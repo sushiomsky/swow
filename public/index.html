@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Wizard of Wor Battle Royale</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    const ws = new WebSocket('ws://localhost:5001');
+
+    ws.onmessage = (event) => {
+        const gameData = JSON.parse(event.data);
+
+        // Clear the canvas
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Render players
+        for (const playerId in gameData.players) {
+            const player = gameData.players[playerId];
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(player.x * 20, player.y * 20, 20, 20);
+        }
+
+        // Render shots
+        for (const shot of gameData.shots) {
+            ctx.fillStyle = 'red';
+            ctx.fillRect(shot.x * 20, shot.y * 20, 10, 10);
+        }
+    };
+
+    function movePlayer(x, y) {
+        const movementData = {
+            type: 'movement',
+            data: { x, y },
+        };
+        ws.send(JSON.stringify(movementData));
+    }
+
+    function shoot(direction) {
+        const shootData = {
+            type: 'shoot',
+            data: { direction },
+        };
+        ws.send(JSON.stringify(shootData));
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowUp') {
+            movePlayer(0, -1);
+        } else if (event.key === 'ArrowDown') {
+            movePlayer(0, 1);
+        } else if (event.key === 'ArrowLeft') {
+            movePlayer(-1, 0);
+        } else if (event.key === 'ArrowRight') {
+            movePlayer(1, 0);
+        } else if (event.key === ' ') {
+            shoot('up');
+        }
+    });
+</script>
+</body>
+</html>
