@@ -10,6 +10,9 @@ const wss = new WebSocket.Server({ server });
 const MAP_WIDTH = 30;
 const MAP_HEIGHT = 30;
 
+const HOMEBASE_X = 1;
+const HOMEBASE_Y = MAP_HEIGHT - 2;
+
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -151,8 +154,8 @@ wss.on('connection', (ws) => {
     // Create a new player object and add it to the game state
     const player = {
         id: playerId,
-        x: Math.floor(Math.random() * MAP_WIDTH),
-        y: Math.floor(Math.random() * MAP_HEIGHT),
+        x: HOMEBASE_X,
+        y: HOMEBASE_Y,
         hasShot: false,
     };
     gameState.players[playerId] = player;
