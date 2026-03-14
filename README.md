@@ -66,7 +66,7 @@ PORT=3000 node server.js
 
 ### Game Rules
 
-- Each player spawns at a random position on the grid.
+- Each player spawns at the homebase position (column 1, row 28 on the 30×30 grid).
 - Only **one active shot per player** is allowed at a time.
 - A shot is destroyed when it hits a wall or another shot.
 - A player is eliminated when hit by a shot.
