@@ -1,9 +1,8 @@
-const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 8080;
-const HOST = '144.76.188.141';
+const PORT = 443;
 const ROOT = __dirname;
 
 const MIME_TYPES = {
@@ -18,13 +17,18 @@ const MIME_TYPES = {
     '.json': 'application/json',
 };
 
-const server = http.createServer((req, res) => {
-    let urlPath = req.url.split('?')[0]; // strip query params
+// Load SSL certificates
+const options = {
+    key: fs.readFileSync(path.join(ROOT, 'certs/key.pem')),
+    cert: fs.readFileSync(path.join(ROOT, 'certs/cert.pem')),
+};
+
+const server = https.createServer(options, (req, res) => {
+    let urlPath = req.url.split('?')[0];
     if (urlPath === '/') urlPath = '/index.html';
 
     const filePath = path.join(ROOT, urlPath);
 
-    // Security: prevent directory traversal
     if (!filePath.startsWith(ROOT)) {
         res.writeHead(403);
         res.end('Forbidden');
@@ -50,7 +54,7 @@ const server = http.createServer((req, res) => {
     });
 });
 
-server.listen(PORT, HOST, () => {
-    console.log(`🎮 Wizard of Wor running at http://${HOST}:${PORT}`);
+server.listen(PORT, () => {
+    console.log(`🎮 Wizard of Wor running at https://144.76.188.142:${PORT}`);
     console.log(`   Press Ctrl+C to stop`);
 });

@@ -1,12 +1,18 @@
 {
-  "name": "swow",
+  "name": "wow",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "patch.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "husky": "^9.1.7",
+    "vite": "^7.3.1"
+  }
 }
