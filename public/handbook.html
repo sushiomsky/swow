@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wizard of Wor — Game Handbook</title>
+<style>
+  @import url('/fonts/v2.0/WizardOfWor.css');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --c64-black:  #000000;
+    --c64-white:  #ffffff;
+    --c64-yellow: #d8c26e;
+    --c64-blue:   #6c5eb5;
+    --c64-cyan:   #7abfc7;
+    --c64-red:    #883932;
+    --c64-orange: #c46c00;
+    --c64-green:  #55a049;
+    --c64-bg:     #0a0a1a;
+    --c64-panel:  #111128;
+    --c64-border: #2a2a5a;
+    --glow-yellow: 0 0 8px #d8c26e88, 0 0 20px #d8c26e44;
+    --glow-blue:   0 0 8px #6c5eb588, 0 0 20px #6c5eb544;
+    --glow-cyan:   0 0 8px #7abfc788, 0 0 20px #7abfc744;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--c64-bg);
+    color: var(--c64-white);
+    font-family: 'C64Pro', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(180deg, #0d0d2b 0%, #050510 100%);
+    border-bottom: 2px solid var(--c64-blue);
+    padding: 40px 20px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,80,0.15) 2px, rgba(0,0,80,0.15) 4px);
+    pointer-events: none;
+  }
+  .title-main {
+    font-family: 'WizardOfWor', 'C64Pro', monospace;
+    font-size: clamp(24px, 5vw, 52px);
+    color: var(--c64-yellow);
+    text-shadow: var(--glow-yellow);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .title-sub {
+    font-size: clamp(10px, 2vw, 14px);
+    color: var(--c64-cyan);
+    margin-top: 8px;
+    letter-spacing: 0.15em;
+    text-shadow: var(--glow-cyan);
+  }
+  .version-badge {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 4px 14px;
+    border: 1px solid var(--c64-blue);
+    color: var(--c64-blue);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    border-radius: 2px;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  /* ── Table of contents ── */
+  nav.toc {
+    background: var(--c64-panel);
+    border: 1px solid var(--c64-border);
+    border-left: 3px solid var(--c64-blue);
+    padding: 20px 24px;
+    margin-bottom: 48px;
+  }
+  nav.toc h2 { color: var(--c64-cyan); margin-bottom: 12px; font-size: 12px; letter-spacing: 0.2em; }
+  nav.toc ol { list-style: none; columns: 2; column-gap: 32px; }
+  nav.toc li { margin-bottom: 6px; }
+  nav.toc a { color: var(--c64-yellow); text-decoration: none; }
+  nav.toc a:hover { color: var(--c64-white); text-shadow: var(--glow-yellow); }
+  @media (max-width: 540px) { nav.toc ol { columns: 1; } }
+
+  /* ── Sections ── */
+  section { margin-bottom: 56px; }
+  section:last-child { margin-bottom: 0; }
+
+  h1.section-title {
+    font-size: 14px;
+    color: var(--c64-cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    border-bottom: 1px solid var(--c64-border);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    text-shadow: var(--glow-cyan);
+  }
+  h2.subsection { color: var(--c64-yellow); font-size: 12px; letter-spacing: 0.2em; margin: 28px 0 12px; }
+
+  p { margin-bottom: 12px; color: #c8c8e8; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+  }
+  th {
+    background: #1a1a3a;
+    color: var(--c64-cyan);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--c64-blue);
+    letter-spacing: 0.1em;
+    font-size: 11px;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #1a1a2e;
+    color: #c8c8e8;
+    vertical-align: top;
+  }
+  tr:hover td { background: #0e0e22; }
+
+  /* ── Enemy cards ── */
+  .enemy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .enemy-card {
+    background: var(--c64-panel);
+    border: 1px solid var(--c64-border);
+    padding: 16px;
+    position: relative;
+  }
+  .enemy-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .enemy-burwor::before   { background: var(--c64-cyan); }
+  .enemy-garwor::before   { background: var(--c64-blue); }
+  .enemy-thorwor::before  { background: var(--c64-orange); }
+  .enemy-worluk::before   { background: var(--c64-yellow); }
+  .enemy-wizard::before   { background: var(--c64-red); }
+  .enemy-worrior::before  { background: #884488; }
+
+  .enemy-name {
+    font-size: 13px;
+    color: var(--c64-yellow);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .enemy-pts {
+    float: right;
+    color: var(--c64-cyan);
+    font-size: 12px;
+    padding: 1px 8px;
+    border: 1px solid var(--c64-border);
+  }
+  .enemy-desc { color: #9898b8; font-size: 12px; line-height: 1.6; }
+  .tag {
+    display: inline-block;
+    margin: 4px 4px 0 0;
+    padding: 1px 6px;
+    font-size: 10px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+  .tag-danger   { background: #3a1010; color: var(--c64-red); border: 1px solid #661010; }
+  .tag-stealth  { background: #101030; color: var(--c64-blue); border: 1px solid #334; }
+  .tag-special  { background: #2a1a0a; color: var(--c64-orange); border: 1px solid #553; }
+  .tag-pvp      { background: #2a0a2a; color: #cc88cc; border: 1px solid #553; }
+
+  /* ── Control keys ── */
+  kbd {
+    display: inline-block;
+    padding: 1px 7px;
+    background: #1a1a3a;
+    border: 1px solid var(--c64-border);
+    border-bottom-width: 2px;
+    color: var(--c64-yellow);
+    font-size: 11px;
+    font-family: inherit;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Callout boxes ── */
+  .callout {
+    border-left: 3px solid var(--c64-yellow);
+    background: #151530;
+    padding: 14px 18px;
+    margin: 20px 0;
+    color: #c8c8e8;
+    font-size: 12px;
+  }
+  .callout.tip    { border-color: var(--c64-green); }
+  .callout.warn   { border-color: var(--c64-orange); }
+  .callout.danger { border-color: var(--c64-red); }
+  .callout strong { color: var(--c64-yellow); }
+  .callout.tip strong    { color: var(--c64-green); }
+  .callout.warn strong   { color: var(--c64-orange); }
+  .callout.danger strong { color: var(--c64-red); }
+
+  /* ── Speed table ── */
+  .speed-bar {
+    height: 10px;
+    background: linear-gradient(90deg, var(--c64-blue), var(--c64-cyan));
+    border-radius: 2px;
+    min-width: 4px;
+  }
+
+  /* ── Lifecycle diagram ── */
+  .lifecycle {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+    margin: 16px 0;
+    font-size: 12px;
+  }
+  .lc-state {
+    padding: 10px 20px;
+    border: 1px solid var(--c64-border);
+    background: var(--c64-panel);
+    min-width: 200px;
+    position: relative;
+  }
+  .lc-state.active    { border-color: var(--c64-green);  color: var(--c64-green); }
+  .lc-state.collapsing{ border-color: var(--c64-orange); color: var(--c64-orange); }
+  .lc-state.empty     { border-color: var(--c64-blue);   color: var(--c64-blue); }
+  .lc-state.destroyed { border-color: var(--c64-red);    color: var(--c64-red); }
+  .lc-arrow {
+    padding: 2px 0 2px 28px;
+    color: #556;
+    font-size: 11px;
+  }
+  .lc-desc {
+    display: block;
+    color: #7878a0;
+    font-size: 10px;
+    margin-top: 2px;
+    font-weight: normal;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 20px;
+    border-top: 1px solid var(--c64-border);
+    color: #444466;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  footer a { color: var(--c64-blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-main">Wizard of Wor</div>
+  <div class="title-sub">Game Handbook &amp; Reference</div>
+  <div class="version-badge">v5.0 — Endless Connected Dungeon Edition</div>
+</header>
+
+<div class="container">
+
+  <!-- Table of Contents -->
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#controls">2. Controls</a></li>
+      <li><a href="#objective">3. Objective</a></li>
+      <li><a href="#enemies">4. Enemies</a></li>
+      <li><a href="#dungeons">5. Dungeons</a></li>
+      <li><a href="#speed">6. Speed System</a></li>
+      <li><a href="#scoring">7. Scoring</a></li>
+      <li><a href="#tunnels">8. Tunnels</a></li>
+      <li><a href="#special">9. Special Events</a></li>
+      <li><a href="#multiplayer">10. Multiplayer</a></li>
+      <li><a href="#filters">11. Visual Filters</a></li>
+      <li><a href="#tips">12. Tips &amp; Tricks</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 ── Overview -->
+  <section id="overview">
+    <h1 class="section-title">1. Overview</h1>
+    <p>
+      Wizard of Wor is a 1983 arcade game originally developed by Midway and popularised on the
+      Commodore 64. You control a warrior navigating maze-like dungeons, shooting monsters before
+      they shoot you. The game never ends — dungeons loop forever, growing harder with every level.
+    </p>
+    <p>
+      This edition is a faithful browser remake of the C64 version, extended with an
+      <strong style="color:var(--c64-yellow)">Endless Connected Dungeon</strong> network
+      multiplayer mode where players each inhabit their own dungeon and can invade each other
+      through tunnel connections.
+    </p>
+
+    <h2 class="subsection">Game modes</h2>
+    <div class="table-wrap">
+    <table>
+      <tr>
+        <th>Mode</th><th>Players</th><th>Entry point</th><th>Description</th>
+      </tr>
+      <tr>
+        <td>Single Player</td><td>1</td><td>index.html</td>
+        <td>Classic Wizard of Wor, one warrior, local play</td>
+      </tr>
+      <tr>
+        <td>Two Player (local)</td><td>2</td><td>index.html</td>
+        <td>Classic WoW, both warriors in the same dungeon</td>
+      </tr>
+      <tr>
+        <td>Multiplayer — Solo join</td><td>N</td><td>multiplayer.html</td>
+        <td>Each player gets their own dungeon; dungeons connect via tunnels</td>
+      </tr>
+      <tr>
+        <td>Multiplayer — Paired join</td><td>2</td><td>multiplayer.html</td>
+        <td>Two players explicitly share one dungeon (classic 2P feel, over the network)</td>
+      </tr>
+    </table>
+    </div>
+  </section>
+
+  <!-- 2 ── Controls -->
+  <section id="controls">
+    <h1 class="section-title">2. Controls</h1>
+
+    <h2 class="subsection">Single-player &amp; classic two-player</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Action</th><th>Yellow Warrior (P1)</th><th>Blue Warrior (P2)</th></tr>
+      <tr><td>Move up</td><td><kbd>↑</kbd></td><td><kbd>W</kbd></td></tr>
+      <tr><td>Move down</td><td><kbd>↓</kbd></td><td><kbd>S</kbd></td></tr>
+      <tr><td>Move left</td><td><kbd>←</kbd></td><td><kbd>A</kbd></td></tr>
+      <tr><td>Move right</td><td><kbd>→</kbd></td><td><kbd>D</kbd></td></tr>
+      <tr><td>Fire</td><td><kbd>Right Ctrl</kbd></td><td><kbd>Left Shift</kbd></td></tr>
+    </table>
+    </div>
+
+    <div class="callout tip">
+      <strong>Tip:</strong> Controls are configurable per player from the in-game
+      <strong>Menu</strong> (red button, top-left). You can also use a gamepad — the browser's
+      Gamepad API is supported for up to 2 controllers.
+    </div>
+
+    <h2 class="subsection">Starting a game</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Action</th><th>Key</th></tr>
+      <tr><td>Start 1-player game</td><td><kbd>1</kbd> or P1's fire key</td></tr>
+      <tr><td>Start 2-player game</td><td><kbd>2</kbd> or P2's fire key</td></tr>
+    </table>
+    </div>
+
+    <h2 class="subsection">Multiplayer</h2>
+    <p>Open <code>http://localhost:5001/multiplayer.html</code> (or the server address). Use the
+    on-screen buttons to choose <strong>Solo</strong> or <strong>2-Player</strong>. Both warriors
+    are controlled from the same keyboard tab — open a second browser tab for true split-screen
+    network play.</p>
+  </section>
+
+  <!-- 3 ── Objective -->
+  <section id="objective">
+    <h1 class="section-title">3. Objective</h1>
+    <p>
+      Clear each dungeon of all enemies before they escape or kill you. You earn points for every
+      monster you shoot. The game ends only when all lives are lost.
+    </p>
+    <p>
+      Every completed dungeon leads to the next, which is harder. Enemies become faster and
+      more aggressive, and the layout changes. There is no final dungeon — the game loops
+      indefinitely.
+    </p>
+
+    <h2 class="subsection">Win conditions &amp; failure</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Event</th><th>Result</th></tr>
+      <tr><td>All monsters killed or escaped</td><td>Dungeon complete; proceed to next level</td></tr>
+      <tr><td>Player hit by monster or bullet</td><td>Lose one life; respawn after ~2 seconds</td></tr>
+      <tr><td>All lives lost</td><td>Game Over</td></tr>
+      <tr><td>Worluk escapes</td><td>All players on-screen lose a life (Worluk penalty)</td></tr>
+      <tr><td>Wizard of Wor escapes</td><td>All players on-screen lose a life</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <!-- 4 ── Enemies -->
+  <section id="enemies">
+    <h1 class="section-title">4. Enemies</h1>
+    <p>Six enemy types appear across the dungeon levels. Each has distinct behaviour, speed, and
+    point value.</p>
+
+    <div class="enemy-grid">
+
+      <div class="enemy-card enemy-burwor">
+        <div class="enemy-pts">100 pts</div>
+        <div class="enemy-name">Burwor</div>
+        <div class="enemy-desc">The most common enemy. Always visible. Appears in all levels.
+          Six Burwors start each dungeon; killing them eventually spawns Garwors.</div>
+        <div style="margin-top:8px">
+          <span class="tag tag-danger">Shoots</span>
+        </div>
+      </div>
+
+      <div class="enemy-card enemy-garwor">
+        <div class="enemy-pts">200 pts</div>
+        <div class="enemy-name">Garwor</div>
+        <div class="enemy-desc">Can turn invisible when away from players. Faster than Burwor.
+          Killing a Garwor spawns a Thorwor.</div>
+        <div style="margin-top:8px">
+          <span class="tag tag-stealth">Invisible</span>
+          <span class="tag tag-danger">Shoots</span>
+        </div>
+      </div>
+
+      <div class="enemy-card enemy-thorwor">
+        <div class="enemy-pts">500 pts</div>
+        <div class="enemy-name">Thorwor</div>
+        <div class="enemy-desc">The elite of the regular enemies. Turns invisible, moves faster
+          than Garwor. Once enough Thorwors are killed, the Worluk appears.</div>
+        <div style="margin-top:8px">
+          <span class="tag tag-stealth">Invisible</span>
+          <span class="tag tag-danger">Shoots</span>
+          <span class="tag tag-special">Triggers Worluk</span>
+        </div>
+      </div>
+
+      <div class="enemy-card enemy-worluk">
+        <div class="enemy-pts">1,000 pts</div>
+        <div class="enemy-name">Worluk</div>
+        <div class="enemy-desc">A giant winged creature that appears after enough Thorwors are
+          defeated. Does not shoot, but killing it triggers a <strong>Double Score</strong>
+          bonus for the next dungeon. If it escapes, all players lose a life.</div>
+        <div style="margin-top:8px">
+          <span class="tag tag-special">Double score trigger</span>
+          <span class="tag tag-danger">Escape penalty</span>
+        </div>
+      </div>
+
+      <div class="enemy-card enemy-wizard">
+        <div class="enemy-pts">2,500 pts</div>
+        <div class="enemy-name">Wizard of Wor</div>
+        <div class="enemy-desc">The boss. Appears randomly after the Worluk is dealt with.
+          Teleports to random locations, fires in all directions. If a player is hit, the
+          Wizard escapes and all players lose a life.</div>
+        <div style="margin-top:8px">
+          <span class="tag tag-danger">Omnidirectional shots</span>
+          <span class="tag tag-special">Teleports</span>
+          <span class="tag tag-danger">Escape penalty</span>
+        </div>
+      </div>
+
+      <div class="enemy-card enemy-worrior">
+        <div class="enemy-pts">1,000 pts</div>
+        <div class="enemy-name">Worrior (other player)</div>
+        <div class="enemy-desc">In two-player or multiplayer modes, the other warrior counts as
+          an enemy. PvP is <em>always enabled</em> — friendly fire cannot be turned off.</div>
+        <div style="margin-top:8px">
+          <span class="tag tag-pvp">PvP</span>
+          <span class="tag tag-danger">Friendly fire always on</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout warn" style="margin-top:20px">
+      <strong>Invisible enemies:</strong> Garwors and Thorwors appear on the radar panel even
+      when invisible on-screen. Use the radar to track them.
+    </div>
+  </section>
+
+  <!-- 5 ── Dungeons -->
+  <section id="dungeons">
+    <h1 class="section-title">5. Dungeons</h1>
+    <p>Dungeons are rectangular 11 × 6 tile grids with configurable inner walls. The layout
+    changes each level.</p>
+
+    <h2 class="subsection">Progression</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Level range</th><th>Layout pool</th><th>Special</th></tr>
+      <tr><td>1–7</td><td>12 easy layouts (randomised, no repeat)</td><td>—</td></tr>
+      <tr><td>Level 4</td><td>Fixed: <em>The Arena</em></td><td>Bonus life at level 3</td></tr>
+      <tr><td>8+</td><td>8 hard layouts (randomised, no repeat)</td><td>—</td></tr>
+      <tr><td>Level 12</td><td>Hard pool</td><td>Bonus life at level 12</td></tr>
+      <tr><td>Level 13+</td><td>Fixed: <em>The Pit</em> (every 6 levels)</td><td>—</td></tr>
+    </table>
+    </div>
+
+    <h2 class="subsection">Radar panel</h2>
+    <p>The centre panel at the bottom of the screen is a mini-map showing the position of all
+    <em>visible</em> enemies (invisible ones are also shown). The label above the map changes to
+    reflect the current dungeon name, or special event text.</p>
+
+    <h2 class="subsection">Double Score dungeon</h2>
+    <p>Killing the Worluk sets a <strong>Double Score</strong> flag. The next dungeon is played
+    with all point values doubled. The double-score banner is shown at the start of the dungeon.</p>
+
+    <div class="callout tip">
+      <strong>Bonus life:</strong> All living players receive a free life at the start of
+      level 3 and level 12.
+    </div>
+  </section>
+
+  <!-- 6 ── Speed System -->
+  <section id="speed">
+    <h1 class="section-title">6. Speed System</h1>
+    <p>Enemy speed is controlled by two factors: the <em>speed level</em> (1–16) and the
+    background music tempo (1–7). Both increase as you progress through dungeons and as time
+    passes within a dungeon.</p>
+
+    <h2 class="subsection">Speed increases when</h2>
+    <ul style="color:#c8c8e8; padding-left:20px; margin-bottom:12px;">
+      <li>Every 25 seconds that pass inside a dungeon</li>
+      <li>Every 4th monster killed in a dungeon</li>
+      <li>The Worluk appears (speed jumps to 14)</li>
+    </ul>
+
+    <h2 class="subsection">Speed tiers</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Speed level</th><th>Movement rate</th><th>Music tempo</th><th>Relative speed</th></tr>
+      <tr><td>1–2</td><td>1 px / ~5 ticks</td><td>1</td>
+        <td><div class="speed-bar" style="width:12%"></div></td></tr>
+      <tr><td>3–4</td><td>1 px / ~3 ticks</td><td>2</td>
+        <td><div class="speed-bar" style="width:22%"></div></td></tr>
+      <tr><td>5–6</td><td>1 px / ~2 ticks</td><td>3</td>
+        <td><div class="speed-bar" style="width:36%"></div></td></tr>
+      <tr><td>7</td><td>1 px / tick</td><td>4</td>
+        <td><div class="speed-bar" style="width:50%"></div></td></tr>
+      <tr><td>8–9</td><td>1–2 px / tick</td><td>5</td>
+        <td><div class="speed-bar" style="width:64%"></div></td></tr>
+      <tr><td>10–12</td><td>1–2 px / tick (faster)</td><td>6</td>
+        <td><div class="speed-bar" style="width:78%"></div></td></tr>
+      <tr><td>13–16</td><td>2–3 px / tick</td><td>7</td>
+        <td><div class="speed-bar" style="width:100%"></div></td></tr>
+    </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>Fast mode (multiplayer only):</strong> When a dungeon enters the
+      <em>Empty</em> lifecycle state (no players remain), all remaining monsters receive a
+      ×1.8 speed multiplier on top of the current speed level.
+    </div>
+  </section>
+
+  <!-- 7 ── Scoring -->
+  <section id="scoring">
+    <h1 class="section-title">7. Scoring</h1>
+
+    <div class="table-wrap">
+    <table>
+      <tr><th>Target</th><th>Base points</th><th>Double Score</th></tr>
+      <tr><td>Burwor</td><td>100</td><td>200</td></tr>
+      <tr><td>Garwor</td><td>200</td><td>400</td></tr>
+      <tr><td>Thorwor</td><td>500</td><td>1,000</td></tr>
+      <tr><td>Worluk</td><td>1,000</td><td>2,000</td></tr>
+      <tr><td>Worrior (other player)</td><td>1,000</td><td>2,000</td></tr>
+      <tr><td>Wizard of Wor</td><td>2,500</td><td>5,000</td></tr>
+    </table>
+    </div>
+
+    <h2 class="subsection">High scores</h2>
+    <p>The top 5 scores are saved in <code>localStorage</code> and shown on the title screen.
+    Scores are per-browser and persist between sessions.</p>
+  </section>
+
+  <!-- 8 ── Tunnels -->
+  <section id="tunnels">
+    <h1 class="section-title">8. Tunnels (Teleport Gates)</h1>
+    <p>The left and right walls of the dungeon have <em>teleport gates</em> at row 3 (counting
+    from the top). Walking into a gate teleports you to the other side of the dungeon — or, in
+    multiplayer, to a connected dungeon.</p>
+
+    <h2 class="subsection">Tunnel rules</h2>
+    <ul style="color:#c8c8e8; padding-left:20px; margin-bottom:16px;">
+      <li>Tunnels are open at the start of each dungeon.</li>
+      <li>After use, a tunnel closes for a cooldown period (default 13 seconds).</li>
+      <li>Some events force a longer or immediate close: Worluk appearance (5 s),
+          Worluk death (immediately), wizard activity.</li>
+      <li>Most monsters can also use tunnels; the Worluk and Wizard of Wor have special behaviour.</li>
+    </ul>
+
+    <h2 class="subsection">Cross-dungeon transfer (multiplayer)</h2>
+    <p>In multiplayer, each dungeon has a <strong>left tunnel target</strong> and a
+    <strong>right tunnel target</strong> — references to other connected dungeons. When you
+    enter a tunnel that is linked to another dungeon, you are transferred to that dungeon and
+    appear at the matching tunnel exit on the opposite side.</p>
+
+    <div class="callout">
+      <strong>Respawn:</strong> When you die in a foreign dungeon, you respawn in your own home
+      dungeon — never in the dungeon you were visiting.
+    </div>
+
+    <div class="callout warn">
+      <strong>Dungeon collapse:</strong> When all home players die in a dungeon, it enters
+      <em>Collapsing</em> state. All tunnels are forced open so visitors can escape. After
+      15 seconds, any remaining visitors are force-killed.
+    </div>
+  </section>
+
+  <!-- 9 ── Special Events -->
+  <section id="special">
+    <h1 class="section-title">9. Special Events</h1>
+
+    <h2 class="subsection">Worluk sequence</h2>
+    <p>Once you have killed enough Thorwors (the threshold decreases at higher levels), the
+    Worluk appears. The radar displays <span style="color:var(--c64-yellow)">WORLUK</span>,
+    the wall colour changes, and enemy speed jumps to 14.</p>
+    <ol style="color:#c8c8e8; padding-left:20px; margin-bottom:12px; line-height:2.0">
+      <li>Tunnels close for 5 seconds.</li>
+      <li>Background music switches to the Worluk theme.</li>
+      <li><strong>Kill the Worluk</strong> → Double Score flag set for next dungeon.</li>
+      <li><strong>Worluk escapes</strong> → All living players lose a life; penalty timer begins.</li>
+    </ol>
+
+    <h2 class="subsection">Wizard of Wor sequence</h2>
+    <p>After the Worluk event resolves, there is a 1-in-7 chance the Wizard of Wor spawns:</p>
+    <ol style="color:#c8c8e8; padding-left:20px; margin-bottom:12px; line-height:2.0">
+      <li>Speed resets to 12, tunnels open, radar shows
+        <span style="color:var(--c64-yellow)">WIZARD OF WOR</span>.</li>
+      <li>The Wizard teleports randomly and fires in all four directions.</li>
+      <li><strong>Kill the Wizard</strong> → Double Score flag is set; dungeon ends.</li>
+      <li><strong>Wizard shoots a player</strong> → Wizard escapes; that player (and all others)
+          lose a life.</li>
+    </ol>
+
+    <div class="callout danger">
+      <strong>Radar warning:</strong> When the Wizard is present, watch the radar carefully —
+      it shows his position even after he teleports.
+    </div>
+  </section>
+
+  <!-- 10 ── Multiplayer -->
+  <section id="multiplayer">
+    <h1 class="section-title">10. Multiplayer — Endless Connected Dungeon</h1>
+    <p>The multiplayer server runs separately from the single-player static server:</p>
+    <pre style="background:#0e0e1e;padding:14px 18px;font-size:12px;overflow-x:auto;color:#7abfc7;border:1px solid var(--c64-border);margin-bottom:16px;">npm run multiplayer
+# → http://localhost:5001/multiplayer.html</pre>
+
+    <h2 class="subsection">Joining rules</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Click</th><th>Result</th></tr>
+      <tr>
+        <td><strong style="color:var(--c64-yellow)">Solo</strong></td>
+        <td>A new dungeon is created just for you. Your dungeon's tunnels are
+            automatically linked to any existing active dungeon. You are
+            assigned the next available warrior colour.</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--c64-cyan)">2-Player</strong></td>
+        <td>You wait for a second player to also click 2-Player. Both players
+            share one dungeon with the original WoW side-by-side spawn positions.
+            This is the closest to the classic two-player experience.</td>
+      </tr>
+    </table>
+    </div>
+
+    <h2 class="subsection">Dungeon lifecycle</h2>
+    <div class="lifecycle">
+      <div class="lc-state active">
+        <strong>ACTIVE</strong>
+        <span class="lc-desc">Normal gameplay. PvP enabled. Tunnels follow normal rules.</span>
+      </div>
+      <div class="lc-arrow">↓ All home players lose their final life</div>
+      <div class="lc-state collapsing">
+        <strong>COLLAPSING</strong>
+        <span class="lc-desc">15-second evacuation window. Tunnels forced open. Visitors
+          force-killed at timeout.</span>
+      </div>
+      <div class="lc-arrow">↓ All players evacuated or killed</div>
+      <div class="lc-state empty">
+        <strong>EMPTY</strong>
+        <span class="lc-desc">No players. Remaining monsters at ×1.8 speed (fast mode).</span>
+      </div>
+      <div class="lc-arrow">↓ All monsters dead or escaped</div>
+      <div class="lc-state destroyed">
+        <strong>DESTROYED</strong>
+        <span class="lc-desc">Dungeon removed. All tunnel links unregistered.</span>
+      </div>
+    </div>
+
+    <h2 class="subsection">PvP rules</h2>
+    <div class="callout danger">
+      <strong>PvP is always enabled.</strong> Friendly fire cannot be turned off. Shooting
+      another player earns 1,000 points (×2 during Double Score). There are no safe zones —
+      not even in your home dungeon.
+    </div>
+
+    <h2 class="subsection">Server authority</h2>
+    <p>The server is fully authoritative. Clients send only raw keyboard state; the server
+    validates all movement, shooting, hits, scoring, tunnel transfers, respawn, and dungeon
+    lifecycle transitions. The client is a pure renderer.</p>
+
+    <div class="table-wrap">
+    <table>
+      <tr><th>Client sends</th><th>Server sends back</th></tr>
+      <tr>
+        <td>Raw key state (up/down/left/right/fire) at 50 fps</td>
+        <td>Full serialised dungeon state (positions, monsters, bullets, scores) at 50 fps</td>
+      </tr>
+    </table>
+    </div>
+  </section>
+
+  <!-- 11 ── Visual Filters -->
+  <section id="filters">
+    <h1 class="section-title">11. Visual Filters</h1>
+    <p>Available from the in-game menu (single-player mode). Each filter also recolours the
+    sprite palette to match the aesthetic.</p>
+
+    <div class="table-wrap">
+    <table>
+      <tr><th>Filter</th><th>CSS effect</th><th>Palette</th></tr>
+      <tr><td>None</td><td>Pixel-perfect, no processing</td><td>Original C64</td></tr>
+      <tr><td>Scan lines</td><td>Horizontal line overlay</td><td>Original C64</td></tr>
+      <tr><td>Black &amp; white TV</td><td>Blur + brightness + noise</td><td>Grayscale</td></tr>
+      <tr><td>Colour TV</td><td>Contrast / saturation blur + noise</td><td>VICE emulator C64</td></tr>
+      <tr><td>Green C64 monitor</td><td>Blur + brightness tint</td><td>Green phosphor</td></tr>
+    </table>
+    </div>
+
+    <div class="callout tip">
+      Palette recolouring happens at runtime by scanning the sprite sheet pixel-by-pixel and
+      remapping known C64 colours to the target palette. This happens once on palette change
+      and is cached.
+    </div>
+  </section>
+
+  <!-- 12 ── Tips & Tricks -->
+  <section id="tips">
+    <h1 class="section-title">12. Tips &amp; Tricks</h1>
+
+    <h2 class="subsection">Combat</h2>
+    <ul style="color:#c8c8e8; padding-left:20px; line-height:2.2">
+      <li>You can only have one bullet on-screen at a time — time your shots carefully.</li>
+      <li>Bullets from two players cancel each other out if they collide mid-air.</li>
+      <li>You are briefly invulnerable after spawning — use this window to orient yourself.</li>
+      <li>The Wizard of Wor fires in all four directions; don't stand in a straight line from his position.</li>
+      <li>Invisible Garwors and Thorwors still appear on the radar — always check it.</li>
+    </ul>
+
+    <h2 class="subsection">Score maximisation</h2>
+    <ul style="color:#c8c8e8; padding-left:20px; line-height:2.2">
+      <li>Always kill the Worluk to trigger Double Score for the next dungeon.</li>
+      <li>The Wizard of Wor is worth 2,500 pts (5,000 during Double Score) — worth the risk.</li>
+      <li>In multiplayer, shooting other players earns 1,000 pts — but leaves you exposed.</li>
+      <li>Killing monsters in groups of 4 triggers a speed-up — use this strategically to
+          control difficulty.</li>
+    </ul>
+
+    <h2 class="subsection">Multiplayer tactics</h2>
+    <ul style="color:#c8c8e8; padding-left:20px; line-height:2.2">
+      <li>When a dungeon starts collapsing, tunnels open — enemy dungeons become accessible.</li>
+      <li>Fast-mode monsters (×1.8 speed) in abandoned dungeons pose a real threat if you
+          visit without preparation.</li>
+      <li>Entering via a tunnel puts you at row 3. You exit moving right (left tunnel) or
+          left (right tunnel) — use this predictable entry to prepare for combat.</li>
+      <li>Respawn always sends you back to your home dungeon — dying in an enemy dungeon is
+          safer than in your own.</li>
+    </ul>
+
+    <div class="callout tip">
+      <strong>Radar text tells you everything:</strong>
+      <code style="color:var(--c64-yellow)">WORLUK</code> means rush to kill it,
+      <code style="color:var(--c64-yellow)">WIZARD OF WOR</code> means prepare for chaos,
+      <code style="color:var(--c64-yellow)">ESCAPED</code> means you lost a life shortly.
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>Wizard of Wor browser remake based on
+    <a href="https://wizardofwor.krissz.hu/" target="_blank" rel="noopener">WoW v5.0 by krissz.hu</a>
+    &nbsp;·&nbsp; Original game © 1981 Midway Manufacturing &amp; CBS Electronics
+  </p>
+  <p style="margin-top:8px">
+    <a href="/" style="color:var(--c64-cyan)">← Back to game</a>
+    &nbsp;&nbsp;
+    <a href="/multiplayer.html" style="color:var(--c64-yellow)">Play multiplayer →</a>
+  </p>
+</footer>
+
+</body>
+</html>

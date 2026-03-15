@@ -4,7 +4,8 @@
   "main": "patch.js",
   "scripts": {
     "dev": "vite",
-    "start": "node server.js"
+    "start": "node server.js",
+    "multiplayer": "node server-multiplayer.js"
   },
   "keywords": [],
   "author": "",
@@ -14,5 +15,8 @@
     "@playwright/test": "^1.58.2",
     "husky": "^9.1.7",
     "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
   }
 }

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = 8080;
-const HOST = '144.76.188.141';
+const HOST = '0.0.0.0';
 const ROOT = __dirname;
 
 const MIME_TYPES = {

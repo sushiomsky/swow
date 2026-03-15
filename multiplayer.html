@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Wizard Of Wor — Multiplayer</title>
+    <style>
+        @font-face {
+            font-family: 'WizardOfWor';
+            src: url('/fonts/v2.0/wizardofwor-webfont.woff') format('woff');
+        }
+        @font-face {
+            font-family: 'C64ProRegular';
+            src: url('/fonts/v2.0/c64_pro_v1.0-style-webfont-webfont.woff') format('woff');
+        }
+        *, html, body { margin: 0; padding: 0; border: 0; }
+        html { height: 100%; overflow: hidden; background: #000; }
+        body {
+            position: relative; height: 100%;
+            font-family: 'C64ProRegular'; font-size: 8px; line-height: 1;
+            color: #fff; background: #000;
+            -webkit-user-select: none; user-select: none;
+        }
+        #border {
+            position: absolute; z-index: 80;
+            left: 0; top: 0; width: 100%; height: 100%;
+        }
+        #screen {
+            position: absolute; z-index: 100;
+            left: 0; top: 0; width: 960px; height: 600px;
+            transform-origin: 0 0;
+            image-rendering: pixelated; image-rendering: crisp-edges;
+        }
+        #visualFilterLayer {
+            position: absolute; z-index: 120;
+            pointer-events: none; left: 0; top: 0; width: 100%; height: 100%;
+            image-rendering: pixelated;
+        }
+        #overlay {
+            position: fixed; z-index: 500;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-family: 'C64ProRegular', monospace;
+            color: #fff;
+        }
+        #overlay h1 { font-size: 28px; color: #DFF60A; margin-bottom: 30px; letter-spacing: 2px; }
+        #overlay p  { font-size: 14px; color: #aaa; margin: 6px 0; }
+        .btn {
+            margin: 10px; padding: 14px 32px;
+            font-family: inherit; font-size: 16px; font-weight: bold;
+            background: #a00; color: #fff; border: none; cursor: pointer;
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        .btn:hover { background: #c00; }
+        .btn.blue { background: #15c; }
+        .btn.blue:hover { background: #27e; }
+        #status { font-size: 13px; color: #59FE59; margin-top: 18px; min-height: 20px; }
+        #hud {
+            position: fixed; z-index: 400;
+            top: 5px; right: 10px;
+            font-family: 'C64ProRegular', monospace;
+            font-size: 12px; color: #DFF60A;
+            pointer-events: none;
+        }
+        #controls-hint {
+            position: fixed; z-index: 400;
+            bottom: 5px; left: 50%; transform: translateX(-50%);
+            font-family: 'C64ProRegular', monospace;
+            font-size: 10px; color: #555;
+            pointer-events: none;
+        }
+        .hide { display: none !important; }
+    </style>
+    <link rel="shortcut icon" href="/favicon.ico">
+</head>
+<body>
+    <div id="overlay">
+        <h1>WIZARD OF WOR</h1>
+        <p>Endless Connected Dungeon — Multiplayer</p>
+        <div style="margin-top:20px;">
+            <button class="btn" id="btnSolo">▶ SOLO  (own dungeon, tunnel-linked)</button>
+            <button class="btn blue" id="btnPair">👥 2-PLAYER  (shared dungeon, wait for partner)</button>
+        </div>
+        <div id="status"></div>
+        <p style="margin-top:30px; font-size:11px; color:#555;">
+            <b>Solo / Battle Royal:</b> each player gets their own dungeon — dungeons link via tunnels, invade each other!<br>
+            <b>2-Player Network:</b> two players share one dungeon — open this page on a second machine and click 2-Player
+        </p>
+        <p style="margin-top:16px; font-size:11px;">
+            <a href="/public/handbook.html" target="_blank" style="color:#6c5eb5; text-decoration:none;">📖 Game Handbook &amp; Reference</a>
+        </p>
+    </div>
+
+    <div id="body">
+        <div id="border">
+            <canvas id="screen" width="960" height="600" class="hide" moz-opaque></canvas>
+            <canvas id="visualFilterLayer" width="960" height="600"></canvas>
+        </div>
+    </div>
+    <img src="/images/v4.0/noise.png" id="crtNoise" class="hide">
+    <span style="font-family:WizardOfWor"></span>
+
+    <div id="hud" class="hide">
+        <span id="hud-dungeon"></span>
+    </div>
+    <div id="controls-hint">
+        ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu
+    </div>
+
+    <script type="module" src="/src/client/MultiplayerApp.js"></script>
+</body>
+</html>

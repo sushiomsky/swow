@@ -8,10 +8,7 @@ class App {
     constructor() {
         this.options = {};
         this.pressedKeys = [];
-        this.loadResourcesInterval = null;
         this.enableKeys = !1;
-        this.neededResourcesCount = 1;
-        this.loadedResourcesCount = 0;
         this.spriteImage = new Image();
         this.spriteWidth = 248;
         this.spriteHeight = 355;
@@ -27,7 +24,6 @@ class App {
         this.checkSystemRequirements(() => {
             this.audio = new AudioEngine();
             this.audio.init();
-            this.neededResourcesCount += this.audio.neededResources.length;
             this.setOptions();
             this.loadResources(() => {
                 this.engine = new GameEngine(this);
@@ -38,6 +34,7 @@ class App {
                 this.initEngine();
                 this.applyVisualFilter();
                 F("screen");
+                this.audio.loadAudioResource(0, () => {});
             });
         }, () => {
             alert("System requirements not met.");
@@ -71,13 +68,6 @@ class App {
     }
 
     loadResources(callback) {
-        this.loadResourcesInterval = setInterval(() => {
-            if (this.loadedResourcesCount >= this.neededResourcesCount) {
-                clearInterval(this.loadResourcesInterval);
-                callback();
-            }
-        }, 100);
-
         this.spriteImage.src = "/images/v3.0/sprite.png";
         this.spriteImage.onerror = (e) => console.error("Sprite load failed", e);
         this.spriteImage.onload = () => {
@@ -88,11 +78,8 @@ class App {
             ctx.drawImage(this.spriteImage, 0, 0);
             this.originalSpriteImageData = ctx.getImageData(0, 0, this.spriteWidth, this.spriteHeight);
             this.changeGameSpriteColors();
-            this.loadedResourcesCount++;
+            callback();
         };
-        this.audio.loadAudioResource(0, () => {
-            this.loadedResourcesCount++;
-        });
     }
 
     initKeyHandling() {

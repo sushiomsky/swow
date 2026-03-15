@@ -9,8 +9,9 @@ Wizard of Wor is a 1983 arcade game originally developed by Midway, popularized 
 ## Running the game
 
 ```bash
-npm run dev     # Vite dev server — http://localhost:8080 (auto-opens browser)
-npm start       # Plain Node.js static server — http://localhost:8080
+npm run dev        # Vite dev server — http://localhost:8081 (auto-opens browser)
+npm start          # Plain Node.js static server — http://localhost:8080
+npm run multiplayer  # Authoritative multiplayer server — http://localhost:5001/multiplayer.html
 ```
 
 ---
@@ -136,19 +137,98 @@ The game logic was extracted and rewritten as ES modules for maintainability:
 ### Dev tooling added
 
 - `server.js` — simple Node.js static HTTP server (no dependencies) as an alternative to Vite
+- `server-multiplayer.js` — authoritative WebSocket game server for the Endless Connected Dungeon multiplayer mode
 - `vite.config.js` — Vite dev server config (port 8080, auto-open)
+
+---
+
+## Multiplayer — Endless Connected Dungeon
+
+An authoritative multiplayer battle-royal mode built on top of the original game engine. Each player gets their own home dungeon; dungeons are dynamically linked via tunnels so players can invade each other.
+
+### Architecture
+
+The multiplayer stack runs as a separate process (`server-multiplayer.js`) alongside or instead of the static server:
+
+```
+server-multiplayer.js        HTTP + WebSocket entry point (port 5001)
+src/server/
+  serverConstants.js         dungeon layouts, scoring, directions (server-only, no rendering)
+  serverUtils.js             randInt(), overlaps(), frames() — pure math helpers
+  ServerBullet.js            bullet movement and hit detection (no rendering)
+  ServerMonster.js           monster AI, pathfinding, speed tiers (no rendering)
+  ServerPlayer.js            player movement, shooting, tunnel transfer (no rendering)
+  DungeonInstance.js         one dungeon: full game loop, lifecycle state machine, serialisation
+  GameServer.js              session manager, WS handling, 50 fps tick, dungeon linker
+src/client/
+  MultiplayerApp.js          sprite loading, WS connection, input capture, client renderer
+multiplayer.html             client entry page with join-mode overlay
+```
+
+### Joining modes
+
+| Mode | How | Result |
+|------|-----|--------|
+| **Solo** | Click "Solo" on join screen | Own dungeon; tunnels auto-link to any other active dungeon |
+| **Paired** | Both players click "2-Player" | Shared dungeon; original WoW two-player spawn positions |
+
+### Connected dungeons & tunnels
+
+When a second solo player joins, a new independent dungeon is created and its tunnels are linked bidirectionally to an existing dungeon. Entering a tunnel at row 3 (the teleport gate row) transfers the player to the connected dungeon. The original teleport cooldown is preserved; tunnels are forced open during dungeon collapse.
+
+### Dungeon lifecycle
+
+```
+ACTIVE
+  │  (owner loses final life → 15 s evacuation window)
+  ▼
+COLLAPSING  — tunnels forced open; PvP still active; visiting players force-killed at timeout
+  │
+  ▼
+EMPTY       — no players; monster speed ×1.8 (fast mode)
+  │  (all monsters dead/escaped)
+  ▼
+DESTROYED   — dungeon removed; tunnel links unregistered
+```
+
+### Server authority
+
+The server validates all movement, shooting, hits, scoring, tunnel transfers, respawn, and dungeon lifecycle transitions. Clients send only raw key-state; the server sends full serialised dungeon state at 50 fps.
+
+### Multiplayer controls
+
+| Action | Yellow (P1) | Blue (P2) |
+|--------|-------------|-----------|
+| Move   | Arrow keys  | WASD      |
+| Fire   | Right Ctrl  | Left Shift |
+
+Both players are controlled locally from the same browser tab. Open two tabs (or two browsers) for true network play.
+
+---
 
 ---
 
 ## Project structure
 
 ```
-index.html          entry point (all CSS inline, loads src/App.js)
+index.html          single-player entry point (all CSS inline, loads src/App.js)
+multiplayer.html    multiplayer entry point (loads src/client/MultiplayerApp.js)
 src/                ES module source (the active game code)
-js/v5.0/w.js        original unpacked+patched source (reference)
-patch.js            one-time unpack/patch script (already run)
-server.js           Node.js static file server
-audio/v2.0/         .ogg sound effects
+  App.js            single-player bootstrap
+  constants.js      sprite atlas, dungeon layouts, palettes, keycodes
+  utils.js          shared drawing helpers and utilities
+  engine/           GameEngine — scene state machine, collision, scoring
+  entities/         Player, Monster, Bullet — game entity logic
+  audio/            AudioEngine — Web Audio API wrapper
+  ui/               UIManager — DOM menu wiring, fullscreen, options
+  server/           Authoritative multiplayer server modules (Node.js / CommonJS)
+  client/           Multiplayer client renderer (ES modules, browser)
+js/v5.0/w.js        original unpacked+patched source (reference only)
+patch.js            one-time unpack/patch script (already run — do not re-run)
+server.js           Node.js static file server (single-player)
+server-multiplayer.js  Node.js HTTP + WebSocket server (multiplayer)
+audio/v2.0/         .ogg sound effects (22 files)
 images/             sprite sheet, CRT noise texture, UI assets
 fonts/v2.0/         WizardOfWor and C64Pro web fonts
+public/             static assets served by Vite (handbook, etc.)
 ```
