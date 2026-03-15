@@ -22,7 +22,7 @@ const MIME = {
 
 const httpServer = http.createServer((req, res) => {
     let urlPath = req.url.split('?')[0];
-    if (urlPath === '/' || urlPath === '/multiplayer') urlPath = '/multiplayer.html';
+    if (urlPath === '/') urlPath = '/multiplayer.html';
 
     const filePath = path.join(ROOT, urlPath);
     if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }
@@ -47,3 +47,14 @@ httpServer.listen(PORT, '0.0.0.0', () => {
 });
 
 process.on('SIGINT', () => { gameServer.stop(); process.exit(0); });
+
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});

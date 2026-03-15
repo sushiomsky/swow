@@ -25,6 +25,12 @@ class GameServer {
      */
     constructor(httpServer) {
         this.wss = new WebSocket.Server({ server: httpServer });
+        
+        // Error handler for WebSocket server
+        this.wss.on('error', (err) => {
+            console.error('[GameServer] WebSocket server error:', err.message);
+        });
+        
         // Map: playerId → { ws, player, dungeonId, inputs, sessionId }
         this.connections = new Map();
         // Map: dungeonId → DungeonInstance
@@ -40,19 +46,27 @@ class GameServer {
     // ─── Connection Lifecycle ─────────────────────────────────────────────────
 
     _onConnect(ws) {
-        const playerId = String(nextPlayerId++);
-        const conn = { ws, player: null, dungeonId: null, inputs: {}, sessionId: null };
-        this.connections.set(playerId, conn);
+        try {
+            const playerId = String(nextPlayerId++);
+            const conn = { ws, player: null, dungeonId: null, inputs: {}, sessionId: null };
+            this.connections.set(playerId, conn);
 
-        ws.on('message', (msg) => {
-            try { this._onMessage(playerId, JSON.parse(msg)); } catch (e) { /* ignore bad json */ }
-        });
-        ws.on('close', () => this._onDisconnect(playerId));
-        ws.on('error', () => ws.terminate());
+            ws.on('message', (msg) => {
+                try { this._onMessage(playerId, JSON.parse(msg)); } catch (e) { console.error(`[GameServer] Message error for player ${playerId}:`, e.message); }
+            });
+            ws.on('close', () => this._onDisconnect(playerId));
+            ws.on('error', (err) => {
+                console.error(`[GameServer] WebSocket error for player ${playerId}:`, err.message);
+                ws.terminate();
+            });
 
-        // Send player their assigned id so they know who they are
-        this._send(ws, { type: 'connected', playerId });
-        console.log(`[GameServer] player ${playerId} connected`);
+            // Send player their assigned id so they know who they are
+            this._send(ws, { type: 'connected', playerId });
+            console.log(`[GameServer] player ${playerId} connected`);
+        } catch (e) {
+            console.error('[GameServer] Error in _onConnect:', e.message, e.stack);
+            ws.terminate();
+        }
     }
 
     _onDisconnect(playerId) {
@@ -189,6 +203,7 @@ class GameServer {
         const hasRealPlayers = dungeon.players.some(p => p.id !== null);
         if (!hasRealPlayers && dungeon.lifecycleState !== STATE.DESTROYED) {
             dungeon.lifecycleState = STATE.EMPTY;
+            dungeon.speedMultiplier = 1.8; // Apply fast mode when dungeon becomes empty
         }
     }
 
@@ -203,19 +218,32 @@ class GameServer {
      * @param {'left'|'right'} entrySide  Which wall the player enters the target dungeon from.
      */
     transferPlayerToDungeon(player, fromDungeon, toDungeonId, entrySide) {
+        console.log(`[GameServer] TRANSFER START: player ${player.id} from dungeon ${fromDungeon.id}`);
         const toDungeon = this.dungeons.get(toDungeonId);
         if (!toDungeon || toDungeon.lifecycleState === STATE.DESTROYED) {
+            console.log(`[GameServer] TRANSFER FALLBACK: target dungeon ${toDungeonId} doesn't exist or is destroyed`);
             // Target gone: same-dungeon teleport fallback
+            player.status = 'alive';
+            player.row = 3;
             if ('left' === entrySide) { player.col = 1; player.x = 34; player.d = 'right'; }
             else { player.col = 11; player.x = 274; player.d = 'left'; }
+            player.y = 3 + 24 * (player.row - 1);
+            player.bullet = false;
+            player.frameCounters = { justShoot: 0, entering: 0, dead: 0 };
             return;
         }
 
         // Find a free slot in the target dungeon; fall back to same-dungeon teleport if full
         const slot = this._findFreeSlot(toDungeon, player);
         if (slot === -1) {
+            console.log(`[GameServer] TRANSFER FALLBACK: target dungeon ${toDungeonId} is full`);
+            player.status = 'alive';
+            player.row = 3;
             if ('left' === entrySide) { player.col = 1; player.x = 34; player.d = 'right'; }
             else { player.col = 11; player.x = 274; player.d = 'left'; }
+            player.y = 3 + 24 * (player.row - 1);
+            player.bullet = false;
+            player.frameCounters = { justShoot: 0, entering: 0, dead: 0 };
             return;
         }
 
@@ -226,6 +254,9 @@ class GameServer {
         // Remove from current dungeon
         fromDungeon.removePlayer(player);
         if (!fromDungeon.afterWorluk()) fromDungeon.closeTeleport(13);
+        
+        // Also close the target dungeon's tunnels (prevent abuse on entry side)
+        if (!toDungeon.afterWorluk()) toDungeon.closeTeleport(13);
 
         // Add to target dungeon
         player.engine = toDungeon;
@@ -233,12 +264,18 @@ class GameServer {
         player.goToTunnelEntry(entrySide);
 
         // Update connection tracking
+        let found = false;
         for (const [, conn] of this.connections) {
             if (conn.player === player) {
+                console.log(`[GameServer] TRANSFER: updating conn dungeonId from ${conn.dungeonId} to ${toDungeon.id}`);
                 conn.dungeonId = toDungeon.id;
                 this._sendInit(conn, toDungeon);
+                found = true;
                 break;
             }
+        }
+        if (!found) {
+            console.warn(`[GameServer] TRANSFER ERROR: connection not found for player ${player.id}!`);
         }
         console.log(`[GameServer] player ${player.id} transferred ${fromDungeon.id} → ${toDungeon.id} (entry: ${entrySide})`);
     }
@@ -334,6 +371,7 @@ class GameServer {
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     _sendInit(conn, dungeon) {
+        console.log(`[GameServer] Sending init to player ${conn.player.id}: dungeonId=${dungeon.id}, playerNum=${conn.player.num}`);
         this._send(conn.ws, {
             type: 'init',
             playerId: conn.player.id,
@@ -346,6 +384,8 @@ class GameServer {
     _send(ws, data) {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(data));
+        } else {
+            console.warn(`[GameServer] WARNING: Cannot send ${data.type} message - WebSocket state is ${ws.readyState} (not OPEN)`);
         }
     }
 

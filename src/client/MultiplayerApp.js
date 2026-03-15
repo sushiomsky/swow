@@ -26,7 +26,8 @@ import { q, t, l, v, E, z, H } from '../utils.js';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
-const WS_URL = `ws://${location.hostname}:${location.port || 5001}`;
+const WS_PROTOCOL = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL = `${WS_PROTOCOL}//${location.hostname}${location.port ? ':' + location.port : ''}/multiplayer`;
 const SPRITE_URL = '/images/v3.0/sprite.png';
 const SPRITE_W = 248, SPRITE_H = 355;
 const SCALE = 3;
@@ -516,16 +517,25 @@ class MultiplayerApp {
         };
 
         this.ws.onmessage = (ev) => {
-            try { this._handleMessage(JSON.parse(ev.data)); }
-            catch (e) { /* ignore */ }
+            try {
+                const msg = JSON.parse(ev.data);
+                if (msg.type === 'init' || msg.type === 'state') {
+                    console.log('[Client] Received message:', msg.type, msg);
+                }
+                this._handleMessage(msg);
+            } catch (e) { 
+                console.error('[Client] Message parse error:', e.message);
+            }
         };
 
         this.ws.onclose = () => {
+            console.warn('[Client] WebSocket closed unexpectedly!');
             this._setStatus('Disconnected. Refresh to reconnect.');
             this._showOverlay();
         };
 
         this.ws.onerror = () => {
+            console.error('[Client] WebSocket error!');
             this._setStatus('Connection error — is the multiplayer server running?');
         };
 
