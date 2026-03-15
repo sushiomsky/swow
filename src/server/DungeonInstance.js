@@ -242,7 +242,8 @@ class DungeonInstance {
 
         // Lifecycle checks
         if (this.lifecycleState === STATE.COLLAPSING) {
-            if (Date.now() >= this.collapseUntil) {
+            // For 2-player mode, force-kill remaining visitors after evacuation time
+            if (this.collapseUntil !== null && Date.now() >= this.collapseUntil) {
                 // Force-kill any remaining visitors
                 for (let i = 0; i < 2; i++) {
                     const p = this.players[i];
@@ -252,6 +253,14 @@ class DungeonInstance {
                 }
                 this.lifecycleState = STATE.EMPTY;
                 this.speedMultiplier = FAST_SPEED_MULTIPLIER;
+            }
+            // For solo mode (collapseUntil === null), transition to EMPTY when all real players are out
+            if (this.collapseUntil === null) {
+                const realPlayers = this.players.filter(p => p.id !== null);
+                if (realPlayers.every(p => p.status === 'out')) {
+                    this.lifecycleState = STATE.EMPTY;
+                    this.speedMultiplier = FAST_SPEED_MULTIPLIER;
+                }
             }
         }
 
@@ -581,8 +590,23 @@ class DungeonInstance {
         const homePlayers = this.players.filter(p => p.id && p.homeDungeonId === this.id);
         if (homePlayers.length > 0 && homePlayers.every(p => p.status === 'out')) {
             if (this.lifecycleState === STATE.ACTIVE) {
-                this.lifecycleState = STATE.COLLAPSING;
-                this.collapseUntil = Date.now() + EVACUATION_TIME_MS;
+                // Check if this is a solo battle royale dungeon (only 1 home player)
+                const isBattleRoyale = homePlayers.length === 1;
+                
+                if (isBattleRoyale) {
+                    // Instant evacuation mode: kill all monsters immediately
+                    console.log(`[DungeonInstance] Solo player died in dungeon ${this.id} - instant evacuation mode`);
+                    for (const monster of this.monsters) {
+                        monster.status = 'died';
+                    }
+                    // Keep tunnels open indefinitely (no collapseUntil timer)
+                    this.lifecycleState = STATE.COLLAPSING;
+                    this.collapseUntil = null; // No timeout - tunnels stay open
+                } else {
+                    // Normal 2-player mode: standard evacuation
+                    this.lifecycleState = STATE.COLLAPSING;
+                    this.collapseUntil = Date.now() + EVACUATION_TIME_MS;
+                }
                 this.teleportStatus = 'open'; // force open during collapse
             }
         }

@@ -316,16 +316,87 @@ class GameServer {
     /**
      * Called by a DungeonInstance when it has fully destroyed itself.
      * Unlinks tunnel references pointing to the destroyed dungeon and removes it from the registry.
+     * For single-player battle royale, implements wrapping: leftmost dungeon's left tunnel
+     * links to rightmost dungeon's right tunnel.
      * @param {string} dungeonId
      */
     onDungeonDestroyed(dungeonId) {
         const dungeon = this.dungeons.get(dungeonId);
         if (!dungeon) return;
-        // Unlink from other dungeons
+        
+        let leftNeighbor = null;  // dungeon that pointed right to this one
+        let rightNeighbor = null; // dungeon that pointed left to this one
+        
+        // Find neighbors in the chain
+        for (const [, d] of this.dungeons) {
+            if (d.rightTunnelTarget && d.rightTunnelTarget.dungeonId === dungeonId) {
+                leftNeighbor = d;
+            }
+            if (d.leftTunnelTarget && d.leftTunnelTarget.dungeonId === dungeonId) {
+                rightNeighbor = d;
+            }
+        }
+        
+        // Unlink from all other dungeons
         for (const [, d] of this.dungeons) {
             if (d.leftTunnelTarget && d.leftTunnelTarget.dungeonId === dungeonId) d.leftTunnelTarget = null;
             if (d.rightTunnelTarget && d.rightTunnelTarget.dungeonId === dungeonId) d.rightTunnelTarget = null;
         }
+        
+        // Implement wrapping: if this was the only dungeon destroyed in a chain,
+        // link neighbors to each other to maintain connectivity
+        if (leftNeighbor && rightNeighbor) {
+            leftNeighbor.rightTunnelTarget = { dungeonId: rightNeighbor.id, entrySide: 'left' };
+            rightNeighbor.leftTunnelTarget = { dungeonId: leftNeighbor.id, entrySide: 'right' };
+            console.log(`[GameServer] wrapped dungeons: ${leftNeighbor.id} (right) ↔ ${rightNeighbor.id} (left) after dungeon ${dungeonId} destroyed`);
+        } else if (leftNeighbor && !rightNeighbor) {
+            // This was the rightmost dungeon in the chain - link leftNeighbor's right to the leftmost dungeon
+            let leftmostDungeon = null;
+            for (const [, d] of this.dungeons) {
+                if (d.id === leftNeighbor.id) continue;
+                if (d.lifecycleState === STATE.DESTROYED) continue;
+                // Find the leftmost dungeon (one with no left tunnel target or whose left target doesn't exist)
+                let isLeftmost = true;
+                if (d.leftTunnelTarget) {
+                    const targetExists = this.dungeons.has(d.leftTunnelTarget.dungeonId);
+                    if (targetExists && this.dungeons.get(d.leftTunnelTarget.dungeonId).lifecycleState !== STATE.DESTROYED) {
+                        isLeftmost = false;
+                    }
+                }
+                if (isLeftmost && (!leftmostDungeon || d.id < leftmostDungeon.id)) {
+                    leftmostDungeon = d;
+                }
+            }
+            if (leftmostDungeon) {
+                leftNeighbor.rightTunnelTarget = { dungeonId: leftmostDungeon.id, entrySide: 'left' };
+                leftmostDungeon.leftTunnelTarget = { dungeonId: leftNeighbor.id, entrySide: 'right' };
+                console.log(`[GameServer] wrapped dungeons: ${leftNeighbor.id} (right) ↔ ${leftmostDungeon.id} (left) - wrapping to leftmost`);
+            }
+        } else if (rightNeighbor && !leftNeighbor) {
+            // This was the leftmost dungeon in the chain - link rightNeighbor's left to the rightmost dungeon
+            let rightmostDungeon = null;
+            for (const [, d] of this.dungeons) {
+                if (d.id === rightNeighbor.id) continue;
+                if (d.lifecycleState === STATE.DESTROYED) continue;
+                // Find the rightmost dungeon (one with no right tunnel target or whose right target doesn't exist)
+                let isRightmost = true;
+                if (d.rightTunnelTarget) {
+                    const targetExists = this.dungeons.has(d.rightTunnelTarget.dungeonId);
+                    if (targetExists && this.dungeons.get(d.rightTunnelTarget.dungeonId).lifecycleState !== STATE.DESTROYED) {
+                        isRightmost = false;
+                    }
+                }
+                if (isRightmost && (!rightmostDungeon || d.id > rightmostDungeon.id)) {
+                    rightmostDungeon = d;
+                }
+            }
+            if (rightmostDungeon) {
+                rightNeighbor.leftTunnelTarget = { dungeonId: rightmostDungeon.id, entrySide: 'right' };
+                rightmostDungeon.rightTunnelTarget = { dungeonId: rightNeighbor.id, entrySide: 'left' };
+                console.log(`[GameServer] wrapped dungeons: ${rightNeighbor.id} (left) ↔ ${rightmostDungeon.id} (right) - wrapping to rightmost`);
+            }
+        }
+        
         this.dungeons.delete(dungeonId);
         console.log(`[GameServer] dungeon ${dungeonId} destroyed`);
     }
