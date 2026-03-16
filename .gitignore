@@ -4,3 +4,8 @@ dist/
 **/.DS_Store
 *.local
 certs/
+
+# Monorepo build artifacts
+**/node_modules/
+**/.next/
+**/dist/
