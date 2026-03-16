@@ -15,6 +15,8 @@ const { ServerPlayer } = require('./ServerPlayer');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
+const SITNGO_MIN_PLAYERS = 2;
+const SITNGO_MAX_PLAYERS = 8;
 
 let nextPlayerId = 1;
 
@@ -35,8 +37,12 @@ class GameServer {
         this.connections = new Map();
         // Map: dungeonId → DungeonInstance
         this.dungeons = new Map();
-        // Pending solo player waiting to be paired (for 2-player explicit start)
-        this.pendingSoloPlayer = null;
+        // Private classic pair lobbies: code -> { hostConn, hostId, dungeon, createdAt }
+        this.privatePairLobbies = new Map();
+        // Sit-n-go queue entries: { playerId, conn }
+        this.sitNGoQueue = [];
+        // Team BR queue metadata
+        this.teamCounter = 0;
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
@@ -79,6 +85,12 @@ class GameServer {
                 this._checkDungeonEmpty(dungeon);
             }
         }
+        this.sitNGoQueue = this.sitNGoQueue.filter(entry => entry.playerId !== playerId);
+        for (const [code, lobby] of this.privatePairLobbies.entries()) {
+            if (lobby.hostId === playerId) {
+                this.privatePairLobbies.delete(code);
+            }
+        }
         this.connections.delete(playerId);
         console.log(`[GameServer] player ${playerId} disconnected`);
     }
@@ -89,10 +101,19 @@ class GameServer {
 
         switch (msg.type) {
             case 'join_solo':
-                this._joinSolo(playerId, conn);
+                this._joinSolo(playerId, conn, 'endless_br');
+                break;
+            case 'join_sitngo':
+                this._joinSitNGo(playerId, conn);
+                break;
+            case 'join_team_br':
+                this._joinTeamBattleRoyale(playerId, conn);
                 break;
             case 'join_pair':
-                this._joinPair(playerId, conn);
+                this._createPrivatePair(playerId, conn);
+                break;
+            case 'join_private_pair':
+                this._joinPrivatePair(playerId, conn, msg.code);
                 break;
             case 'input':
                 conn.inputs = msg.keys || {};
@@ -102,55 +123,117 @@ class GameServer {
 
     // ─── Join Modes ───────────────────────────────────────────────────────────
 
-    _joinSolo(playerId, conn) {
+    _joinSolo(playerId, conn, mode = 'endless_br', team = null) {
+        if (conn.player) return;
         // Each solo player is alone in their own dungeon, always occupying slot 0.
         const dungeon = this._createDungeon();
+        dungeon.matchMode = mode;
+        const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
+        player.homeSlot = 0;
+        player.team = team;
+        conn.player = player;
+        conn.dungeonId = dungeon.id;
+        conn.sessionId = playerId;
+        conn.mode = mode;
+        conn.team = team;
+        dungeon.addPlayer(player);
+
+        // Link to existing dungeon according to mode pool.
+        if (mode === 'endless_br' || mode === 'team_br') {
+            this._linkToExistingDungeon(dungeon, mode);
+        }
+
+        dungeon.startGame();
+        this._sendInit(conn, dungeon);
+        console.log(`[GameServer] ${mode} player ${playerId} → dungeon ${dungeon.id}${team ? ` team ${team}` : ''}`);
+    }
+
+    _joinSitNGo(playerId, conn) {
+        if (conn.player) return;
+        this.sitNGoQueue.push({ playerId, conn });
+        const queueSize = this.sitNGoQueue.length;
+        this._send(conn.ws, { type: 'waiting_for_sitngo', queued: queueSize, minPlayers: SITNGO_MIN_PLAYERS });
+        if (queueSize < SITNGO_MIN_PLAYERS) return;
+
+        const entrants = this.sitNGoQueue.splice(0, SITNGO_MAX_PLAYERS);
+        const lobbyId = `sitngo-${Date.now()}`;
+        const created = [];
+        for (const entry of entrants) {
+            const dungeon = this._createDungeon();
+            dungeon.matchMode = 'sitngo_br';
+            dungeon.sitNGoLobbyId = lobbyId;
+            const player = new ServerPlayer(0, dungeon, entry.playerId, dungeon.id);
+            player.homeSlot = 0;
+            entry.conn.player = player;
+            entry.conn.dungeonId = dungeon.id;
+            entry.conn.sessionId = entry.playerId;
+            entry.conn.mode = 'sitngo_br';
+            dungeon.addPlayer(player);
+            dungeon.startGame();
+            this._sendInit(entry.conn, dungeon);
+            created.push(dungeon);
+        }
+        this._linkDungeonRing(created);
+        console.log(`[GameServer] sit-n-go started (${created.length} players) lobby=${lobbyId}`);
+    }
+
+    _joinTeamBattleRoyale(playerId, conn) {
+        const team = this.teamCounter % 2 === 0 ? 'gold' : 'blue';
+        this.teamCounter++;
+        this._joinSolo(playerId, conn, 'team_br', team);
+    }
+
+    _createPrivatePair(playerId, conn) {
+        if (conn.player) return;
+        const dungeon = this._createDungeon();
+        dungeon.matchMode = 'classic_private_pair';
         const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
         player.homeSlot = 0;
         conn.player = player;
         conn.dungeonId = dungeon.id;
         conn.sessionId = playerId;
+        conn.mode = 'classic_private_pair';
         dungeon.addPlayer(player);
 
-        // Link to existing dungeon if one exists
-        this._linkToExistingDungeon(dungeon);
-
-        dungeon.startGame();
-        this._sendInit(conn, dungeon);
-        console.log(`[GameServer] solo player ${playerId} → dungeon ${dungeon.id}`);
+        const code = this._generatePrivateCode();
+        this.privatePairLobbies.set(code, { hostConn: conn, hostId: playerId, dungeon, createdAt: Date.now() });
+        const joinUrl = `/multiplayer.html?pair=${encodeURIComponent(code)}`;
+        this._send(conn.ws, { type: 'private_pair_created', code, joinUrl });
+        this._send(conn.ws, { type: 'waiting_for_partner' });
+        console.log(`[GameServer] private pair host ${playerId} code=${code}`);
     }
 
-    _joinPair(playerId, conn) {
-        if (this.pendingSoloPlayer) {
-            // Pair with waiting player
-            const { playerId: p1Id, conn: p1Conn, dungeon: sharedDungeon } = this.pendingSoloPlayer;
-            this.pendingSoloPlayer = null;
-
-            const player2 = new ServerPlayer(1, sharedDungeon, playerId, sharedDungeon.id);
-            player2.homeSlot = 1;
-            conn.player = player2;
-            conn.dungeonId = sharedDungeon.id;
-            conn.sessionId = p1Conn.sessionId;
-            sharedDungeon.addPlayer(player2);
-
-            sharedDungeon.startGame();
-            this._sendInit(p1Conn, sharedDungeon);
-            this._sendInit(conn, sharedDungeon);
-            console.log(`[GameServer] paired ${p1Id} + ${playerId} → dungeon ${sharedDungeon.id}`);
-        } else {
-            // Create dungeon and wait for partner
-            const dungeon = this._createDungeon();
-            const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
-            player.homeSlot = 0;
-            conn.player = player;
-            conn.dungeonId = dungeon.id;
-            conn.sessionId = playerId;
-            dungeon.addPlayer(player);
-            this.pendingSoloPlayer = { playerId, conn, dungeon };
-
-            this._send(conn.ws, { type: 'waiting_for_partner' });
-            console.log(`[GameServer] player ${playerId} waiting for pair partner`);
+    _joinPrivatePair(playerId, conn, rawCode) {
+        const code = (rawCode || '').toString().trim().toUpperCase();
+        const lobby = this.privatePairLobbies.get(code);
+        if (!lobby || lobby.hostId === playerId) {
+            this._send(conn.ws, { type: 'join_error', message: 'Invalid or expired private link.' });
+            return;
         }
+        const sharedDungeon = lobby.dungeon;
+        if (!sharedDungeon || sharedDungeon.lifecycleState === STATE.DESTROYED) {
+            this.privatePairLobbies.delete(code);
+            this._send(conn.ws, { type: 'join_error', message: 'Private session is no longer available.' });
+            return;
+        }
+        if (sharedDungeon.players[1] && sharedDungeon.players[1].id !== null) {
+            this.privatePairLobbies.delete(code);
+            this._send(conn.ws, { type: 'join_error', message: 'Private session is already full.' });
+            return;
+        }
+        const player2 = new ServerPlayer(1, sharedDungeon, playerId, sharedDungeon.id);
+        player2.homeSlot = 1;
+        conn.player = player2;
+        conn.dungeonId = sharedDungeon.id;
+        conn.sessionId = lobby.hostId;
+        conn.mode = 'classic_private_pair';
+        sharedDungeon.addPlayer(player2);
+
+        sharedDungeon.startGame();
+        this._sendInit(lobby.hostConn, sharedDungeon);
+        this._sendInit(conn, sharedDungeon);
+        this.privatePairLobbies.delete(code);
+        console.log(`[GameServer] private pair joined ${lobby.hostId} + ${playerId} code=${code}`);
     }
 
     // ─── Dungeon Management ───────────────────────────────────────────────────
@@ -173,11 +256,12 @@ class GameServer {
         return -1; // both slots occupied
     }
 
-    _linkToExistingDungeon(newDungeon) {
+    _linkToExistingDungeon(newDungeon, mode = 'endless_br') {
         // Find any active dungeon with a free tunnel slot
         for (const [id, existing] of this.dungeons) {
             if (id === newDungeon.id) continue;
             if (existing.lifecycleState === STATE.DESTROYED) continue;
+            if ((existing.matchMode || 'endless_br') !== mode) continue;
 
             // Link: newDungeon right tunnel ↔ existing left tunnel
             if (!existing.leftTunnelTarget && !newDungeon.rightTunnelTarget) {
@@ -196,6 +280,18 @@ class GameServer {
                 this._broadcastDungeonState(existing);
                 return;
             }
+        }
+    }
+
+    _linkDungeonRing(dungeons) {
+        if (!dungeons || dungeons.length < 2) return;
+        for (let i = 0; i < dungeons.length; i++) {
+            const curr = dungeons[i];
+            const next = dungeons[(i + 1) % dungeons.length];
+            const prev = dungeons[(i - 1 + dungeons.length) % dungeons.length];
+            curr.rightTunnelTarget = { dungeonId: next.id, entrySide: 'left' };
+            curr.leftTunnelTarget = { dungeonId: prev.id, entrySide: 'right' };
+            this._broadcastDungeonState(curr);
         }
     }
 
@@ -301,12 +397,14 @@ class GameServer {
     onDungeonDestroyed(dungeonId) {
         const dungeon = this.dungeons.get(dungeonId);
         if (!dungeon) return;
+        const mode = dungeon.matchMode || 'endless_br';
         
         let leftNeighbor = null;  // dungeon that pointed right to this one
         let rightNeighbor = null; // dungeon that pointed left to this one
         
         // Find neighbors in the chain
         for (const [, d] of this.dungeons) {
+            if ((d.matchMode || 'endless_br') !== mode) continue;
             if (d.rightTunnelTarget && d.rightTunnelTarget.dungeonId === dungeonId) {
                 leftNeighbor = d;
             }
@@ -317,6 +415,7 @@ class GameServer {
         
         // Unlink from all other dungeons
         for (const [, d] of this.dungeons) {
+            if ((d.matchMode || 'endless_br') !== mode) continue;
             if (d.leftTunnelTarget && d.leftTunnelTarget.dungeonId === dungeonId) d.leftTunnelTarget = null;
             if (d.rightTunnelTarget && d.rightTunnelTarget.dungeonId === dungeonId) d.rightTunnelTarget = null;
         }
@@ -333,6 +432,7 @@ class GameServer {
             for (const [, d] of this.dungeons) {
                 if (d.id === leftNeighbor.id) continue;
                 if (d.lifecycleState === STATE.DESTROYED) continue;
+                if ((d.matchMode || 'endless_br') !== mode) continue;
                 // Find the leftmost dungeon (one with no left tunnel target or whose left target doesn't exist)
                 let isLeftmost = true;
                 if (d.leftTunnelTarget) {
@@ -356,6 +456,7 @@ class GameServer {
             for (const [, d] of this.dungeons) {
                 if (d.id === rightNeighbor.id) continue;
                 if (d.lifecycleState === STATE.DESTROYED) continue;
+                if ((d.matchMode || 'endless_br') !== mode) continue;
                 // Find the rightmost dungeon (one with no right tunnel target or whose right target doesn't exist)
                 let isRightmost = true;
                 if (d.rightTunnelTarget) {
@@ -426,7 +527,21 @@ class GameServer {
             playerNum: conn.player.num,
             dungeonId: dungeon.id,
             homeDungeonId: conn.player.homeDungeonId,
+            mode: conn.mode || dungeon.matchMode || 'endless_br',
+            team: conn.team || null,
         });
+    }
+
+    _generatePrivateCode() {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        do {
+            code = '';
+            for (let i = 0; i < 6; i++) {
+                code += alphabet[Math.floor(Math.random() * alphabet.length)];
+            }
+        } while (this.privatePairLobbies.has(code));
+        return code;
     }
 
     _send(ws, data) {

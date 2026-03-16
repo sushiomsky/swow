@@ -10,15 +10,21 @@
  *   - Receive serialised dungeon state from the server and render it at ~60 fps
  *
  * WebSocket message protocol (client → server):
- *   { type: 'join_solo' }              — request a new solo dungeon
- *   { type: 'join_pair' }              — request paired two-player start
+ *   { type: 'join_solo' }              — endless battle royale dungeon
+ *   { type: 'join_sitngo' }            — sit-n-go battle royale queue
+ *   { type: 'join_team_br' }           — team-based battle royale
+ *   { type: 'join_pair' }              — create private classic 2-player room
+ *   { type: 'join_private_pair', code }— join private classic room by code
  *   { type: 'input', keys: {...} }     — raw key state { up, down, left, right, fire }
  *
  * WebSocket message protocol (server → client):
  *   { type: 'connected', playerId }    — server-assigned ID
- *   { type: 'init', playerId, playerNum, dungeonId, homeDungeonId }
+ *   { type: 'init', playerId, playerNum, dungeonId, homeDungeonId, mode, team }
  *   { type: 'state', state: {...} }    — full serialised DungeonInstance state
  *   { type: 'waiting_for_partner' }    — paired mode: waiting for second player
+ *   { type: 'waiting_for_sitngo' }     — sit-n-go: waiting for enough players
+ *   { type: 'private_pair_created', code, joinUrl } — private share link
+ *   { type: 'join_error', message }    — join could not be completed
  */
 
 import { m } from '../constants.js';
@@ -444,6 +450,7 @@ class MultiplayerApp {
         this.ws = null;
         this._inputInterval = null;
         this._lastJoinType = null;
+        this._lastJoinPayload = null;
         this._isConnecting = false;
         this._hasJoinedGame = false;
         this.renderer = null;
@@ -502,13 +509,33 @@ class MultiplayerApp {
 
     _bindButtons() {
         document.getElementById('btnSolo').onclick = () => this._connect('join_solo');
-        document.getElementById('btnPair').onclick = () => this._connect('join_pair');
-        document.getElementById('btnRetry').onclick = () => {
-            if (this._lastJoinType) this._connect(this._lastJoinType);
+        document.getElementById('btnSitNGo').onclick = () => this._connect('join_sitngo');
+        document.getElementById('btnTeamBr').onclick = () => this._connect('join_team_br');
+        document.getElementById('btnPairCreate').onclick = () => this._connect('join_pair');
+        document.getElementById('btnPairJoin').onclick = () => {
+            const codeEl = document.getElementById('pairCode');
+            const code = (codeEl?.value || '').trim();
+            if (!code) {
+                this._setStatus('Enter a private code first.');
+                this._setStatusError(true);
+                return;
+            }
+            this._connect('join_private_pair', { code });
         };
+        document.getElementById('btnRetry').onclick = () => {
+            if (this._lastJoinType) this._connect(this._lastJoinType, this._lastJoinPayload);
+        };
+
+        const autoCode = new URLSearchParams(location.search).get('pair');
+        if (autoCode) {
+            const codeEl = document.getElementById('pairCode');
+            if (codeEl) codeEl.value = autoCode;
+            this._setStatus(`Private code detected: ${autoCode.toUpperCase()}. Click JOIN PRIVATE.`);
+            this._setStatusError(false);
+        }
     }
 
-    _connect(joinType) {
+    _connect(joinType, payload = null) {
         if (this._isConnecting) return;
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
         if (this.ws) {
@@ -518,6 +545,7 @@ class MultiplayerApp {
 
         this._isConnecting = true;
         this._lastJoinType = joinType;
+        this._lastJoinPayload = payload;
         this._setButtonState(true);
         this._toggleRetry(false);
         this._setStatus('Connecting…');
@@ -528,7 +556,7 @@ class MultiplayerApp {
         this.ws.onopen = () => {
             this._setStatus('Connected — waiting for dungeon…');
             this._setStatusError(false);
-            this.ws.send(JSON.stringify({ type: joinType }));
+            this.ws.send(JSON.stringify({ type: joinType, ...(payload || {}) }));
         };
 
         this.ws.onmessage = (ev) => {
@@ -576,6 +604,20 @@ class MultiplayerApp {
             case 'waiting_for_partner':
                 this._setStatus('Waiting for second player to join…');
                 break;
+            case 'waiting_for_sitngo':
+                this._setStatus(`Sit-n-Go queue: ${msg.queued}/${msg.minPlayers} players. Waiting…`);
+                break;
+            case 'private_pair_created':
+                this._setStatus(`Private room created. Share code: ${msg.code}`);
+                this._copyPrivateLink(msg);
+                break;
+            case 'join_error':
+                this._setStatus(msg.message || 'Unable to join this mode.');
+                this._setStatusError(true);
+                this._setButtonState(false);
+                this._toggleRetry(!!this._lastJoinType);
+                this._isConnecting = false;
+                break;
 
             case 'init':
                 this._isConnecting = false;
@@ -591,8 +633,10 @@ class MultiplayerApp {
                 q('hud').classList.remove('hide');
                 this._setStatus('');
                 this._setStatusError(false);
+                const teamText = msg.team ? ` | Team: ${msg.team.toUpperCase()}` : '';
+                const modeText = msg.mode ? ` | Mode: ${msg.mode.replaceAll('_', ' ').toUpperCase()}` : '';
                 document.getElementById('hud-dungeon').textContent =
-                    `Dungeon ${this.dungeonId}  |  You: ${this.myPlayerNum === 0 ? '🟡 Yellow' : '🔵 Blue'}`;
+                    `Dungeon ${this.dungeonId} | You: ${this.myPlayerNum === 0 ? '🟡 Yellow' : '🔵 Blue'}${teamText}${modeText}`;
                 // Resume audio context after user interaction
                 if (this.audio.ctx && this.audio.ctx.state === 'suspended') {
                     this.audio.ctx.resume();
@@ -656,11 +700,32 @@ class MultiplayerApp {
     }
 
     _setButtonState(disabled) {
-        const ids = ['btnSolo', 'btnPair', 'btnRetry'];
+        const ids = ['btnSolo', 'btnSitNGo', 'btnTeamBr', 'btnPairCreate', 'btnPairJoin', 'btnRetry'];
         for (const id of ids) {
             const el = document.getElementById(id);
             if (el) el.disabled = !!disabled;
         }
+    }
+
+    async _copyPrivateLink(msg) {
+        const pairCode = msg.code || '';
+        const codeEl = document.getElementById('pairCode');
+        if (codeEl && pairCode) codeEl.value = pairCode;
+        const rawJoinUrl = msg.joinUrl || `/multiplayer.html?pair=${encodeURIComponent(pairCode)}`;
+        const absolute = rawJoinUrl.startsWith('http') ? rawJoinUrl : `${location.origin}${rawJoinUrl}`;
+        const shareText = `Private classic link: ${absolute}`;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(absolute);
+                this._setStatus(`Private room ready (${pairCode}). Link copied to clipboard.`);
+                this._setStatusError(false);
+                return;
+            }
+        } catch (e) {
+            // Keep graceful fallback text.
+        }
+        this._setStatus(`${shareText} (copy manually)`);
+        this._setStatusError(false);
     }
 
     _toggleRetry(show) {

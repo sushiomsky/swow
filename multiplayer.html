@@ -83,17 +83,26 @@
 <body>
     <div id="overlay">
         <h1>WIZARD OF WOR</h1>
-        <p>Endless Connected Dungeon — Multiplayer</p>
-        <p class="subtext">Pick a mode to join. Solo creates your own home dungeon; 2-Player waits for a partner and starts shared.</p>
+        <p>Connected Dungeons — Multiplayer</p>
+        <p class="subtext">Choose a mode: endless BR, sit-n-go BR, team BR, or private 2-player classic with a shareable link.</p>
         <div style="margin-top:20px;">
-            <button class="btn" id="btnSolo">▶ SOLO  (own dungeon, tunnel-linked)</button>
-            <button class="btn blue" id="btnPair">👥 2-PLAYER  (shared dungeon, wait for partner)</button>
+            <button class="btn" id="btnSolo">▶ ENDLESS BR (join anytime)</button>
+            <button class="btn blue" id="btnSitNGo">⏱ SIT-N-GO BR (queued start)</button>
+            <button class="btn green" id="btnTeamBr">🛡 TEAM BR (gold vs blue)</button>
+            <button class="btn blue" id="btnPairCreate">🔗 CREATE PRIVATE CLASSIC</button>
+            <div style="margin-top: 12px;">
+                <input id="pairCode" type="text" maxlength="12" placeholder="Private code"
+                    style="padding: 10px 12px; font-family: inherit; width: 240px; text-transform: uppercase; letter-spacing: 2px;">
+                <button class="btn" id="btnPairJoin">JOIN PRIVATE</button>
+            </div>
             <button class="btn green hide" id="btnRetry">↻ RETRY LAST MODE</button>
         </div>
         <div id="status" role="status" aria-live="polite"></div>
         <p style="margin-top:30px; font-size:11px; color:#555;">
-            <b>Solo / Battle Royal:</b> each player gets their own dungeon — dungeons link via tunnels, invade each other!<br>
-            <b>2-Player Network:</b> two players share one dungeon — open this page on a second machine and click 2-Player
+            <b>Endless BR:</b> join anytime, get your own dungeon and invade through tunnels.<br>
+            <b>Sit-n-Go BR:</b> waits for enough players, then starts a closed ring of linked dungeons.<br>
+            <b>Team BR:</b> players auto-balance between gold and blue teams.<br>
+            <b>Private Classic:</b> host creates a private code/link and shares it with one friend.
         </p>
         <p style="margin-top:16px; font-size:11px;">
             <a href="/public/handbook.html" target="_blank" style="color:#6c5eb5; text-decoration:none;">📖 Game Handbook &amp; Reference</a>
