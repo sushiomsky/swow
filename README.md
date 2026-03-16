@@ -44,6 +44,50 @@ Service definition is versioned in `infra/systemd/wizard-of-wor-compose.service`
 ./deploy-remote.sh user@host /opt/wizard-of-wor
 ```
 
+## Community & Competitive Layer (new)
+
+The repository now includes an isolated community stack:
+
+- `community-api/` — Express + Socket.IO + PostgreSQL + Redis backend
+- `community-web/` — Next.js + Tailwind + Zustand frontend
+- `infra/community/init.sql` — database schema bootstrap
+
+### Community routes
+
+- `/community` — community UI
+- `/community/profile/:username` — player profile
+- `/community/leaderboards` — global/season leaderboard page
+- `/community/clans/:id` — clan page + clan chat
+- `/community/challenges` — challenges and rewards
+- `/community/chat` — global/match/team chat panels
+- `/admin` — moderation + analytics dashboard shell
+- `/api/community/*` — backend API routes
+
+### Community API modules
+
+- Users/profile, recent matches, edit profile
+- Friends system
+- Leaderboards (season/region)
+- Clans/teams
+- Challenges/progress/claims
+- Notifications
+- Chat history + real-time chat via WebSocket
+- Admin endpoints (user moderation + DAU/WAU/MAU)
+
+### Local community development
+
+```bash
+cd community-api && npm install && npm run dev
+cd community-web && npm install && npm run dev
+```
+
+Or run everything with IaC stack:
+
+```bash
+make setup
+make up
+```
+
 ---
 
 ## Gameplay

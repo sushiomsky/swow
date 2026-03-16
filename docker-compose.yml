@@ -17,11 +17,53 @@ services:
       MP_PORT: 5001
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: wow_community
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/community/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  community-api:
+    build:
+      context: ./community-api
+      dockerfile: Dockerfile
+    environment:
+      COMMUNITY_API_PORT: 7000
+      COMMUNITY_JWT_SECRET: ${COMMUNITY_JWT_SECRET:-change-me}
+      COMMUNITY_DATABASE_URL: postgres://postgres:postgres@postgres:5432/wow_community
+      COMMUNITY_REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  community-web:
+    build:
+      context: ./community-web
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_COMMUNITY_API_BASE: /api/community
+      NEXT_PUBLIC_COMMUNITY_SOCKET_URL: ""
+    depends_on:
+      - community-api
+    restart: unless-stopped
+
   edge:
     image: caddy:2.9
     depends_on:
       - web
       - multiplayer
+      - community-api
+      - community-web
     ports:
       - "80:80"
       - "443:443"
@@ -37,3 +79,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  postgres_data:
