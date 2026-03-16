@@ -11,3 +11,16 @@ body {
 .card {
   @apply rounded-xl border border-zinc-700 bg-zinc-900/80 p-4;
 }
+
+.site-header {
+  @apply border-b border-zinc-800 bg-zinc-950/80 backdrop-blur;
+}
+
+.site-footer {
+  @apply border-t border-zinc-800 bg-zinc-950/50;
+}
+
+.hero {
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.22), transparent 48%),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.18), transparent 42%);
+}

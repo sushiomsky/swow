@@ -1,10 +1,12 @@
 export function attachCommunitySocket(io, db, redis) {
   io.on('connection', (socket) => {
+    // Room model: global/match/clan channels are namespaced as "<type>:<id>".
     socket.on('join_room', ({ roomType, roomId }) => {
       if (!roomType || !roomId) return;
       socket.join(`${roomType}:${roomId}`);
     });
 
+    // Chat message fan-out + persistence.
     socket.on('chat_message', async (payload) => {
       try {
         const { senderId, roomType, roomId, content } = payload || {};
@@ -21,6 +23,7 @@ export function attachCommunitySocket(io, db, redis) {
       }
     });
 
+    // User-specific notifications are both persisted and published.
     socket.on('notify_user', async ({ userId, type, content }) => {
       if (!userId || !type || !content) return;
       await db.query(

@@ -16,6 +16,7 @@ import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import { attachCommunitySocket } from './socket.js';
 
+// Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
 app.use(helmet());
 app.use(cors());
@@ -45,6 +46,7 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: 'Internal server error' });
 });
 
+// Socket.IO shares the same HTTP server for chat/notification real-time events.
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 attachCommunitySocket(io, db, redis);

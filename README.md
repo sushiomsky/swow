@@ -63,6 +63,15 @@ The repository now includes an isolated community stack:
 - `/admin` — moderation + analytics dashboard shell
 - `/api/community/*` — backend API routes
 
+### Content pages for trust & ad-readiness
+
+- `/community/about`
+- `/community/features`
+- `/community/faq`
+- `/community/contact`
+- `/community/privacy-policy`
+- `/community/terms-of-service`
+
 ### Community API modules
 
 - Users/profile, recent matches, edit profile
