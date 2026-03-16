@@ -218,32 +218,16 @@ class GameServer {
      * @param {'left'|'right'} entrySide  Which wall the player enters the target dungeon from.
      */
     transferPlayerToDungeon(player, fromDungeon, toDungeonId, entrySide) {
-        console.log(`[GameServer] TRANSFER START: player ${player.id} from dungeon ${fromDungeon.id}`);
         const toDungeon = this.dungeons.get(toDungeonId);
         if (!toDungeon || toDungeon.lifecycleState === STATE.DESTROYED) {
-            console.log(`[GameServer] TRANSFER FALLBACK: target dungeon ${toDungeonId} doesn't exist or is destroyed`);
-            // Target gone: same-dungeon teleport fallback
-            player.status = 'alive';
-            player.row = 3;
-            if ('left' === entrySide) { player.col = 1; player.x = 34; player.d = 'right'; }
-            else { player.col = 11; player.x = 274; player.d = 'left'; }
-            player.y = 3 + 24 * (player.row - 1);
-            player.bullet = false;
-            player.frameCounters = { justShoot: 0, entering: 0, dead: 0 };
+            this._fallbackTunnelTeleport(player, entrySide);
             return;
         }
 
         // Find a free slot in the target dungeon; fall back to same-dungeon teleport if full
         const slot = this._findFreeSlot(toDungeon, player);
         if (slot === -1) {
-            console.log(`[GameServer] TRANSFER FALLBACK: target dungeon ${toDungeonId} is full`);
-            player.status = 'alive';
-            player.row = 3;
-            if ('left' === entrySide) { player.col = 1; player.x = 34; player.d = 'right'; }
-            else { player.col = 11; player.x = 274; player.d = 'left'; }
-            player.y = 3 + 24 * (player.row - 1);
-            player.bullet = false;
-            player.frameCounters = { justShoot: 0, entering: 0, dead: 0 };
+            this._fallbackTunnelTeleport(player, entrySide);
             return;
         }
 
@@ -264,18 +248,12 @@ class GameServer {
         player.goToTunnelEntry(entrySide);
 
         // Update connection tracking
-        let found = false;
         for (const [, conn] of this.connections) {
             if (conn.player === player) {
-                console.log(`[GameServer] TRANSFER: updating conn dungeonId from ${conn.dungeonId} to ${toDungeon.id}`);
                 conn.dungeonId = toDungeon.id;
                 this._sendInit(conn, toDungeon);
-                found = true;
                 break;
             }
-        }
-        if (!found) {
-            console.warn(`[GameServer] TRANSFER ERROR: connection not found for player ${player.id}!`);
         }
         console.log(`[GameServer] player ${player.id} transferred ${fromDungeon.id} → ${toDungeon.id} (entry: ${entrySide})`);
     }
@@ -442,7 +420,6 @@ class GameServer {
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     _sendInit(conn, dungeon) {
-        console.log(`[GameServer] Sending init to player ${conn.player.id}: dungeonId=${dungeon.id}, playerNum=${conn.player.num}`);
         this._send(conn.ws, {
             type: 'init',
             playerId: conn.player.id,
@@ -455,9 +432,17 @@ class GameServer {
     _send(ws, data) {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(data));
-        } else {
-            console.warn(`[GameServer] WARNING: Cannot send ${data.type} message - WebSocket state is ${ws.readyState} (not OPEN)`);
         }
+    }
+
+    _fallbackTunnelTeleport(player, entrySide) {
+        player.status = 'alive';
+        player.row = 3;
+        if ('left' === entrySide) { player.col = 1; player.x = 34; player.d = 'right'; }
+        else { player.col = 11; player.x = 274; player.d = 'left'; }
+        player.y = 3 + 24 * (player.row - 1);
+        player.bullet = false;
+        player.frameCounters = { justShoot: 0, entering: 0, dead: 0 };
     }
 
     /** Stops the game loop and closes the WebSocket server. */

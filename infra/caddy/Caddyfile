@@ -1,0 +1,8 @@
+{$DOMAIN} {
+    encode gzip
+
+    @multiplayer_ws path /multiplayer /multiplayer/*
+    reverse_proxy @multiplayer_ws multiplayer:5001
+
+    reverse_proxy web:8080
+}

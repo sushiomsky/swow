@@ -6,12 +6,42 @@ Wizard of Wor is a 1983 arcade game originally developed by Midway, popularized 
 
 ---
 
-## Running the game
+## Running the game (local)
 
 ```bash
 npm run dev        # Vite dev server — http://localhost:8081 (auto-opens browser)
 npm start          # Plain Node.js static server — http://localhost:8080
 npm run multiplayer  # Authoritative multiplayer server — http://localhost:5001/multiplayer.html
+```
+
+## One-command production deployment (IaC)
+
+This repo now ships a full Docker Compose stack (game web, authoritative multiplayer server, and TLS reverse proxy via Caddy).
+
+```bash
+cp .env.example .env
+# edit .env and set DOMAIN + ACME_EMAIL
+make up
+```
+
+That brings up:
+
+- `web` → single-player/static assets (port 8080 inside network)
+- `multiplayer` → authoritative server (port 5001 inside network)
+- `edge` (Caddy) → public HTTPS on `:443`, auto TLS from Let's Encrypt
+
+### Optional auto-start on reboot (systemd, codified)
+
+```bash
+sudo scripts/install-systemd-service.sh /opt/wizard-of-wor
+```
+
+Service definition is versioned in `infra/systemd/wizard-of-wor-compose.service`.
+
+### Remote deployment
+
+```bash
+./deploy-remote.sh user@host /opt/wizard-of-wor
 ```
 
 ---
@@ -171,6 +201,11 @@ multiplayer.html             client entry page with join-mode overlay
 |------|-----|--------|
 | **Solo** | Click "Solo" on join screen | Own dungeon; tunnels auto-link to any other active dungeon |
 | **Paired** | Both players click "2-Player" | Shared dungeon; original WoW two-player spawn positions |
+
+Join-screen UX improvements:
+- Clearer connection status text
+- Retry button after disconnects/errors (rejoins your last selected mode)
+- Mode buttons lock while connecting to avoid duplicate join attempts
 
 ### Connected dungeons & tunnels
 

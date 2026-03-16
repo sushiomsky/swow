@@ -3,10 +3,10 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY . .
 
-EXPOSE 443
+EXPOSE 8080 5001
 
-CMD ["node", "server-https.js"]
+CMD ["node", "server.js"]

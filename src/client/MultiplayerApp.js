@@ -442,6 +442,10 @@ class MultiplayerApp {
         this.homeDungeonId = null;
         this.lastState = null;
         this.ws = null;
+        this._inputInterval = null;
+        this._lastJoinType = null;
+        this._isConnecting = false;
+        this._hasJoinedGame = false;
         this.renderer = null;
         this.audio = new AudioPlayer();
         this.pressedKeys = {};
@@ -497,46 +501,59 @@ class MultiplayerApp {
     }
 
     _bindButtons() {
-        document.getElementById('btnSolo').onclick = () => {
-            this._connect('join_solo');
-        };
-        document.getElementById('btnPair').onclick = () => {
-            this._connect('join_pair');
+        document.getElementById('btnSolo').onclick = () => this._connect('join_solo');
+        document.getElementById('btnPair').onclick = () => this._connect('join_pair');
+        document.getElementById('btnRetry').onclick = () => {
+            if (this._lastJoinType) this._connect(this._lastJoinType);
         };
     }
 
     _connect(joinType) {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
+        if (this._isConnecting) return;
+        if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+        if (this.ws) {
+            try { this.ws.close(); } catch (e) {}
+        }
+        if (this._inputInterval) clearInterval(this._inputInterval);
+
+        this._isConnecting = true;
+        this._lastJoinType = joinType;
+        this._setButtonState(true);
+        this._toggleRetry(false);
         this._setStatus('Connecting…');
+        this._setStatusError(false);
 
         this.ws = new WebSocket(WS_URL);
 
         this.ws.onopen = () => {
             this._setStatus('Connected — waiting for dungeon…');
+            this._setStatusError(false);
             this.ws.send(JSON.stringify({ type: joinType }));
         };
 
         this.ws.onmessage = (ev) => {
             try {
-                const msg = JSON.parse(ev.data);
-                if (msg.type === 'init' || msg.type === 'state') {
-                    console.log('[Client] Received message:', msg.type, msg);
-                }
-                this._handleMessage(msg);
-            } catch (e) { 
-                console.error('[Client] Message parse error:', e.message);
+                this._handleMessage(JSON.parse(ev.data));
+            } catch (e) {
+                this._setStatus('Received invalid server message.');
+                this._setStatusError(true);
             }
         };
 
         this.ws.onclose = () => {
-            console.warn('[Client] WebSocket closed unexpectedly!');
-            this._setStatus('Disconnected. Refresh to reconnect.');
+            this._isConnecting = false;
+            this._setButtonState(false);
+            this._toggleRetry(!!this._lastJoinType);
+            this._setStatus(this._hasJoinedGame
+                ? 'Disconnected from server. Retry to reconnect.'
+                : 'Connection closed before game start. Retry to connect.');
+            this._setStatusError(true);
             this._showOverlay();
         };
 
         this.ws.onerror = () => {
-            console.error('[Client] WebSocket error!');
-            this._setStatus('Connection error — is the multiplayer server running?');
+            this._setStatus('Connection error — check server status and try again.');
+            this._setStatusError(true);
         };
 
         // Send inputs at 50fps
@@ -561,6 +578,10 @@ class MultiplayerApp {
                 break;
 
             case 'init':
+                this._isConnecting = false;
+                this._hasJoinedGame = true;
+                this._setButtonState(false);
+                this._toggleRetry(false);
                 this.myPlayerId = msg.playerId;
                 this.myPlayerNum = msg.playerNum;
                 this.dungeonId = msg.dungeonId;
@@ -569,6 +590,7 @@ class MultiplayerApp {
                 q('screen').classList.remove('hide');
                 q('hud').classList.remove('hide');
                 this._setStatus('');
+                this._setStatusError(false);
                 document.getElementById('hud-dungeon').textContent =
                     `Dungeon ${this.dungeonId}  |  You: ${this.myPlayerNum === 0 ? '🟡 Yellow' : '🔵 Blue'}`;
                 // Resume audio context after user interaction
@@ -604,10 +626,15 @@ class MultiplayerApp {
             if (27 === e.which) {
                 if (this.ws) { this.ws.close(); clearInterval(this._inputInterval); }
                 this.lastState = null;
+                this._hasJoinedGame = false;
                 q('screen').classList.add('hide');
                 q('hud').classList.add('hide');
                 this.audio.stopAll();
                 this._showOverlay();
+                this._toggleRetry(!!this._lastJoinType);
+                this._setButtonState(false);
+                this._setStatus('Select a mode to join.');
+                this._setStatusError(false);
             }
             // Prevent page scroll
             if ([37,38,39,40,32].includes(e.which)) e.preventDefault();
@@ -621,6 +648,24 @@ class MultiplayerApp {
     _setStatus(msg) {
         const el = document.getElementById('status');
         if (el) el.textContent = msg;
+    }
+
+    _setStatusError(isError) {
+        const el = document.getElementById('status');
+        if (el) el.classList.toggle('error', !!isError);
+    }
+
+    _setButtonState(disabled) {
+        const ids = ['btnSolo', 'btnPair', 'btnRetry'];
+        for (const id of ids) {
+            const el = document.getElementById(id);
+            if (el) el.disabled = !!disabled;
+        }
+    }
+
+    _toggleRetry(show) {
+        const el = document.getElementById('btnRetry');
+        if (el) el.classList.toggle('hide', !show);
     }
 
     _hideOverlay() {

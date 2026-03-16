@@ -1,0 +1,39 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node server.js
+    environment:
+      PORT: 8080
+    restart: unless-stopped
+
+  multiplayer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node server-multiplayer.js
+    environment:
+      MP_PORT: 5001
+    restart: unless-stopped
+
+  edge:
+    image: caddy:2.9
+    depends_on:
+      - web
+      - multiplayer
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
