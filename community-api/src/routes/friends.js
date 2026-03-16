@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { emitToUser } from '../realtime.js';
 
 const router = Router();
 
@@ -20,15 +21,58 @@ router.get('/', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/:friendId', requireAuth, async (req, res, next) => {
+router.post('/request/:friendId', requireAuth, async (req, res, next) => {
   try {
     await db.query(
       `INSERT INTO friends (user_id, friend_id, status)
-       VALUES ($1, $2, 'accepted')
-       ON CONFLICT (user_id, friend_id) DO UPDATE SET status = EXCLUDED.status, updated_at = NOW()`,
+       VALUES ($1, $2, 'pending')
+       ON CONFLICT (user_id, friend_id)
+       DO UPDATE SET status = 'pending', updated_at = NOW()`,
       [req.user.sub, req.params.friendId]
     );
+    emitToUser(req.params.friendId, 'notification', {
+      type: 'friend_request',
+      content: `You have a friend request from ${req.user.sub}`
+    });
     return res.status(201).json({ ok: true });
+  } catch (e) {
+    return next(e);
+  }
+});
+
+router.post('/respond/:friendId', requireAuth, async (req, res, next) => {
+  const action = (req.body?.action || '').toString(); // accept | decline
+  if (!['accept', 'decline'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
+  try {
+    const nextStatus = action === 'accept' ? 'accepted' : 'declined';
+    await db.query(
+      `UPDATE friends
+       SET status = $1, updated_at = NOW()
+       WHERE user_id = $2 AND friend_id = $3`,
+      [nextStatus, req.params.friendId, req.user.sub]
+    );
+    if (action === 'accept') {
+      await db.query(
+        `INSERT INTO friends (user_id, friend_id, status)
+         VALUES ($1, $2, 'accepted')
+         ON CONFLICT (user_id, friend_id)
+         DO UPDATE SET status = 'accepted', updated_at = NOW()`,
+        [req.user.sub, req.params.friendId]
+      );
+    }
+    return res.json({ ok: true, status: nextStatus });
+  } catch (e) {
+    return next(e);
+  }
+});
+
+router.delete('/:friendId', requireAuth, async (req, res, next) => {
+  try {
+    await db.query(
+      `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+      [req.user.sub, req.params.friendId]
+    );
+    return res.status(204).end();
   } catch (e) {
     return next(e);
   }

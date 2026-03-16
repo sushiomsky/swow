@@ -75,8 +75,9 @@ The repository now includes an isolated community stack:
 ### Community API modules
 
 - Users/profile, recent matches, edit profile
+- Match result ingestion with XP/level progression and seasonal badge generation
 - Friends system
-- Leaderboards (season/region)
+- Leaderboards (global/regional/friends) with pagination and seasonal reset support
 - Clans/teams
 - Challenges/progress/claims
 - Notifications
@@ -96,6 +97,12 @@ Or run everything with IaC stack:
 make setup
 make up
 ```
+
+### Operational extras
+
+- Backup script: `scripts/backup-community.sh [backup_dir]`
+- CI workflow: `.github/workflows/community-ci.yml`
+- Real-time channels include chat, notifications, friend presence, and leaderboard updates.
 
 ---
 

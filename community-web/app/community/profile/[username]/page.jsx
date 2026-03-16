@@ -1,5 +1,8 @@
 import ProfileCard from '../../../../components/ProfileCard';
 import NotificationsPanel from '../../../../components/NotificationsPanel';
+import ProfileEditor from '../../../../components/ProfileEditor';
+import AchievementList from '../../../../components/AchievementList';
+import MatchHistoryTable from '../../../../components/MatchHistoryTable';
 import { apiGet } from '../../../../lib/api';
 
 export default async function ProfilePage({ params }) {
@@ -9,13 +12,24 @@ export default async function ProfilePage({ params }) {
     xp: 0,
     level: 1
   }));
+  const matches = profile.user_id
+    ? await apiGet(`/users/matches/${profile.user_id}`).catch(() => [])
+    : [];
+  const badges = profile.user_id
+    ? await apiGet(`/users/badges/${profile.user_id}`).catch(() => [])
+    : [];
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2">
+    <div className="grid gap-4 md:grid-cols-12">
+      <div className="space-y-4 md:col-span-8">
         <ProfileCard profile={profile} />
+        <AchievementList achievements={profile.achievements || []} badges={badges} />
+        <MatchHistoryTable rows={matches} />
       </div>
-      <NotificationsPanel />
+      <div className="space-y-4 md:col-span-4">
+        <ProfileEditor profile={profile} />
+        <NotificationsPanel userId={profile.user_id} />
+      </div>
     </div>
   );
 }

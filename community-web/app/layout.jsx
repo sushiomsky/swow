@@ -30,6 +30,7 @@ export default function RootLayout({ children }) {
               <Link href="/community/features">Features</Link>
               <Link href="/community/leaderboards">Leaderboards</Link>
               <Link href="/community/challenges">Challenges</Link>
+              <Link href="/community/social">Social</Link>
               <Link href="/community/faq">FAQ</Link>
               <Link href="/community/contact">Contact</Link>
               <a className="rounded bg-indigo-600 px-3 py-2 text-white" href="/multiplayer.html">Play Multiplayer</a>

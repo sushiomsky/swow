@@ -1,4 +1,5 @@
 import ChatRoom from '../../../../components/ChatRoom';
+import ClanActions from '../../../../components/ClanActions';
 import { apiGet } from '../../../../lib/api';
 
 export default async function ClanPage({ params }) {
@@ -13,6 +14,9 @@ export default async function ClanPage({ params }) {
       <section className="card">
         <h1 className="text-2xl font-bold">{clan.name}</h1>
         <p className="text-zinc-400">{clan.members.length} member(s)</p>
+        <div className="mt-3">
+          <ClanActions clanId={params.id} />
+        </div>
       </section>
       <section className="card">
         <h2 className="mb-2 text-lg font-semibold">Members</h2>

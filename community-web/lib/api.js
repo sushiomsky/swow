@@ -5,3 +5,19 @@ export async function apiGet(path) {
   if (!res.ok) throw new Error(`GET ${path} failed`);
   return res.json();
 }
+
+export async function apiSend(path, method, body, token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`${method} ${path} failed: ${msg}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}

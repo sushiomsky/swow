@@ -30,4 +30,16 @@ router.post('/:notificationId/read', requireAuth, async (req, res, next) => {
   }
 });
 
+router.post('/read-all', requireAuth, async (req, res, next) => {
+  try {
+    await db.query(
+      `UPDATE notifications SET read_status = true WHERE user_id = $1`,
+      [req.user.sub]
+    );
+    return res.status(204).end();
+  } catch (e) {
+    return next(e);
+  }
+});
+
 export default router;

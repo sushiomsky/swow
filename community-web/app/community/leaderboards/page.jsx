@@ -1,12 +1,10 @@
-import LeaderboardTable from '../../../components/LeaderboardTable';
-import { apiGet } from '../../../lib/api';
+import LeaderboardView from '../../../components/LeaderboardView';
 
-export default async function LeaderboardsPage() {
-  const rows = await apiGet('/leaderboards?season=current').catch(() => []);
+export default function LeaderboardsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Leaderboards</h1>
-      <LeaderboardTable rows={rows} />
+      <LeaderboardView />
     </div>
   );
 }

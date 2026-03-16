@@ -92,3 +92,35 @@ CREATE TABLE IF NOT EXISTS notifications (
   read_status BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS seasons (
+  season_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS seasonal_badges (
+  badge_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  season TEXT NOT NULL,
+  badge TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, season, badge)
+);
+
+CREATE TABLE IF NOT EXISTS chat_reports (
+  report_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  message_id UUID NOT NULL REFERENCES chat_messages(message_id) ON DELETE CASCADE,
+  reporter_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_leaderboards_season_rank ON leaderboards (season, rank);
+CREATE INDEX IF NOT EXISTS idx_match_results_user_created_at ON match_results (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_room_created_at ON chat_messages (room_type, room_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created_at ON notifications (user_id, created_at DESC);

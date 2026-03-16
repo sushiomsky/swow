@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { emitToUser } from '../realtime.js';
 
 const router = Router();
 
@@ -43,6 +44,35 @@ router.post('/:challengeId/claim', requireAuth, async (req, res, next) => {
     );
     if (!rows[0]) return res.status(400).json({ error: 'Challenge not completed or already claimed' });
     return res.json({ ok: true });
+  } catch (e) {
+    return next(e);
+  }
+});
+
+router.post('/progress-event', requireAuth, async (req, res, next) => {
+  const amount = Number(req.body?.amount || 0);
+  if (!req.body?.challengeId || !Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'challengeId and positive amount required' });
+  }
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO user_challenge_progress (user_id, challenge_id, progress)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, challenge_id)
+       DO UPDATE SET progress = user_challenge_progress.progress + EXCLUDED.progress
+       RETURNING progress`,
+      [req.user.sub, req.body.challengeId, amount]
+    );
+    if (rows[0].progress >= 100) {
+      await db.query(
+        `UPDATE user_challenge_progress
+         SET completed_at = COALESCE(completed_at, NOW())
+         WHERE user_id = $1 AND challenge_id = $2`,
+        [req.user.sub, req.body.challengeId]
+      );
+      emitToUser(req.user.sub, 'challenge_complete', { challengeId: req.body.challengeId });
+    }
+    return res.json({ ok: true, progress: rows[0].progress });
   } catch (e) {
     return next(e);
   }

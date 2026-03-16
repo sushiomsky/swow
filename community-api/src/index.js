@@ -15,6 +15,7 @@ import notificationsRoutes from './routes/notifications.js';
 import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import { attachCommunitySocket } from './socket.js';
+import { setRealtimeIO } from './realtime.js';
 
 // Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
@@ -50,6 +51,7 @@ app.use((err, _req, res, _next) => {
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 attachCommunitySocket(io, db, redis);
+setRealtimeIO(io);
 
 await redis.connect();
 

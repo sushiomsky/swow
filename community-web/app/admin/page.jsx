@@ -1,4 +1,5 @@
 import { apiGet } from '../../lib/api';
+import AdminConsole from '../../components/AdminConsole';
 
 export default async function AdminPage() {
   const analytics = await apiGet('/admin/analytics').catch(() => ({ dau: 0, wau: 0, mau: 0 }));
@@ -14,6 +15,7 @@ export default async function AdminPage() {
         <h2 className="mb-2 text-lg font-semibold">Moderation Tools</h2>
         <p className="text-sm text-zinc-300">Search, mute, ban, and report triage APIs are available under <code>/api/community/admin</code>.</p>
       </section>
+      <AdminConsole />
     </div>
   );
 }

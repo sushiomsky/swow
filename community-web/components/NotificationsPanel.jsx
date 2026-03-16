@@ -1,9 +1,33 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useCommunityStore } from '../store/useCommunityStore';
+import { apiSend } from '../lib/api';
+import { communitySocket } from '../lib/socket';
 
-export default function NotificationsPanel() {
+export default function NotificationsPanel({ userId }) {
   const notifications = useCommunityStore((s) => s.notifications);
+  const setNotifications = useCommunityStore((s) => s.setNotifications);
+  const addNotification = useCommunityStore((s) => s.addNotification);
+
+  useEffect(() => {
+    if (!userId) return;
+    const load = async () => {
+      try {
+        const token = localStorage.getItem('communityToken');
+        const items = await apiSend('/notifications', 'GET', null, token);
+        setNotifications(items || []);
+      } catch (_) {}
+    };
+    load();
+
+    if (!communitySocket.connected) communitySocket.connect();
+    communitySocket.emit('subscribe_notifications', { userId });
+    const onNotification = (n) => addNotification({ ...n, created_at: new Date().toISOString() });
+    communitySocket.on('notification', onNotification);
+    return () => communitySocket.off('notification', onNotification);
+  }, [userId, setNotifications, addNotification]);
+
   return (
     <section className="card">
       <h3 className="mb-2 text-lg font-semibold">Notifications</h3>

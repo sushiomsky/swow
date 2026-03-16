@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { communitySocket } from '../lib/socket';
+import { apiSend } from '../lib/api';
 
 export default function ChatRoom({ roomType, roomId, senderId = 'demo-user' }) {
   const [messages, setMessages] = useState([]);
@@ -21,6 +22,13 @@ export default function ChatRoom({ roomType, roomId, senderId = 'demo-user' }) {
     setContent('');
   };
 
+  const reportMessage = async (messageId) => {
+    try {
+      const token = localStorage.getItem('communityToken');
+      await apiSend(`/chat/report/${messageId}`, 'POST', { reason: 'abuse' }, token);
+    } catch (_) {}
+  };
+
   return (
     <section className="card">
       <h3 className="mb-2 text-lg font-semibold">Chat • {roomType}:{roomId}</h3>
@@ -29,6 +37,9 @@ export default function ChatRoom({ roomType, roomId, senderId = 'demo-user' }) {
           <p key={m.message_id || i} className="mb-1">
             <span className="text-zinc-500">{m.sender_id}: </span>
             {m.content}
+            {m.message_id && (
+              <button onClick={() => reportMessage(m.message_id)} className="ml-2 text-xs text-rose-300 underline">report</button>
+            )}
           </p>
         ))}
       </div>

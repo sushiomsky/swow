@@ -21,4 +21,18 @@ router.get('/:roomType/:roomId', requireAuth, async (req, res, next) => {
   }
 });
 
+router.post('/report/:messageId', requireAuth, async (req, res, next) => {
+  const reason = (req.body?.reason || 'abuse').toString();
+  try {
+    await db.query(
+      `INSERT INTO chat_reports (message_id, reporter_id, reason)
+       VALUES ($1, $2, $3)`,
+      [req.params.messageId, req.user.sub, reason]
+    );
+    return res.status(201).json({ ok: true });
+  } catch (e) {
+    return next(e);
+  }
+});
+
 export default router;
