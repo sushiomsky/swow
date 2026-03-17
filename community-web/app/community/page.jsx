@@ -26,6 +26,7 @@ export default function CommunityLandingPage() {
           <a href="/multiplayer.html" className="rounded bg-indigo-600 px-5 py-3 text-sm font-semibold">Play Now</a>
           <Link href="/community/features" className="rounded border border-zinc-600 px-5 py-3 text-sm font-semibold">Explore Features</Link>
           <Link href="/community/leaderboards" className="rounded border border-zinc-600 px-5 py-3 text-sm font-semibold">View Leaderboards</Link>
+          <Link href="/community/forum" className="rounded border border-zinc-600 px-5 py-3 text-sm font-semibold">Join Forum</Link>
         </div>
       </section>
 

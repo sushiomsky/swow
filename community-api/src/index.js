@@ -14,6 +14,7 @@ import challengesRoutes from './routes/challenges.js';
 import notificationsRoutes from './routes/notifications.js';
 import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
+import forumRoutes from './routes/forum.js';
 import { attachCommunitySocket } from './socket.js';
 import { setRealtimeIO } from './realtime.js';
 
@@ -41,6 +42,7 @@ app.use('/api/community/challenges', challengesRoutes);
 app.use('/api/community/notifications', notificationsRoutes);
 app.use('/api/community/chat', chatRoutes);
 app.use('/api/community/admin', adminRoutes);
+app.use('/api/community/forum', forumRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error('[community-api]', err);

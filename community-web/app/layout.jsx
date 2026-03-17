@@ -30,6 +30,7 @@ export default function RootLayout({ children }) {
               <Link href="/community/features">Features</Link>
               <Link href="/community/leaderboards">Leaderboards</Link>
               <Link href="/community/challenges">Challenges</Link>
+              <Link href="/community/forum">Forum</Link>
               <Link href="/community/social">Social</Link>
               <Link href="/community/faq">FAQ</Link>
               <Link href="/community/contact">Contact</Link>
@@ -46,6 +47,7 @@ export default function RootLayout({ children }) {
               <Link href="/community/privacy-policy">Privacy</Link>
               <Link href="/community/terms-of-service">Terms</Link>
               <Link href="/community/contact">Support</Link>
+              <Link href="/community/forum">Forum</Link>
             </div>
           </div>
         </footer>

@@ -120,7 +120,45 @@ CREATE TABLE IF NOT EXISTS chat_reports (
   resolved_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS forum_categories (
+  category_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS forum_threads (
+  thread_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  category_id UUID NOT NULL REFERENCES forum_categories(category_id) ON DELETE CASCADE,
+  author_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  pinned BOOLEAN NOT NULL DEFAULT false,
+  is_locked BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS forum_posts (
+  post_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  thread_id UUID NOT NULL REFERENCES forum_threads(thread_id) ON DELETE CASCADE,
+  author_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO forum_categories (slug, name, description)
+VALUES
+  ('general', 'General Discussion', 'Talk about the game, updates, and events.'),
+  ('strategy', 'Strategy & Tips', 'Share tactics, builds, and survival guides.'),
+  ('looking-for-group', 'Looking For Group', 'Find teammates for multiplayer sessions.')
+ON CONFLICT (slug) DO NOTHING;
+
 CREATE INDEX IF NOT EXISTS idx_leaderboards_season_rank ON leaderboards (season, rank);
 CREATE INDEX IF NOT EXISTS idx_match_results_user_created_at ON match_results (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_room_created_at ON chat_messages (room_type, room_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created_at ON notifications (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_forum_threads_category_updated_at ON forum_threads (category_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_forum_posts_thread_created_at ON forum_posts (thread_id, created_at ASC);

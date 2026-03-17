@@ -60,6 +60,7 @@ The repository now includes an isolated community stack:
 - `/community/clans/:id` — clan page + clan chat
 - `/community/challenges` — challenges and rewards
 - `/community/chat` — global/match/team chat panels
+- `/community/forum` — discussion forum with categories, threads, and replies
 - `/admin` — moderation + analytics dashboard shell
 - `/api/community/*` — backend API routes
 
@@ -82,6 +83,7 @@ The repository now includes an isolated community stack:
 - Challenges/progress/claims
 - Notifications
 - Chat history + real-time chat via WebSocket
+- Forum categories/threads/posts API
 - Admin endpoints (user moderation + DAU/WAU/MAU)
 
 ### Local community development

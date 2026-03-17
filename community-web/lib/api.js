@@ -6,8 +6,8 @@ export async function apiGet(path) {
   return res.json();
 }
 
-export async function apiSend(path, method, body, token) {
-  const headers = { 'Content-Type': 'application/json' };
+export async function apiSend(path, method, body, token, extraHeaders = {}) {
+  const headers = { 'Content-Type': 'application/json', ...extraHeaders };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, {
     method,
