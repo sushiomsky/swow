@@ -25,8 +25,9 @@ export default function RootLayout({ children }) {
       <body>
         <header className="site-header">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-            <Link href="/community" className="text-lg font-bold tracking-wide">Wizard of Wor Community</Link>
+            <Link href="/" className="text-lg font-bold tracking-wide">Wizard of Wor Platform</Link>
             <nav className="flex flex-wrap items-center gap-4 text-sm text-zinc-300">
+              <Link href="/">Home</Link>
               <Link href="/community/features">Features</Link>
               <Link href="/community/leaderboards">Leaderboards</Link>
               <Link href="/community/challenges">Challenges</Link>
@@ -34,6 +35,7 @@ export default function RootLayout({ children }) {
               <Link href="/community/social">Social</Link>
               <Link href="/community/faq">FAQ</Link>
               <Link href="/community/contact">Contact</Link>
+              <a className="rounded border border-zinc-600 px-3 py-2 text-white" href="/index.html">Play Classic</a>
               <a className="rounded bg-indigo-600 px-3 py-2 text-white" href="/multiplayer.html">Play Multiplayer</a>
             </nav>
           </div>
@@ -41,7 +43,7 @@ export default function RootLayout({ children }) {
         <main className="mx-auto min-h-[70vh] max-w-6xl px-6 py-8">{children}</main>
         <footer className="site-footer">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-zinc-400">
-            <p>© {new Date().getFullYear()} Wizard of Wor Community</p>
+            <p>Wizard of Wor Community Platform</p>
             <div className="flex gap-4">
               <Link href="/community/about">About</Link>
               <Link href="/community/privacy-policy">Privacy</Link>

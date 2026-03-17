@@ -101,6 +101,13 @@ CREATE TABLE IF NOT EXISTS seasons (
   is_active BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE IF NOT EXISTS auth_credentials (
+  user_id UUID PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+  password_hash TEXT NOT NULL,
+  password_salt TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS seasonal_badges (
   badge_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

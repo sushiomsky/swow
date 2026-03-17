@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { communitySocket } from '../lib/socket';
 import { apiSend } from '../lib/api';
 
 export default function ChatRoom({ roomType, roomId, senderId = 'demo-user' }) {
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
+  const resolvedSenderId = useMemo(() => {
+    if (senderId && senderId !== 'demo-user') return senderId;
+    if (typeof window === 'undefined') return senderId;
+    return localStorage.getItem('communityUserId') || senderId;
+  }, [senderId]);
 
   useEffect(() => {
     if (!communitySocket.connected) communitySocket.connect();
@@ -18,7 +23,7 @@ export default function ChatRoom({ roomType, roomId, senderId = 'demo-user' }) {
 
   const send = () => {
     if (!content.trim()) return;
-    communitySocket.emit('chat_message', { senderId, roomType, roomId, content });
+    communitySocket.emit('chat_message', { senderId: resolvedSenderId, roomType, roomId, content });
     setContent('');
   };
 
@@ -35,7 +40,7 @@ export default function ChatRoom({ roomType, roomId, senderId = 'demo-user' }) {
       <div className="mb-3 h-56 overflow-auto rounded border border-zinc-800 p-2 text-sm">
         {messages.map((m, i) => (
           <p key={m.message_id || i} className="mb-1">
-            <span className="text-zinc-500">{m.sender_id}: </span>
+            <span className="text-zinc-500">{m.sender_id || 'system'}: </span>
             {m.content}
             {m.message_id && (
               <button onClick={() => reportMessage(m.message_id)} className="ml-2 text-xs text-rose-300 underline">report</button>

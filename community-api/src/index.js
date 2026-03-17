@@ -7,6 +7,7 @@ import { config } from './config.js';
 import { db, healthcheckDb } from './db.js';
 import { redis } from './redis.js';
 import usersRoutes from './routes/users.js';
+import authRoutes from './routes/auth.js';
 import friendsRoutes from './routes/friends.js';
 import leaderboardRoutes from './routes/leaderboards.js';
 import clansRoutes from './routes/clans.js';
@@ -35,6 +36,7 @@ app.get('/health', async (_req, res) => {
 });
 
 app.use('/api/community/users', usersRoutes);
+app.use('/api/community/auth', authRoutes);
 app.use('/api/community/friends', friendsRoutes);
 app.use('/api/community/leaderboards', leaderboardRoutes);
 app.use('/api/community/clans', clansRoutes);

@@ -1,8 +1,8 @@
-# Wizard of Wor — Local Offline Fork
+# Wizard of Wor Platform
 
-A local offline version of the **Wizard of Wor v5.0** browser remake by [krissz.hu](https://krissz.hu/). The original live game is at [wizardofwor.krissz.hu](https://wizardofwor.krissz.hu/).
+A browser-based Wizard of Wor platform with classic gameplay, multiplayer services, and a modern community layer.
 
-Wizard of Wor is a 1983 arcade game originally developed by Midway, popularized on the Commodore 64. This remake faithfully recreates the C64 version in the browser using HTML5 Canvas and Web Audio API.
+The project recreates classic dungeon action in the browser and extends it with profiles, rankings, social tools, and admin features.
 
 ---
 
@@ -54,6 +54,7 @@ The repository now includes an isolated community stack:
 
 ### Community routes
 
+- `/` — website landing with navigation, account auth panel, and global chat
 - `/community` — community UI
 - `/community/profile/:username` — player profile
 - `/community/leaderboards` — global/season leaderboard page
@@ -63,6 +64,12 @@ The repository now includes an isolated community stack:
 - `/community/forum` — discussion forum with categories, threads, and replies
 - `/admin` — moderation + analytics dashboard shell
 - `/api/community/*` — backend API routes
+
+Auth API:
+
+- `POST /api/community/auth/register`
+- `POST /api/community/auth/login`
+- `GET /api/community/auth/me`
 
 ### Content pages for trust & ad-readiness
 
@@ -205,7 +212,7 @@ The base of this project is the packed/minified `w.js` from Wizard of Wor v5.0 (
 
 `patch.js` was a one-time script that:
 1. Unpacked the custom-packed `w.js` source
-2. Removed the domain check that redirected to `wizardofwor.krissz.hu`
+2. Removed legacy forced-domain redirect logic
 3. Removed the unsupported-browser redirect
 
 > ⚠️ Do not re-run `patch.js` — the file has already been unpacked in place.
