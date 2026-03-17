@@ -29,6 +29,7 @@ That brings up:
 - `web` → single-player/static assets (port 8080 inside network)
 - `multiplayer` → authoritative server (port 5001 inside network)
 - `edge` (Caddy) → public HTTPS on `:443`, auto TLS from Let's Encrypt
+- Healthchecks are enabled for app/data services; `depends_on` waits for healthy upstreams before starting dependents.
 
 ### Optional auto-start on reboot (systemd, codified)
 
