@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import { recomputeSeasonRanks } from '../services/leaderboardService.js';
+import { enqueueSeasonRecompute } from '../services/leaderboardService.js';
 import { emitToAll } from '../realtime.js';
 
 const router = Router();
@@ -76,8 +76,7 @@ router.post('/score', async (req, res, next) => {
        DO UPDATE SET score = GREATEST(leaderboards.score, EXCLUDED.score), updated_at = NOW()`,
       [user_id, score, season]
     );
-    await recomputeSeasonRanks(season);
-    emitToAll('leaderboard_update', { season });
+    await enqueueSeasonRecompute(season);
     return res.status(201).json({ ok: true });
   } catch (e) {
     return next(e);

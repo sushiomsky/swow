@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import { recomputeSeasonRanks } from '../services/leaderboardService.js';
+import { enqueueSeasonRecompute } from '../services/leaderboardService.js';
 import { emitToAll } from '../realtime.js';
 import { handleValidationError } from '../middleware/validation.js';
 
@@ -126,8 +126,7 @@ router.post('/leaderboards/adjust', async (req, res, next) => {
        DO UPDATE SET score = $2, updated_at = NOW()`,
       [user_id, score, season]
     );
-    await recomputeSeasonRanks(season);
-    emitToAll('leaderboard_update', { season });
+    await enqueueSeasonRecompute(season);
     return res.json({ ok: true });
   } catch (e) {
     if (handleValidationError(res, e)) return;

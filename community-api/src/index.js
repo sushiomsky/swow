@@ -21,6 +21,7 @@ import { setRealtimeIO } from './realtime.js';
 import { createApiRateLimiter } from './middleware/rateLimit.js';
 import { migrateUp } from './migrations.js';
 import { logError, logInfo, requestLogger } from './logger.js';
+import { startLeaderboardWorker } from './services/leaderboardService.js';
 
 // Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
@@ -88,6 +89,7 @@ setRealtimeIO(io);
 
 await redis.connect();
 await migrateUp(db);
+startLeaderboardWorker();
 
 server.listen(config.port, '0.0.0.0', () => {
   logInfo('community_api_listening', { port: config.port });

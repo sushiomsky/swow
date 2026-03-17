@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import { recomputeSeasonRanks } from '../services/leaderboardService.js';
-import { emitToAll, emitToUser } from '../realtime.js';
+import { enqueueSeasonRecompute } from '../services/leaderboardService.js';
+import { emitToUser } from '../realtime.js';
 
 const router = Router();
 
@@ -157,7 +157,7 @@ router.post('/match-result', requireAuth, async (req, res, next) => {
        DO UPDATE SET score = GREATEST(leaderboards.score, EXCLUDED.score), updated_at = NOW()`,
       [req.user.sub, payload.score, payload.season]
     );
-    await recomputeSeasonRanks(payload.season);
+    await enqueueSeasonRecompute(payload.season);
 
     // Basic seasonal badge generation for top performers.
     if (payload.score >= 10000) {
@@ -169,7 +169,6 @@ router.post('/match-result', requireAuth, async (req, res, next) => {
       );
     }
 
-    emitToAll('leaderboard_update', { season: payload.season });
     emitToUser(req.user.sub, 'progress_update', {
       xp: updatedUsers[0].xp,
       level: updatedUsers[0].level,

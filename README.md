@@ -94,6 +94,7 @@ Auth API:
 - Match result ingestion with XP/level progression and seasonal badge generation
 - Friends system
 - Leaderboards (global/regional/friends) with pagination and seasonal reset support
+- Redis-backed leaderboard recompute worker queue (`leaderboard:recompute:queue`)
 - Clans/teams
 - Challenges/progress/claims
 - Notifications
