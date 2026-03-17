@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { apiGet, apiSend } from '../lib/api';
+import { apiGet } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function ForumThreadView({ threadId }) {
   const [thread, setThread] = useState(null);
@@ -10,6 +11,7 @@ export default function ForumThreadView({ threadId }) {
   const [reply, setReply] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const { api, isAuthenticated } = useCommunitySession();
 
   const load = async () => {
     const data = await apiGet(`/forum/threads/${threadId}`);
@@ -33,8 +35,11 @@ export default function ForumThreadView({ threadId }) {
     setError('');
     setBusy(true);
     try {
-      const token = localStorage.getItem('communityToken');
-      await apiSend(`/forum/threads/${threadId}/posts`, 'POST', { body: reply.trim() }, token);
+      if (!isAuthenticated) {
+        setError('Sign in required to post replies.');
+        return;
+      }
+      await api.createForumPost(threadId, { body: reply.trim() });
       setReply('');
       await load();
     } catch (err) {

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { apiGet, apiSend } from '../lib/api';
+import { apiGet } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function ForumBoard() {
   const [categories, setCategories] = useState([]);
@@ -13,6 +14,7 @@ export default function ForumBoard() {
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const { api, isAuthenticated } = useCommunitySession();
 
   const threadQuery = useMemo(() => {
     return `/forum/threads?category=${encodeURIComponent(selectedCategory)}&page=${page}&limit=20`;
@@ -44,12 +46,15 @@ export default function ForumBoard() {
     setError('');
     setBusy(true);
     try {
-      const token = localStorage.getItem('communityToken');
-      await apiSend('/forum/threads', 'POST', {
+      if (!isAuthenticated) {
+        setError('Sign in required to create a thread.');
+        return;
+      }
+      await api.createForumThread({
         category_slug: selectedCategory,
         title: title.trim(),
         body: body.trim()
-      }, token);
+      });
       setTitle('');
       setBody('');
       const refreshed = await apiGet(threadQuery);

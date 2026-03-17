@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import LeaderboardTable from './LeaderboardTable';
 import { apiGet } from '../lib/api';
 import { communitySocket, connectCommunitySocket } from '../lib/socket';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function LeaderboardView() {
   const [rows, setRows] = useState([]);
@@ -12,24 +13,29 @@ export default function LeaderboardView() {
   const [region, setRegion] = useState('EU');
   const [page, setPage] = useState(1);
   const [limit] = useState(25);
+  const { token, user } = useCommunitySession();
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ scope, season, page: String(page), limit: String(limit) });
     if (scope === 'regional') params.set('region', region);
-    if (scope === 'friends') params.set('userId', localStorage.getItem('communityUserId') || '');
+    if (scope === 'friends' && user?.user_id) params.set('userId', user.user_id);
     return `/leaderboards?${params.toString()}`;
-  }, [scope, season, region, page, limit]);
+  }, [scope, season, region, page, limit, user]);
 
   useEffect(() => {
     const run = async () => {
+      if (scope === 'friends' && !user?.user_id) {
+        setRows([]);
+        return;
+      }
       const data = await apiGet(query).catch(() => ({ rows: [] }));
       setRows(data.rows || []);
     };
     run();
-  }, [query]);
+  }, [query, scope, user]);
 
   useEffect(() => {
-    if (!connectCommunitySocket()) return;
+    if (!connectCommunitySocket(token)) return;
     const onUpdate = () => {
       apiGet(query).then((data) => setRows(data.rows || [])).catch(() => {});
     };
@@ -39,7 +45,7 @@ export default function LeaderboardView() {
       communitySocket.off('leaderboard_update', onUpdate);
       communitySocket.off('leaderboard_reset', onUpdate);
     };
-  }, [query]);
+  }, [query, token]);
 
   return (
     <div className="space-y-4">

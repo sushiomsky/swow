@@ -127,6 +127,7 @@ make up
 - Community API emits structured JSON logs with request correlation (`x-request-id`) and socket lifecycle events.
 - Real-time channels include chat, notifications, friend presence, and leaderboard updates.
 - Community API is transitioning to route/service/repository layering (users and admin domains refactored).
+- Community web now uses a shared session provider + typed community API client for auth-protected actions.
 
 ---
 

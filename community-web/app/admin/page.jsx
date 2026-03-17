@@ -1,8 +1,32 @@
-import { apiGet } from '../../lib/api';
-import AdminConsole from '../../components/AdminConsole';
+'use client';
 
-export default async function AdminPage() {
-  const analytics = await apiGet('/admin/analytics').catch(() => ({ dau: 0, wau: 0, mau: 0 }));
+import { useEffect, useState } from 'react';
+import AdminConsole from '../../components/AdminConsole';
+import { useCommunitySession } from '../../providers/CommunitySessionProvider';
+
+export default function AdminPage() {
+  const { api, isAuthenticated } = useCommunitySession();
+  const [analytics, setAnalytics] = useState({ dau: 0, wau: 0, mau: 0 });
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setAnalytics({ dau: 0, wau: 0, mau: 0 });
+      return;
+    }
+
+    api.getAdminAnalytics()
+      .then((data) => {
+        setAnalytics({
+          dau: data?.dau ?? 0,
+          wau: data?.wau ?? 0,
+          mau: data?.mau ?? 0
+        });
+      })
+      .catch(() => {
+        setAnalytics({ dau: 0, wau: 0, mau: 0 });
+      });
+  }, [api, isAuthenticated]);
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Admin Dashboard</h1>

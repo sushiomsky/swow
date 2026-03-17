@@ -2,32 +2,35 @@
 
 import { useEffect } from 'react';
 import { useCommunityStore } from '../store/useCommunityStore';
-import { apiSend } from '../lib/api';
 import { communitySocket, connectCommunitySocket } from '../lib/socket';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function NotificationsPanel() {
   const notifications = useCommunityStore((s) => s.notifications);
   const setNotifications = useCommunityStore((s) => s.setNotifications);
   const addNotification = useCommunityStore((s) => s.addNotification);
+  const { token, api } = useCommunitySession();
 
   useEffect(() => {
-    const token = localStorage.getItem('communityToken');
-    if (!token) return;
+    if (!token) {
+      setNotifications([]);
+      return;
+    }
 
     const load = async () => {
       try {
-        const items = await apiSend('/notifications', 'GET', null, token);
+        const items = await api.listNotifications();
         setNotifications(items || []);
       } catch (_) {}
     };
     load();
 
-    if (!connectCommunitySocket()) return;
+    if (!connectCommunitySocket(token)) return;
     communitySocket.emit('subscribe_notifications');
     const onNotification = (n) => addNotification({ ...n, created_at: new Date().toISOString() });
     communitySocket.on('notification', onNotification);
     return () => communitySocket.off('notification', onNotification);
-  }, [setNotifications, addNotification]);
+  }, [setNotifications, addNotification, token, api]);
 
   return (
     <section className="card">

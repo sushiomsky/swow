@@ -1,15 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { apiSend } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function ClanActions({ clanId }) {
   const [status, setStatus] = useState('');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('communityToken') : null;
+  const { api, isAuthenticated } = useCommunitySession();
 
   const join = async () => {
     try {
-      await apiSend(`/clans/${clanId}/join`, 'POST', {}, token);
+      if (!isAuthenticated) {
+        setStatus('Sign in required.');
+        return;
+      }
+      await api.joinClan(clanId);
       setStatus('Joined clan.');
     } catch (_) {
       setStatus('Join failed.');
@@ -18,7 +22,11 @@ export default function ClanActions({ clanId }) {
 
   const leave = async () => {
     try {
-      await apiSend('/clans/leave', 'POST', {}, token);
+      if (!isAuthenticated) {
+        setStatus('Sign in required.');
+        return;
+      }
+      await api.leaveClan();
       setStatus('Left clan.');
     } catch (_) {
       setStatus('Leave failed.');

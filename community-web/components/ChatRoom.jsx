@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { communitySocket, connectCommunitySocket } from '../lib/socket';
-import { apiSend } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function ChatRoom({ roomType, roomId }) {
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
   const [authRequired, setAuthRequired] = useState(false);
+  const { token, api } = useCommunitySession();
 
   useEffect(() => {
     const onConnect = () => {
@@ -15,7 +16,7 @@ export default function ChatRoom({ roomType, roomId }) {
       communitySocket.emit('join_room', { roomType, roomId });
     };
     const onConnectError = () => setAuthRequired(true);
-    const connected = connectCommunitySocket();
+    const connected = connectCommunitySocket(token);
     setAuthRequired(!connected);
     const onMessage = (msg) => setMessages((curr) => [...curr, msg]);
     communitySocket.on('connect', onConnect);
@@ -29,12 +30,12 @@ export default function ChatRoom({ roomType, roomId }) {
       communitySocket.off('connect_error', onConnectError);
       communitySocket.off('chat_message', onMessage);
     };
-  }, [roomType, roomId]);
+  }, [roomType, roomId, token]);
 
   const send = () => {
     if (!content.trim()) return;
     if (!communitySocket.connected) {
-      const connected = connectCommunitySocket();
+      const connected = connectCommunitySocket(token);
       setAuthRequired(!connected);
       if (!connected) return;
       communitySocket.emit('join_room', { roomType, roomId });
@@ -45,8 +46,7 @@ export default function ChatRoom({ roomType, roomId }) {
 
   const reportMessage = async (messageId) => {
     try {
-      const token = localStorage.getItem('communityToken');
-      await apiSend(`/chat/report/${messageId}`, 'POST', { reason: 'abuse' }, token);
+      await api.reportChatMessage(messageId, 'abuse');
     } catch (_) {}
   };
 

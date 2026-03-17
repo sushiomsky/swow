@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiSend } from '../lib/api';
-import { disconnectCommunitySocket } from '../lib/socket';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function AuthPanel() {
   const [mode, setMode] = useState('login');
@@ -10,31 +9,37 @@ export default function AuthPanel() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [region, setRegion] = useState('');
-  const [sessionUser, setSessionUser] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const {
+    user: sessionUser,
+    login,
+    register,
+    logout,
+    ready,
+    sessionError,
+    clearSessionError
+  } = useCommunitySession();
 
   useEffect(() => {
-    const userId = localStorage.getItem('communityUserId');
-    const loginName = localStorage.getItem('communityUsername');
-    if (userId && loginName) setSessionUser({ user_id: userId, username: loginName });
-  }, []);
+    if (!sessionError) return;
+    setError(sessionError);
+  }, [sessionError]);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    clearSessionError();
     setBusy(true);
     try {
-      const path = mode === 'register' ? '/auth/register' : '/auth/login';
       const payload = mode === 'register'
         ? { username: username.trim(), password, display_name: displayName.trim() || undefined, region: region.trim() || undefined }
         : { username: username.trim(), password };
-      const data = await apiSend(path, 'POST', payload);
-      if (!data?.token || !data?.user?.user_id) throw new Error('Invalid auth response');
-      localStorage.setItem('communityToken', data.token);
-      localStorage.setItem('communityUserId', data.user.user_id);
-      localStorage.setItem('communityUsername', data.user.username);
-      setSessionUser({ user_id: data.user.user_id, username: data.user.username });
+      if (mode === 'register') {
+        await register(payload);
+      } else {
+        await login(payload);
+      }
       setPassword('');
     } catch (err) {
       setError(err.message || 'Authentication failed');
@@ -43,21 +48,26 @@ export default function AuthPanel() {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('communityToken');
-    localStorage.removeItem('communityUserId');
-    localStorage.removeItem('communityUsername');
-    disconnectCommunitySocket();
-    setSessionUser(null);
+  const handleLogout = () => {
+    logout();
     setPassword('');
   };
+
+  if (!ready) {
+    return (
+      <section className="card">
+        <h2 className="text-lg font-semibold">Account</h2>
+        <p className="mt-2 text-sm text-zinc-300">Loading session...</p>
+      </section>
+    );
+  }
 
   if (sessionUser) {
     return (
       <section className="card">
         <h2 className="text-lg font-semibold">Account</h2>
         <p className="mt-2 text-sm text-zinc-300">Signed in as <b>{sessionUser.username}</b></p>
-        <button onClick={logout} className="mt-3 rounded border border-zinc-700 px-4 py-2 text-sm">Log out</button>
+        <button onClick={handleLogout} className="mt-3 rounded border border-zinc-700 px-4 py-2 text-sm">Log out</button>
       </section>
     );
   }

@@ -1,29 +1,38 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiSend } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function FriendsPanel() {
   const [friends, setFriends] = useState([]);
   const [friendId, setFriendId] = useState('');
   const [status, setStatus] = useState('');
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem('communityToken') : null;
+  const { api, isAuthenticated } = useCommunitySession();
 
   const load = async () => {
     try {
-      const rows = await apiSend('/friends', 'GET', null, token);
+      if (!isAuthenticated) {
+        setFriends([]);
+        setStatus('Sign in to manage friends.');
+        return;
+      }
+      const rows = await api.listFriends();
       setFriends(rows || []);
+      setStatus('');
     } catch (_) {
-      setStatus('Unable to load friends. Ensure community token is set.');
+      setStatus('Unable to load friends.');
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [isAuthenticated, api]);
 
   const sendRequest = async () => {
     try {
-      await apiSend(`/friends/request/${friendId}`, 'POST', {}, token);
+      if (!isAuthenticated) {
+        setStatus('Sign in to send friend requests.');
+        return;
+      }
+      await api.sendFriendRequest(friendId);
       setStatus('Request sent.');
       setFriendId('');
       await load();

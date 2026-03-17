@@ -1,39 +1,52 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiSend } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function AdminConsole() {
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [health, setHealth] = useState(null);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('communityToken') : null;
+  const [status, setStatus] = useState('');
+  const { api, isAuthenticated } = useCommunitySession();
 
   const load = async () => {
     try {
-      const [u, r, h] = await Promise.all([
-        apiSend(`/admin/users?q=${encodeURIComponent(query)}`, 'GET', null, token),
-        apiSend('/admin/reports/chat', 'GET', null, token),
-        apiSend('/admin/health/system', 'GET', null, token)
+      if (!isAuthenticated) {
+        setUsers([]);
+        setReports([]);
+        setHealth(null);
+        setStatus('Sign in as an admin user to load moderation data.');
+        return;
+      }
+
+      const [usersPage, reportsPage, systemHealth] = await Promise.all([
+        api.listAdminUsers({ q: query, page: 1, size: 50 }),
+        api.listAdminReports({ page: 1, size: 50 }),
+        api.getAdminHealth()
       ]);
-      setUsers(u || []);
-      setReports(r || []);
-      setHealth(h);
-    } catch (_) {}
+      setUsers(usersPage?.rows || []);
+      setReports(reportsPage?.rows || []);
+      setHealth(systemHealth);
+      setStatus('');
+    } catch (error) {
+      setStatus(error.message || 'Unable to load admin data.');
+    }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [isAuthenticated, api]);
 
-  const mute = async (id) => { await apiSend(`/admin/users/${id}/mute`, 'POST', { hours: 24 }, token); await load(); };
-  const ban = async (id) => { await apiSend(`/admin/users/${id}/ban`, 'POST', { days: 7 }, token); await load(); };
-  const resolveReport = async (id) => { await apiSend(`/admin/reports/chat/${id}/resolve`, 'POST', {}, token); await load(); };
+  const mute = async (id) => { await api.muteAdminUser(id, 24); await load(); };
+  const ban = async (id) => { await api.banAdminUser(id, 7); await load(); };
+  const resolveReport = async (id) => { await api.resolveAdminReport(id); await load(); };
 
   return (
     <div className="space-y-4">
       <section className="card">
         <h2 className="mb-2 text-lg font-semibold">System Health</h2>
         <p className="text-sm text-zinc-300">{health ? `DB Time: ${new Date(health.dbNow).toLocaleString()}` : 'Unavailable'}</p>
+        {status && <p className="mt-2 text-xs text-amber-300">{status}</p>}
       </section>
 
       <section className="card space-y-3">

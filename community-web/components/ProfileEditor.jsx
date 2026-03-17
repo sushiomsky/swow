@@ -1,25 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { apiSend } from '../lib/api';
+import { useCommunitySession } from '../providers/CommunitySessionProvider';
 
 export default function ProfileEditor({ profile }) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
   const [bio, setBio] = useState(profile.bio || '');
   const [status, setStatus] = useState('');
+  const { api, isAuthenticated } = useCommunitySession();
 
   const save = async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('communityToken') : null;
-      await apiSend('/users/profile', 'PATCH', {
+      if (!isAuthenticated) {
+        setStatus('Sign in to update your profile.');
+        return;
+      }
+      await api.updateProfile({
         display_name: displayName,
         avatar_url: avatarUrl,
         bio
-      }, token);
+      });
       setStatus('Saved profile changes.');
     } catch (e) {
-      setStatus('Save failed. Add a valid community token in localStorage (communityToken).');
+      setStatus(e.message || 'Save failed.');
     }
   };
 
