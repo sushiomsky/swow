@@ -126,6 +126,7 @@ make up
   - For user-owned projects, set repository secret `PROJECT_AUTOMATION_TOKEN` with `repo` and `project` scopes.
 - Community API emits structured JSON logs with request correlation (`x-request-id`) and socket lifecycle events.
 - Real-time channels include chat, notifications, friend presence, and leaderboard updates.
+- Community API is transitioning to route/service/repository layering (users and admin domains refactored).
 
 ---
 
