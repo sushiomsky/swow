@@ -129,6 +129,8 @@ make up
 - Community API is transitioning to route/service/repository layering (users and admin domains refactored).
 - Community web now uses a shared session provider + typed community API client for auth-protected actions.
 - Community web now uses a unified realtime provider with shared socket lifecycle, room subscriptions, and reconnect replay.
+- Multiplayer load script: `node scripts/multiplayer-load-test.js` (configure via `MP_LOAD_*` env vars).
+- Recent local load sample (30 private pairs / 60 clients for 10s): `state_messages_per_second=2858.23`, `avg_server_cpu_percent=23.27`.
 
 ---
 

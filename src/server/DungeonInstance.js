@@ -620,7 +620,7 @@ class DungeonInstance {
 
     /**
      * Returns a plain-object snapshot of all game state needed by the client renderer.
-     * Called once per tick per connected player.
+     * Called once per tick per active dungeon and reused for all viewers in that dungeon.
      */
     serialize() {
         return {

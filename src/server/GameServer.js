@@ -489,33 +489,44 @@ class GameServer {
             if (conn.player) inputsMap[playerId] = conn.inputs;
         }
 
-        // Tick all dungeons
-        for (const [, dungeon] of this.dungeons) {
+        // Tick all dungeons and serialize each dungeon state once.
+        const serializedByDungeon = new Map();
+        for (const [dungeonId, dungeon] of this.dungeons) {
             dungeon.tick(inputsMap);
+            serializedByDungeon.set(dungeonId, this._prepareSerializedDungeonState(dungeon));
         }
 
         // Broadcast state to all connected players
         for (const [, conn] of this.connections) {
             if (!conn.player || !conn.dungeonId) continue;
-            const dungeon = this.dungeons.get(conn.dungeonId);
-            if (!dungeon) continue;
-            this._broadcastToConn(conn, dungeon);
+            const serializedState = serializedByDungeon.get(conn.dungeonId);
+            if (!serializedState) continue;
+            this._sendSerializedState(conn, serializedState);
         }
     }
 
     _broadcastDungeonState(dungeon) {
+        const serializedState = this._prepareSerializedDungeonState(dungeon);
         for (const [, conn] of this.connections) {
             if (conn.dungeonId === dungeon.id) {
-                this._broadcastToConn(conn, dungeon);
+                this._sendSerializedState(conn, serializedState);
             }
         }
     }
 
-    _broadcastToConn(conn, dungeon) {
+    _prepareSerializedDungeonState(dungeon) {
         const state = dungeon.serialize();
         state.sounds = dungeon.drainSounds();
-        state.myPlayerId = conn.player ? conn.player.id : null;
-        this._send(conn.ws, { type: 'state', state });
+        const serializedState = JSON.stringify(state);
+        return serializedState.slice(0, -1);
+    }
+
+    _sendSerializedState(conn, serializedStateWithoutBrace) {
+        const myPlayerId = conn.player ? conn.player.id : null;
+        this._sendRaw(
+            conn.ws,
+            `{"type":"state","state":${serializedStateWithoutBrace},"myPlayerId":${JSON.stringify(myPlayerId)}}}`
+        );
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -547,6 +558,12 @@ class GameServer {
     _send(ws, data) {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(data));
+        }
+    }
+
+    _sendRaw(ws, rawData) {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(rawData);
         }
     }
 
