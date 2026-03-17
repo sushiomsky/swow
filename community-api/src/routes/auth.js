@@ -24,9 +24,13 @@ function deriveHash(password, saltHex) {
   return pbkdf2Sync(password, Buffer.from(saltHex, 'hex'), 210000, 32, 'sha256').toString('hex');
 }
 
+function normalizeRole(role) {
+  return role === 'admin' ? 'admin' : 'user';
+}
+
 function createToken(user) {
   return jwt.sign(
-    { sub: user.user_id, role: 'user', username: user.username },
+    { sub: user.user_id, role: normalizeRole(user.role), username: user.username },
     config.jwtSecret,
     { expiresIn: '30d' }
   );
@@ -53,7 +57,7 @@ router.post('/register', async (req, res, next) => {
       const { rows: userRows } = await client.query(
         `INSERT INTO users (username, display_name, region, last_active)
          VALUES ($1, $2, $3, NOW())
-         RETURNING user_id, username, display_name, region, level, xp`,
+         RETURNING user_id, username, role, display_name, region, level, xp`,
         [username, payload.display_name || username, payload.region || null]
       );
       await client.query(
@@ -81,7 +85,7 @@ router.post('/login', async (req, res, next) => {
     const payload = loginSchema.parse(req.body || {});
     const username = payload.username.trim();
     const { rows } = await db.query(
-      `SELECT u.user_id, u.username, u.display_name, u.region, u.level, u.xp, a.password_hash, a.password_salt
+      `SELECT u.user_id, u.username, u.role, u.display_name, u.region, u.level, u.xp, a.password_hash, a.password_salt
        FROM users u
        JOIN auth_credentials a ON a.user_id = u.user_id
        WHERE u.username = $1`,
@@ -101,6 +105,7 @@ router.post('/login', async (req, res, next) => {
     const user = {
       user_id: row.user_id,
       username: row.username,
+      role: normalizeRole(row.role),
       display_name: row.display_name,
       region: row.region,
       level: row.level,
@@ -117,7 +122,7 @@ router.post('/login', async (req, res, next) => {
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      `SELECT user_id, username, display_name, avatar_url, bio, level, xp, region
+      `SELECT user_id, username, role, display_name, avatar_url, bio, level, xp, region
        FROM users WHERE user_id = $1`,
       [req.user.sub]
     );

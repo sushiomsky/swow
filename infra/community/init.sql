@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS clans (
 CREATE TABLE IF NOT EXISTS users (
   user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   username TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user',
   display_name TEXT,
   avatar_url TEXT,
   bio TEXT,
@@ -25,6 +26,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
 
 CREATE TABLE IF NOT EXISTS friends (
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

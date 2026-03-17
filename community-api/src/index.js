@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { Server } from 'socket.io';
 import { config } from './config.js';
-import { db, healthcheckDb } from './db.js';
+import { db, healthcheckDb, runStartupMigrations } from './db.js';
 import { redis } from './redis.js';
 import usersRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
@@ -58,6 +58,7 @@ attachCommunitySocket(io, db, redis);
 setRealtimeIO(io);
 
 await redis.connect();
+await runStartupMigrations();
 
 server.listen(config.port, '0.0.0.0', () => {
   console.log(`Community API listening on ${config.port}`);
