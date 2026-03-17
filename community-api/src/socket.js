@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from './config.js';
+import { createRequestId, logError, logInfo, logWarn } from './logger.js';
 
 const BLOCKED_TERMS = ['spam-link', 'hate-word-placeholder'];
 
@@ -24,12 +25,23 @@ function readSocketToken(socket) {
 export function attachCommunitySocket(io, db, redis) {
   io.use((socket, next) => {
     const token = readSocketToken(socket);
-    if (!token) return next(new Error('Missing bearer token'));
+    if (!token) {
+      logWarn('socket_auth_missing_token', {
+        socket_id: socket.id,
+        remote_address: socket.handshake?.address || null
+      });
+      return next(new Error('Missing bearer token'));
+    }
     try {
       const claims = jwt.verify(token, config.jwtSecret);
       socket.data.user = claims;
+      socket.data.connectionId = createRequestId();
       return next();
     } catch (e) {
+      logWarn('socket_auth_invalid_token', {
+        socket_id: socket.id,
+        remote_address: socket.handshake?.address || null
+      });
       return next(new Error('Invalid token'));
     }
   });
@@ -37,9 +49,25 @@ export function attachCommunitySocket(io, db, redis) {
   io.on('connection', (socket) => {
     const userId = socket.data?.user?.sub;
     if (!userId) {
+      logWarn('socket_connection_missing_user', { socket_id: socket.id });
       socket.disconnect(true);
       return;
     }
+    const connectionId = socket.data.connectionId || createRequestId();
+    logInfo('socket_connected', {
+      connection_id: connectionId,
+      socket_id: socket.id,
+      user_id: userId
+    });
+
+    socket.on('disconnect', (reason) => {
+      logInfo('socket_disconnected', {
+        connection_id: connectionId,
+        socket_id: socket.id,
+        user_id: userId,
+        reason
+      });
+    });
 
     socket.on('presence_online', () => {
       io.emit('friend_presence', { userId, online: true });
@@ -70,6 +98,11 @@ export function attachCommunitySocket(io, db, redis) {
         );
         io.to(`${roomType}:${roomId}`).emit('chat_message', rows[0]);
       } catch (e) {
+        logError('socket_chat_message_failed', e, {
+          connection_id: connectionId,
+          socket_id: socket.id,
+          user_id: userId
+        });
         socket.emit('error_event', { message: 'Failed to send chat message' });
       }
     });
@@ -82,12 +115,21 @@ export function attachCommunitySocket(io, db, redis) {
     // User-specific notifications are both persisted and published.
     socket.on('notify_user', async ({ type, content } = {}) => {
       if (!type || !content) return;
-      await db.query(
-        `INSERT INTO notifications (user_id, type, content) VALUES ($1, $2, $3)`,
-        [userId, type, content]
-      );
-      await redis.publish(`notify:${userId}`, JSON.stringify({ type, content }));
-      io.to(`user:${userId}`).emit('notification', { type, content });
+      try {
+        await db.query(
+          `INSERT INTO notifications (user_id, type, content) VALUES ($1, $2, $3)`,
+          [userId, type, content]
+        );
+        await redis.publish(`notify:${userId}`, JSON.stringify({ type, content }));
+        io.to(`user:${userId}`).emit('notification', { type, content });
+      } catch (e) {
+        logError('socket_notify_user_failed', e, {
+          connection_id: connectionId,
+          socket_id: socket.id,
+          user_id: userId
+        });
+        socket.emit('error_event', { message: 'Failed to publish notification' });
+      }
     });
 
     socket.on('subscribe_notifications', () => {

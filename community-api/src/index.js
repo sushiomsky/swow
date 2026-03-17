@@ -20,12 +20,14 @@ import { attachCommunitySocket } from './socket.js';
 import { setRealtimeIO } from './realtime.js';
 import { createApiRateLimiter } from './middleware/rateLimit.js';
 import { migrateUp } from './migrations.js';
+import { logError, logInfo, requestLogger } from './logger.js';
 
 // Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+app.use(requestLogger);
 
 const authRateLimiter = createApiRateLimiter({
   scope: 'auth',
@@ -69,8 +71,12 @@ app.use('/api/community/chat', chatRateLimiter, chatRoutes);
 app.use('/api/community/admin', adminRateLimiter, adminRoutes);
 app.use('/api/community/forum', forumRateLimiter, forumRoutes);
 
-app.use((err, _req, res, _next) => {
-  console.error('[community-api]', err);
+app.use((err, req, res, _next) => {
+  logError('http_error', err, {
+    request_id: req.requestId || null,
+    method: req.method,
+    path: req.originalUrl || req.url
+  });
   return res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -84,5 +90,5 @@ await redis.connect();
 await migrateUp(db);
 
 server.listen(config.port, '0.0.0.0', () => {
-  console.log(`Community API listening on ${config.port}`);
+  logInfo('community_api_listening', { port: config.port });
 });
