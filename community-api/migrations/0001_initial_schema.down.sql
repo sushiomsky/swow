@@ -1,0 +1,23 @@
+DROP INDEX IF EXISTS idx_forum_posts_thread_created_at;
+DROP INDEX IF EXISTS idx_forum_threads_category_updated_at;
+DROP INDEX IF EXISTS idx_notifications_user_created_at;
+DROP INDEX IF EXISTS idx_chat_messages_room_created_at;
+DROP INDEX IF EXISTS idx_match_results_user_created_at;
+DROP INDEX IF EXISTS idx_leaderboards_season_rank;
+
+DROP TABLE IF EXISTS forum_posts;
+DROP TABLE IF EXISTS forum_threads;
+DROP TABLE IF EXISTS forum_categories;
+DROP TABLE IF EXISTS chat_reports;
+DROP TABLE IF EXISTS seasonal_badges;
+DROP TABLE IF EXISTS auth_credentials;
+DROP TABLE IF EXISTS seasons;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS chat_messages;
+DROP TABLE IF EXISTS user_challenge_progress;
+DROP TABLE IF EXISTS challenges;
+DROP TABLE IF EXISTS leaderboards;
+DROP TABLE IF EXISTS match_results;
+DROP TABLE IF EXISTS friends;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS clans;

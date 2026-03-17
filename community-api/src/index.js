@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { Server } from 'socket.io';
 import { config } from './config.js';
-import { db, healthcheckDb, runStartupMigrations } from './db.js';
+import { db, healthcheckDb } from './db.js';
 import { redis } from './redis.js';
 import usersRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
@@ -19,6 +19,7 @@ import forumRoutes from './routes/forum.js';
 import { attachCommunitySocket } from './socket.js';
 import { setRealtimeIO } from './realtime.js';
 import { createApiRateLimiter } from './middleware/rateLimit.js';
+import { migrateUp } from './migrations.js';
 
 // Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
@@ -80,7 +81,7 @@ attachCommunitySocket(io, db, redis);
 setRealtimeIO(io);
 
 await redis.connect();
-await runStartupMigrations();
+await migrateUp(db);
 
 server.listen(config.port, '0.0.0.0', () => {
   console.log(`Community API listening on ${config.port}`);

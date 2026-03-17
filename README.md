@@ -51,7 +51,7 @@ The repository now includes an isolated community stack:
 
 - `community-api/` — Express + Socket.IO + PostgreSQL + Redis backend
 - `community-web/` — Next.js + Tailwind + Zustand frontend
-- `infra/community/init.sql` — database schema bootstrap
+- `community-api/migrations/` — versioned SQL migrations (`*.up.sql` / `*.down.sql`)
 
 Security defaults:
 
@@ -104,7 +104,7 @@ Auth API:
 ### Local community development
 
 ```bash
-cd community-api && npm install && npm run dev
+cd community-api && npm install && npm run migrate:up && npm run dev
 cd community-web && npm install && npm run dev
 ```
 
@@ -119,6 +119,7 @@ make up
 
 - Backup script: `scripts/backup-community.sh [backup_dir]`
 - CI workflow: `.github/workflows/community-ci.yml`
+- Migration commands: `npm --prefix community-api run migrate:up` and rollback `npm --prefix community-api run migrate:down -- 1`
 - Project automation workflow: `.github/workflows/project-board-automation.yml`
   - Auto-adds issues to Project `#1` and updates `Status` (`Todo`/`In Progress`/`Done`) plus `Phase`.
   - For user-owned projects, set repository secret `PROJECT_AUTOMATION_TOKEN` with `repo` and `project` scopes.
