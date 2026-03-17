@@ -17,6 +17,7 @@ jobs:
       - name: Community API install + check
         run: |
           npm --prefix community-api install
+          npm --prefix community-api run test:integration
           npm --prefix community-api run check
       - name: Community web install + build
         run: |
