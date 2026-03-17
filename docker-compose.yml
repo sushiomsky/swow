@@ -39,6 +39,7 @@ services:
     environment:
       COMMUNITY_API_PORT: 7000
       COMMUNITY_JWT_SECRET: ${COMMUNITY_JWT_SECRET:-change-me}
+      COMMUNITY_ALLOW_DEV_AUTH: ${COMMUNITY_ALLOW_DEV_AUTH:-false}
       COMMUNITY_DATABASE_URL: postgres://postgres:postgres@postgres:5432/wow_community
       COMMUNITY_REDIS_URL: redis://redis:6379
     depends_on:

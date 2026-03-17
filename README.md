@@ -52,6 +52,11 @@ The repository now includes an isolated community stack:
 - `community-web/` — Next.js + Tailwind + Zustand frontend
 - `infra/community/init.sql` — database schema bootstrap
 
+Security defaults:
+
+- `COMMUNITY_ALLOW_DEV_AUTH=false` disables `x-user-id`/`x-user-role` header auth by default.
+- Use bearer tokens in normal operation. Only enable `COMMUNITY_ALLOW_DEV_AUTH=true` for local scaffolding, never production.
+
 ### Community routes
 
 - `/` — website landing with navigation, account auth panel, and global chat

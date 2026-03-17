@@ -4,12 +4,6 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiGet, apiSend } from '../lib/api';
 
-function userHeaders() {
-  if (typeof window === 'undefined') return {};
-  const userId = localStorage.getItem('communityUserId');
-  return userId ? { 'x-user-id': userId } : {};
-}
-
 export default function ForumBoard() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('general');
@@ -51,12 +45,11 @@ export default function ForumBoard() {
     setBusy(true);
     try {
       const token = localStorage.getItem('communityToken');
-      const headers = userHeaders();
       await apiSend('/forum/threads', 'POST', {
         category_slug: selectedCategory,
         title: title.trim(),
         body: body.trim()
-      }, token, headers);
+      }, token);
       setTitle('');
       setBody('');
       const refreshed = await apiGet(threadQuery);
@@ -94,7 +87,7 @@ export default function ForumBoard() {
       <div className="space-y-4">
         <section className="card">
           <h2 className="text-lg font-semibold">New Thread</h2>
-          <p className="mt-1 text-xs text-zinc-400">Use localStorage `communityUserId` (and optional `communityToken`) to post.</p>
+          <p className="mt-1 text-xs text-zinc-400">Sign in to create a thread.</p>
           <form onSubmit={createThread} className="mt-3 space-y-2">
             <input
               value={title}

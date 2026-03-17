@@ -4,12 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiGet, apiSend } from '../lib/api';
 
-function userHeaders() {
-  if (typeof window === 'undefined') return {};
-  const userId = localStorage.getItem('communityUserId');
-  return userId ? { 'x-user-id': userId } : {};
-}
-
 export default function ForumThreadView({ threadId }) {
   const [thread, setThread] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -40,7 +34,7 @@ export default function ForumThreadView({ threadId }) {
     setBusy(true);
     try {
       const token = localStorage.getItem('communityToken');
-      await apiSend(`/forum/threads/${threadId}/posts`, 'POST', { body: reply.trim() }, token, userHeaders());
+      await apiSend(`/forum/threads/${threadId}/posts`, 'POST', { body: reply.trim() }, token);
       setReply('');
       await load();
     } catch (err) {
