@@ -111,6 +111,9 @@ make up
 
 - Backup script: `scripts/backup-community.sh [backup_dir]`
 - CI workflow: `.github/workflows/community-ci.yml`
+- Project automation workflow: `.github/workflows/project-board-automation.yml`
+  - Auto-adds issues to Project `#1` and updates `Status` (`Todo`/`In Progress`/`Done`) plus `Phase`.
+  - For user-owned projects, set repository secret `PROJECT_AUTOMATION_TOKEN` with `repo` and `project` scopes.
 - Real-time channels include chat, notifications, friend presence, and leaderboard updates.
 
 ---

@@ -1,0 +1,285 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+      - assigned
+      - unassigned
+      - labeled
+      - closed
+
+permissions:
+  contents: read
+  issues: read
+  repository-projects: write
+
+jobs:
+  sync-project-item:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: project-automation-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    env:
+      PROJECT_OWNER: sushiomsky
+      PROJECT_NUMBER: "1"
+    steps:
+      - name: Sync issue to project
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_AUTOMATION_TOKEN || github.token }}
+          script: |
+            const owner = process.env.PROJECT_OWNER || context.repo.owner;
+            const projectNumber = Number(process.env.PROJECT_NUMBER || "1");
+            const issue = context.payload.issue;
+
+            if (!issue) {
+              core.setFailed("Missing issue payload.");
+              return;
+            }
+
+            const phaseByLabel = new Map([
+              ["phase-1", "Phase 1 - Critical fixes"],
+              ["phase-2", "Phase 2 - Stability improvements"],
+              ["phase-3", "Phase 3 - Architecture improvements"],
+              ["phase-4", "Phase 4 - New features"],
+            ]);
+
+            const phaseByMilestone = new Map([
+              ["Phase 1 - Critical fixes", "Phase 1 - Critical fixes"],
+              ["Phase 2 - Stability improvements", "Phase 2 - Stability improvements"],
+              ["Phase 3 - Architecture improvements", "Phase 3 - Architecture improvements"],
+              ["Phase 4 - New features", "Phase 4 - New features"],
+            ]);
+
+            const projectQuery = `
+              query($owner: String!, $number: Int!) {
+                user(login: $owner) {
+                  projectV2(number: $number) {
+                    id
+                    fields(first: 50) {
+                      nodes {
+                        ... on ProjectV2FieldCommon {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                organization(login: $owner) {
+                  projectV2(number: $number) {
+                    id
+                    fields(first: 50) {
+                      nodes {
+                        ... on ProjectV2FieldCommon {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const addItemMutation = `
+              mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                  item {
+                    id
+                  }
+                }
+              }
+            `;
+
+            const listItemsQuery = `
+              query($projectId: ID!, $after: String) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    items(first: 100, after: $after) {
+                      nodes {
+                        id
+                        content {
+                          ... on Issue {
+                            id
+                          }
+                        }
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const setFieldMutation = `
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }
+                ) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `;
+
+            const findSingleSelectField = (fields, fieldName) =>
+              fields.find((field) => field?.name === fieldName && Array.isArray(field?.options));
+
+            const findOptionId = (field, candidates) => {
+              const normalized = candidates.map((name) => name.toLowerCase());
+              const option = field.options.find((item) =>
+                normalized.includes(item.name.toLowerCase())
+              );
+              return option ? option.id : null;
+            };
+
+            const findProjectItemId = async (projectId, issueNodeId) => {
+              let after = null;
+              while (true) {
+                const data = await github.graphql(listItemsQuery, { projectId, after });
+                const items = data.node.items.nodes;
+                const match = items.find((item) => item.content?.id === issueNodeId);
+                if (match) return match.id;
+                if (!data.node.items.pageInfo.hasNextPage) return null;
+                after = data.node.items.pageInfo.endCursor;
+              }
+            };
+
+            const setSingleSelectValue = async (projectId, itemId, field, optionId) => {
+              await github.graphql(setFieldMutation, {
+                projectId,
+                itemId,
+                fieldId: field.id,
+                optionId,
+              });
+            };
+
+            try {
+              const projectData = await github.graphql(projectQuery, {
+                owner,
+                number: projectNumber,
+              });
+              const project = projectData.organization?.projectV2 ?? projectData.user?.projectV2;
+
+              if (!project) {
+                core.setFailed(`Project #${projectNumber} was not found for owner "${owner}".`);
+                return;
+              }
+
+              let itemId = null;
+              try {
+                const addItemResult = await github.graphql(addItemMutation, {
+                  projectId: project.id,
+                  contentId: issue.node_id,
+                });
+                itemId = addItemResult.addProjectV2ItemById.item.id;
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                if (!message.toLowerCase().includes("already exists")) {
+                  throw error;
+                }
+              }
+
+              if (!itemId) {
+                itemId = await findProjectItemId(project.id, issue.node_id);
+              }
+
+              if (!itemId) {
+                core.setFailed(`Issue #${issue.number} could not be located in project items.`);
+                return;
+              }
+
+              const fields = project.fields.nodes;
+              const statusField = findSingleSelectField(fields, "Status");
+              const phaseField = findSingleSelectField(fields, "Phase");
+
+              if (statusField) {
+                const statusTarget =
+                  issue.state === "closed"
+                    ? "Done"
+                    : Array.isArray(issue.assignees) && issue.assignees.length > 0
+                    ? "In Progress"
+                    : "Todo";
+
+                const statusCandidates =
+                  statusTarget === "Done"
+                    ? ["Done", "Complete"]
+                    : statusTarget === "In Progress"
+                    ? ["In Progress", "In progress"]
+                    : ["Todo", "To Do", "Backlog"];
+
+                const statusOptionId = findOptionId(statusField, statusCandidates);
+                if (statusOptionId) {
+                  await setSingleSelectValue(project.id, itemId, statusField, statusOptionId);
+                } else {
+                  core.warning(`No Status option found for target "${statusTarget}".`);
+                }
+              } else {
+                core.warning('Project field "Status" was not found.');
+              }
+
+              const labelNames = (issue.labels || [])
+                .map((label) => (typeof label === "string" ? label : label?.name || ""))
+                .map((name) => name.toLowerCase())
+                .filter(Boolean);
+
+              let phaseTarget = null;
+              for (const labelName of labelNames) {
+                if (phaseByLabel.has(labelName)) {
+                  phaseTarget = phaseByLabel.get(labelName);
+                  break;
+                }
+              }
+
+              if (!phaseTarget && issue.milestone?.title) {
+                phaseTarget = phaseByMilestone.get(issue.milestone.title) || null;
+              }
+
+              if (phaseField && phaseTarget) {
+                const phaseOptionId = findOptionId(phaseField, [phaseTarget]);
+                if (phaseOptionId) {
+                  await setSingleSelectValue(project.id, itemId, phaseField, phaseOptionId);
+                } else {
+                  core.warning(`No Phase option found for "${phaseTarget}".`);
+                }
+              }
+
+              core.info(`Synced issue #${issue.number} to project #${projectNumber}.`);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              if (message.includes("Resource not accessible by integration")) {
+                core.setFailed(
+                  `${message}\nSet repository secret PROJECT_AUTOMATION_TOKEN with repo + project scopes.`
+                );
+                return;
+              }
+              core.setFailed(message);
+            }
