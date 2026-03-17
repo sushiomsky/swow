@@ -55,42 +55,44 @@ jobs:
 
             const projectQuery = `
               query($owner: String!, $number: Int!) {
-                user(login: $owner) {
-                  projectV2(number: $number) {
-                    id
-                    fields(first: 50) {
-                      nodes {
-                        ... on ProjectV2FieldCommon {
-                          id
-                          name
-                        }
-                        ... on ProjectV2SingleSelectField {
-                          id
-                          name
-                          options {
+                repositoryOwner(login: $owner) {
+                  ... on User {
+                    projectV2(number: $number) {
+                      id
+                      fields(first: 50) {
+                        nodes {
+                          ... on ProjectV2FieldCommon {
                             id
                             name
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
                           }
                         }
                       }
                     }
                   }
-                }
-                organization(login: $owner) {
-                  projectV2(number: $number) {
-                    id
-                    fields(first: 50) {
-                      nodes {
-                        ... on ProjectV2FieldCommon {
-                          id
-                          name
-                        }
-                        ... on ProjectV2SingleSelectField {
-                          id
-                          name
-                          options {
+                  ... on Organization {
+                    projectV2(number: $number) {
+                      id
+                      fields(first: 50) {
+                        nodes {
+                          ... on ProjectV2FieldCommon {
                             id
                             name
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
                           }
                         }
                       }
@@ -187,7 +189,7 @@ jobs:
                 owner,
                 number: projectNumber,
               });
-              const project = projectData.organization?.projectV2 ?? projectData.user?.projectV2;
+              const project = projectData.repositoryOwner?.projectV2;
 
               if (!project) {
                 core.setFailed(`Project #${projectNumber} was not found for owner "${owner}".`);
