@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
 
 export default function ClanActions({ clanId }) {
   const [status, setStatus] = useState('');
@@ -15,8 +16,8 @@ export default function ClanActions({ clanId }) {
       }
       await api.joinClan(clanId);
       setStatus('Joined clan.');
-    } catch (_) {
-      setStatus('Join failed.');
+    } catch (error) {
+      setStatus(toUserErrorMessage(error, 'Join failed.'));
     }
   };
 
@@ -28,8 +29,8 @@ export default function ClanActions({ clanId }) {
       }
       await api.leaveClan();
       setStatus('Left clan.');
-    } catch (_) {
-      setStatus('Leave failed.');
+    } catch (error) {
+      setStatus(toUserErrorMessage(error, 'Leave failed.'));
     }
   };
 

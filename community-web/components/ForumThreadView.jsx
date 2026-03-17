@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiGet } from '../lib/api';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
+import ErrorText from './ErrorText';
 
 export default function ForumThreadView({ threadId }) {
   const [thread, setThread] = useState(null);
@@ -43,7 +45,7 @@ export default function ForumThreadView({ threadId }) {
       setReply('');
       await load();
     } catch (err) {
-      setError(err.message || 'Failed to send reply.');
+      setError(toUserErrorMessage(err, 'Failed to send reply.'));
     } finally {
       setBusy(false);
     }
@@ -91,7 +93,7 @@ export default function ForumThreadView({ threadId }) {
             disabled={thread.is_locked}
           />
           {thread.is_locked && <p className="text-sm text-amber-300">This thread is locked by moderators.</p>}
-          {error && <p className="text-sm text-rose-300">{error}</p>}
+          <ErrorText message={error} />
           <button disabled={busy || thread.is_locked} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
             {busy ? 'Sending...' : 'Post Reply'}
           </button>

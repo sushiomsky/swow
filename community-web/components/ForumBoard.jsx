@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiGet } from '../lib/api';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
+import ErrorText from './ErrorText';
 
 export default function ForumBoard() {
   const [categories, setCategories] = useState([]);
@@ -60,7 +62,7 @@ export default function ForumBoard() {
       const refreshed = await apiGet(threadQuery);
       setThreads(refreshed.rows || []);
     } catch (err) {
-      setError(err.message || 'Failed to create thread.');
+      setError(toUserErrorMessage(err, 'Failed to create thread.'));
     } finally {
       setBusy(false);
     }
@@ -106,7 +108,7 @@ export default function ForumBoard() {
               className="min-h-24 w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
               placeholder="What do you want to discuss?"
             />
-            {error && <p className="text-sm text-rose-300">{error}</p>}
+            <ErrorText message={error} />
             <button disabled={busy} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
               {busy ? 'Posting...' : 'Create Thread'}
             </button>

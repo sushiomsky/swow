@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
 
 export default function AdminConsole() {
   const [query, setQuery] = useState('');
@@ -31,7 +32,7 @@ export default function AdminConsole() {
       setHealth(systemHealth);
       setStatus('');
     } catch (error) {
-      setStatus(error.message || 'Unable to load admin data.');
+      setStatus(toUserErrorMessage(error, 'Unable to load admin data.'));
     }
   };
 

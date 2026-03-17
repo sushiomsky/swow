@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
 
 export default function FriendsPanel() {
   const [friends, setFriends] = useState([]);
@@ -19,8 +20,8 @@ export default function FriendsPanel() {
       const rows = await api.listFriends();
       setFriends(rows || []);
       setStatus('');
-    } catch (_) {
-      setStatus('Unable to load friends.');
+    } catch (error) {
+      setStatus(toUserErrorMessage(error, 'Unable to load friends.'));
     }
   };
 
@@ -36,8 +37,8 @@ export default function FriendsPanel() {
       setStatus('Request sent.');
       setFriendId('');
       await load();
-    } catch (_) {
-      setStatus('Request failed.');
+    } catch (error) {
+      setStatus(toUserErrorMessage(error, 'Request failed.'));
     }
   };
 

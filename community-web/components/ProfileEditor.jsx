@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
 
 export default function ProfileEditor({ profile }) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
@@ -23,7 +24,7 @@ export default function ProfileEditor({ profile }) {
       });
       setStatus('Saved profile changes.');
     } catch (e) {
-      setStatus(e.message || 'Save failed.');
+      setStatus(toUserErrorMessage(e, 'Save failed.'));
     }
   };
 

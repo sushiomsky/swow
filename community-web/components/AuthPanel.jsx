@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { toUserErrorMessage } from '../lib/errorUtils';
+import ErrorText from './ErrorText';
 
 export default function AuthPanel() {
   const [mode, setMode] = useState('login');
@@ -42,7 +44,7 @@ export default function AuthPanel() {
       }
       setPassword('');
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      setError(toUserErrorMessage(err, 'Authentication failed.'));
     } finally {
       setBusy(false);
     }
@@ -120,7 +122,7 @@ export default function AuthPanel() {
           placeholder="Password"
           required
         />
-        {error && <p className="text-sm text-rose-300">{error}</p>}
+        <ErrorText message={error} />
         <button disabled={busy} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
           {busy ? 'Please wait...' : mode === 'register' ? 'Create account' : 'Sign in'}
         </button>
