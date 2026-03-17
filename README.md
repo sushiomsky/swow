@@ -128,6 +128,7 @@ make up
 - Real-time channels include chat, notifications, friend presence, and leaderboard updates.
 - Community API is transitioning to route/service/repository layering (users and admin domains refactored).
 - Community web now uses a shared session provider + typed community API client for auth-protected actions.
+- Community web now uses a unified realtime provider with shared socket lifecycle, room subscriptions, and reconnect replay.
 
 ---
 

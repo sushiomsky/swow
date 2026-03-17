@@ -1,46 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { communitySocket, connectCommunitySocket } from '../lib/socket';
+import { useCallback, useEffect, useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { useRealtime, useRealtimeEvent, useRealtimeRoom } from '../providers/RealtimeProvider';
 
 export default function ChatRoom({ roomType, roomId }) {
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
   const [authRequired, setAuthRequired] = useState(false);
-  const { token, api } = useCommunitySession();
+  const { isAuthenticated, api } = useCommunitySession();
+  const { connected, connectionError, emit } = useRealtime();
+
+  useRealtimeRoom(roomType, roomId, isAuthenticated);
+  const onMessage = useCallback((msg) => {
+    if (msg?.room_type !== roomType || msg?.room_id !== roomId) return;
+    setMessages((curr) => [...curr, msg]);
+  }, [roomType, roomId]);
+  useRealtimeEvent('chat_message', onMessage);
 
   useEffect(() => {
-    const onConnect = () => {
-      setAuthRequired(false);
-      communitySocket.emit('join_room', { roomType, roomId });
-    };
-    const onConnectError = () => setAuthRequired(true);
-    const connected = connectCommunitySocket(token);
-    setAuthRequired(!connected);
-    const onMessage = (msg) => setMessages((curr) => [...curr, msg]);
-    communitySocket.on('connect', onConnect);
-    communitySocket.on('connect_error', onConnectError);
-    communitySocket.on('chat_message', onMessage);
-    if (connected) {
-      communitySocket.emit('join_room', { roomType, roomId });
+    if (!isAuthenticated) {
+      setAuthRequired(true);
+      return;
     }
-    return () => {
-      communitySocket.off('connect', onConnect);
-      communitySocket.off('connect_error', onConnectError);
-      communitySocket.off('chat_message', onMessage);
-    };
-  }, [roomType, roomId, token]);
+    setAuthRequired(!connected);
+  }, [isAuthenticated, connected]);
 
   const send = () => {
     if (!content.trim()) return;
-    if (!communitySocket.connected) {
-      const connected = connectCommunitySocket(token);
-      setAuthRequired(!connected);
-      if (!connected) return;
-      communitySocket.emit('join_room', { roomType, roomId });
+    if (!isAuthenticated || !connected) {
+      setAuthRequired(true);
+      return;
     }
-    communitySocket.emit('chat_message', { roomType, roomId, content });
+    const sent = emit('chat_message', { roomType, roomId, content });
+    if (!sent) {
+      setAuthRequired(true);
+      return;
+    }
     setContent('');
   };
 
@@ -54,6 +50,7 @@ export default function ChatRoom({ roomType, roomId }) {
     <section className="card">
       <h3 className="mb-2 text-lg font-semibold">Chat • {roomType}:{roomId}</h3>
       {authRequired && <p className="mb-2 text-xs text-amber-300">Sign in to join live chat.</p>}
+      {!authRequired && connectionError && <p className="mb-2 text-xs text-amber-300">{connectionError}</p>}
       <div className="mb-3 h-56 overflow-auto rounded border border-zinc-800 p-2 text-sm">
         {messages.map((m, i) => (
           <p key={m.message_id || i} className="mb-1">

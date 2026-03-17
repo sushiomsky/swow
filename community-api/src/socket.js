@@ -84,6 +84,12 @@ export function attachCommunitySocket(io, db, redis) {
       socket.join(`${roomType}:${roomId}`);
     });
 
+    socket.on('leave_room', ({ roomType, roomId } = {}) => {
+      if (!roomType || !roomId) return;
+      if (roomType === 'user' && roomId !== userId) return;
+      socket.leave(`${roomType}:${roomId}`);
+    });
+
     // Chat message fan-out + persistence with lightweight term filtering.
     socket.on('chat_message', async (payload) => {
       try {

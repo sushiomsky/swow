@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import LeaderboardTable from './LeaderboardTable';
 import { apiGet } from '../lib/api';
-import { communitySocket, connectCommunitySocket } from '../lib/socket';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { useRealtime, useRealtimeEvent } from '../providers/RealtimeProvider';
 
 export default function LeaderboardView() {
   const [rows, setRows] = useState([]);
@@ -13,7 +13,8 @@ export default function LeaderboardView() {
   const [region, setRegion] = useState('EU');
   const [page, setPage] = useState(1);
   const [limit] = useState(25);
-  const { token, user } = useCommunitySession();
+  const { user } = useCommunitySession();
+  const { connected } = useRealtime();
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ scope, season, page: String(page), limit: String(limit) });
@@ -34,18 +35,17 @@ export default function LeaderboardView() {
     run();
   }, [query, scope, user]);
 
+  const refresh = useCallback(() => {
+    apiGet(query).then((data) => setRows(data.rows || [])).catch(() => {});
+  }, [query]);
+
+  useRealtimeEvent('leaderboard_update', refresh);
+  useRealtimeEvent('leaderboard_reset', refresh);
+
   useEffect(() => {
-    if (!connectCommunitySocket(token)) return;
-    const onUpdate = () => {
-      apiGet(query).then((data) => setRows(data.rows || [])).catch(() => {});
-    };
-    communitySocket.on('leaderboard_update', onUpdate);
-    communitySocket.on('leaderboard_reset', onUpdate);
-    return () => {
-      communitySocket.off('leaderboard_update', onUpdate);
-      communitySocket.off('leaderboard_reset', onUpdate);
-    };
-  }, [query, token]);
+    if (!connected) return;
+    refresh();
+  }, [connected, refresh]);
 
   return (
     <div className="space-y-4">

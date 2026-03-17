@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useCommunityStore } from '../store/useCommunityStore';
-import { communitySocket, connectCommunitySocket } from '../lib/socket';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { useRealtime, useRealtimeEvent } from '../providers/RealtimeProvider';
 
 export default function NotificationsPanel() {
   const notifications = useCommunityStore((s) => s.notifications);
   const setNotifications = useCommunityStore((s) => s.setNotifications);
   const addNotification = useCommunityStore((s) => s.addNotification);
   const { token, api } = useCommunitySession();
+  const { subscribeNotifications, unsubscribeNotifications } = useRealtime();
+  const onNotification = useCallback((notification) => {
+    addNotification({ ...notification, created_at: new Date().toISOString() });
+  }, [addNotification]);
 
   useEffect(() => {
     if (!token) {
@@ -24,13 +28,17 @@ export default function NotificationsPanel() {
       } catch (_) {}
     };
     load();
+  }, [setNotifications, token, api]);
 
-    if (!connectCommunitySocket(token)) return;
-    communitySocket.emit('subscribe_notifications');
-    const onNotification = (n) => addNotification({ ...n, created_at: new Date().toISOString() });
-    communitySocket.on('notification', onNotification);
-    return () => communitySocket.off('notification', onNotification);
-  }, [setNotifications, addNotification, token, api]);
+  useEffect(() => {
+    if (!token) return;
+    subscribeNotifications();
+    return () => {
+      unsubscribeNotifications();
+    };
+  }, [token, subscribeNotifications, unsubscribeNotifications]);
+
+  useRealtimeEvent('notification', onNotification);
 
   return (
     <section className="card">
