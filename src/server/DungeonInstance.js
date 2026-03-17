@@ -577,6 +577,17 @@ class DungeonInstance {
     respawnPlayer(player) {
         // If player's home dungeon is this dungeon, respawn here
         if (player.homeDungeonId === this.id) {
+            const preferredHomeSlot = player.homeSlot ?? player.num;
+            if (
+                player.num !== preferredHomeSlot &&
+                this.players[preferredHomeSlot] &&
+                this.players[preferredHomeSlot].id === null
+            ) {
+                this.removePlayer(player);
+                player.num = preferredHomeSlot;
+                this.addPlayer(player);
+            }
+            player._homeSlot = undefined;
             player.goToStartPosition();
         } else {
             // Transfer back to home dungeon

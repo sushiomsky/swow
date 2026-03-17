@@ -250,9 +250,20 @@ class GameServer {
      * Returns -1 if both slots are occupied (transfer should be blocked).
      */
     _findFreeSlot(dungeon, player) {
-        if (dungeon.players[player.num].id === null) return player.num;
-        const other = 1 - player.num;
-        if (dungeon.players[other].id === null) return other;
+        const preferredSlots = [];
+        if (dungeon.id === player.homeDungeonId && player.homeSlot !== undefined) {
+            preferredSlots.push(player.homeSlot);
+        }
+        preferredSlots.push(player.num);
+        preferredSlots.push(1 - player.num);
+
+        const seen = new Set();
+        for (const slot of preferredSlots) {
+            if (slot !== 0 && slot !== 1) continue;
+            if (seen.has(slot)) continue;
+            seen.add(slot);
+            if (dungeon.players[slot].id === null) return slot;
+        }
         return -1; // both slots occupied
     }
 
@@ -368,11 +379,15 @@ class GameServer {
         );
         if (currentDungeon) currentDungeon.removePlayer(player);
 
-        // Restore original home slot before returning
-        if (player._homeSlot !== undefined) {
-            player.num = player._homeSlot;
-            player._homeSlot = undefined;
+        const preferredHomeSlot = player.homeSlot ?? player._homeSlot ?? player.num;
+        if (
+            player.num !== preferredHomeSlot &&
+            homeDungeon.players[preferredHomeSlot] &&
+            homeDungeon.players[preferredHomeSlot].id === null
+        ) {
+            player.num = preferredHomeSlot;
         }
+        player._homeSlot = undefined;
 
         player.engine = homeDungeon;
         homeDungeon.addPlayer(player);
