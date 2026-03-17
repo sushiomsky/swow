@@ -1,3 +1,6 @@
+import jwt from 'jsonwebtoken';
+import { config } from './config.js';
+
 const BLOCKED_TERMS = ['spam-link', 'hate-word-placeholder'];
 
 function sanitizeContent(content) {
@@ -8,33 +11,62 @@ function sanitizeContent(content) {
   return output;
 }
 
+function readSocketToken(socket) {
+  const authToken = socket.handshake?.auth?.token;
+  if (typeof authToken === 'string' && authToken) return authToken;
+  const authHeader = socket.handshake?.headers?.authorization;
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  return null;
+}
+
 export function attachCommunitySocket(io, db, redis) {
+  io.use((socket, next) => {
+    const token = readSocketToken(socket);
+    if (!token) return next(new Error('Missing bearer token'));
+    try {
+      const claims = jwt.verify(token, config.jwtSecret);
+      socket.data.user = claims;
+      return next();
+    } catch (e) {
+      return next(new Error('Invalid token'));
+    }
+  });
+
   io.on('connection', (socket) => {
-    socket.on('presence_online', ({ userId }) => {
-      if (userId) io.emit('friend_presence', { userId, online: true });
+    const userId = socket.data?.user?.sub;
+    if (!userId) {
+      socket.disconnect(true);
+      return;
+    }
+
+    socket.on('presence_online', () => {
+      io.emit('friend_presence', { userId, online: true });
     });
 
-    socket.on('presence_offline', ({ userId }) => {
-      if (userId) io.emit('friend_presence', { userId, online: false });
+    socket.on('presence_offline', () => {
+      io.emit('friend_presence', { userId, online: false });
     });
 
     // Room model: global/match/clan channels are namespaced as "<type>:<id>".
-    socket.on('join_room', ({ roomType, roomId }) => {
+    socket.on('join_room', ({ roomType, roomId } = {}) => {
       if (!roomType || !roomId) return;
+      if (roomType === 'user' && roomId !== userId) return;
       socket.join(`${roomType}:${roomId}`);
     });
 
     // Chat message fan-out + persistence with lightweight term filtering.
     socket.on('chat_message', async (payload) => {
       try {
-        const { senderId, roomType, roomId, content } = payload || {};
-        if (!senderId || !roomType || !roomId || !content) return;
-        const safeContent = sanitizeContent(content);
+        const { roomType, roomId, content } = payload || {};
+        if (!roomType || !roomId || typeof content !== 'string' || !content.trim()) return;
+        const safeContent = sanitizeContent(content.trim().slice(0, 1000));
         const { rows } = await db.query(
           `INSERT INTO chat_messages (sender_id, room_type, room_id, content)
            VALUES ($1, $2, $3, $4)
            RETURNING message_id, sender_id, room_type, room_id, content, created_at`,
-          [senderId, roomType, roomId, safeContent]
+          [userId, roomType, roomId, safeContent]
         );
         io.to(`${roomType}:${roomId}`).emit('chat_message', rows[0]);
       } catch (e) {
@@ -42,14 +74,14 @@ export function attachCommunitySocket(io, db, redis) {
       }
     });
 
-    socket.on('match_update', ({ matchId, score, kills, deaths }) => {
+    socket.on('match_update', ({ matchId, score, kills, deaths } = {}) => {
       if (!matchId) return;
       io.to(`match:${matchId}`).emit('match_update', { matchId, score, kills, deaths });
     });
 
     // User-specific notifications are both persisted and published.
-    socket.on('notify_user', async ({ userId, type, content }) => {
-      if (!userId || !type || !content) return;
+    socket.on('notify_user', async ({ type, content } = {}) => {
+      if (!type || !content) return;
       await db.query(
         `INSERT INTO notifications (user_id, type, content) VALUES ($1, $2, $3)`,
         [userId, type, content]
@@ -58,8 +90,8 @@ export function attachCommunitySocket(io, db, redis) {
       io.to(`user:${userId}`).emit('notification', { type, content });
     });
 
-    socket.on('subscribe_notifications', ({ userId }) => {
-      if (userId) socket.join(`user:${userId}`);
+    socket.on('subscribe_notifications', () => {
+      socket.join(`user:${userId}`);
     });
   });
 }

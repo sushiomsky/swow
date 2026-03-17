@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import LeaderboardTable from './LeaderboardTable';
 import { apiGet } from '../lib/api';
-import { communitySocket } from '../lib/socket';
+import { communitySocket, connectCommunitySocket } from '../lib/socket';
 
 export default function LeaderboardView() {
   const [rows, setRows] = useState([]);
@@ -29,7 +29,7 @@ export default function LeaderboardView() {
   }, [query]);
 
   useEffect(() => {
-    if (!communitySocket.connected) communitySocket.connect();
+    if (!connectCommunitySocket()) return;
     const onUpdate = () => {
       apiGet(query).then((data) => setRows(data.rows || [])).catch(() => {});
     };

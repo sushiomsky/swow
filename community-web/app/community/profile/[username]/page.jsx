@@ -28,7 +28,7 @@ export default async function ProfilePage({ params }) {
       </div>
       <div className="space-y-4 md:col-span-4">
         <ProfileEditor profile={profile} />
-        <NotificationsPanel userId={profile.user_id} />
+        <NotificationsPanel />
       </div>
     </div>
   );

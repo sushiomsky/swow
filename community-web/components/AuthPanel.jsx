@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiSend } from '../lib/api';
+import { disconnectCommunitySocket } from '../lib/socket';
 
 export default function AuthPanel() {
   const [mode, setMode] = useState('login');
@@ -46,6 +47,7 @@ export default function AuthPanel() {
     localStorage.removeItem('communityToken');
     localStorage.removeItem('communityUserId');
     localStorage.removeItem('communityUsername');
+    disconnectCommunitySocket();
     setSessionUser(null);
     setPassword('');
   };
