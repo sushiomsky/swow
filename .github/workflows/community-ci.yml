@@ -1,4 +1,4 @@
-name: Community CI
+name: Community and Surface CI
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  community-checks:
+  community-api-quality:
+    name: Community API quality
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -23,20 +24,130 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      COMMUNITY_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/wow_community
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Community API install + check
-        env:
-          COMMUNITY_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/wow_community
+          cache: npm
+          cache-dependency-path: community-api/package-lock.json
+      - name: Community API install + checks
         run: |
-          npm --prefix community-api install
+          npm --prefix community-api ci
           npm --prefix community-api run migrate:up
           npm --prefix community-api run test:integration
           npm --prefix community-api run check
+
+  community-web-quality:
+    name: Community web build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: community-web/package-lock.json
       - name: Community web install + build
         run: |
-          npm --prefix community-web install
+          npm --prefix community-web ci
           npm --prefix community-web run build
+
+  surface-smoke:
+    name: Smoke (${{ matrix.surface }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        surface:
+          - classic-web
+          - classic-multiplayer
+          - community-api
+          - community-web
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wow_community
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wow_community"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      COMMUNITY_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/wow_community
+      COMMUNITY_REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            community-api/package-lock.json
+            community-web/package-lock.json
+      - name: Install dependencies for smoke target
+        run: |
+          case "${{ matrix.surface }}" in
+            classic-web|classic-multiplayer)
+              npm ci
+              ;;
+            community-api)
+              npm --prefix community-api ci
+              ;;
+            community-web)
+              npm --prefix community-web ci
+              ;;
+          esac
+      - name: Run smoke checks
+        run: |
+          mkdir -p "ci-logs/${{ matrix.surface }}"
+          bash scripts/ci-smoke.sh "${{ matrix.surface }}" "ci-logs/${{ matrix.surface }}"
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.surface }}-logs
+          path: ci-logs/${{ matrix.surface }}
+          if-no-files-found: warn
+
+  ci-required-gate:
+    name: Required CI gate
+    runs-on: ubuntu-latest
+    needs:
+      - community-api-quality
+      - community-web-quality
+      - surface-smoke
+    if: always()
+    steps:
+      - name: Enforce required checks
+        run: |
+          if [ "${{ needs.community-api-quality.result }}" != "success" ]; then
+            echo "community-api-quality result: ${{ needs.community-api-quality.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.community-web-quality.result }}" != "success" ]; then
+            echo "community-web-quality result: ${{ needs.community-web-quality.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.surface-smoke.result }}" != "success" ]; then
+            echo "surface-smoke result: ${{ needs.surface-smoke.result }}"
+            exit 1
+          fi
+          echo "All required quality and smoke checks passed."

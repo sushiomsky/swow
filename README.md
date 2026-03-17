@@ -126,6 +126,9 @@ make up
 
 - Backup script: `scripts/backup-community.sh [backup_dir]`
 - CI workflow: `.github/workflows/community-ci.yml`
+- Surface smoke runner: `bash scripts/ci-smoke.sh <classic-web|classic-multiplayer|community-api|community-web> [log_dir]`
+- CI matrix smoke coverage now validates classic web, multiplayer, community API, and community web surfaces, and uploads per-surface logs as artifacts.
+- CI job `Required CI gate` aggregates quality and smoke jobs to provide a single required-check target for branch protection.
 - Migration commands: `npm --prefix community-api run migrate:up` and rollback `npm --prefix community-api run migrate:down -- 1`
 - Project automation workflow: `.github/workflows/project-board-automation.yml`
   - Auto-adds issues to Project `#1` and updates `Status` (`Todo`/`In Progress`/`Done`) plus `Phase`.
