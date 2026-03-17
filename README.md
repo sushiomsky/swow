@@ -57,6 +57,7 @@ Security defaults:
 - `COMMUNITY_ALLOW_DEV_AUTH=false` disables `x-user-id`/`x-user-role` header auth by default.
 - Use bearer tokens in normal operation. Only enable `COMMUNITY_ALLOW_DEV_AUTH=true` for local scaffolding, never production.
 - Community WebSocket connections require JWT auth; sender identity is derived server-side.
+- Auth/chat/forum/admin APIs use rate limiting and return structured `429` payloads when throttled.
 
 ### Community routes
 

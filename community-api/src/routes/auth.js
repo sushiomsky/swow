@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { db } from '../db.js';
 import { config } from '../config.js';
 import { requireAuth } from '../middleware/auth.js';
+import { handleValidationError } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -75,7 +76,7 @@ router.post('/register', async (req, res, next) => {
       client.release();
     }
   } catch (e) {
-    if (e?.issues) return res.status(400).json({ error: e.issues });
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
@@ -114,7 +115,7 @@ router.post('/login', async (req, res, next) => {
     const token = createToken(user);
     return res.json({ token, user });
   } catch (e) {
-    if (e?.issues) return res.status(400).json({ error: e.issues });
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });

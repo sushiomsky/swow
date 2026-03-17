@@ -2,12 +2,18 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { handleValidationError } from '../middleware/validation.js';
 
 const router = Router();
 
-const paginationSchema = z.object({
+const threadListQuerySchema = z.object({
+  category: z.string().min(1).max(64),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20)
+});
+
+const threadParamsSchema = z.object({
+  threadId: z.string().uuid()
 });
 
 const createThreadSchema = z.object({
@@ -54,16 +60,14 @@ router.post('/categories', requireAuth, async (req, res, next) => {
     );
     return res.status(201).json(rows[0]);
   } catch (e) {
-    if (e?.issues) return res.status(400).json({ error: e.issues });
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
 
 router.get('/threads', async (req, res, next) => {
   try {
-    const { page, limit } = paginationSchema.parse(req.query || {});
-    const categorySlug = (req.query.category || '').toString();
-    if (!categorySlug) return res.status(400).json({ error: 'category query parameter is required' });
+    const { category: categorySlug, page, limit } = threadListQuerySchema.parse(req.query || {});
     const offset = (page - 1) * limit;
     const { rows } = await db.query(
       `SELECT t.thread_id, t.title, t.body, t.created_at, t.updated_at, t.is_locked, t.pinned,
@@ -82,7 +86,7 @@ router.get('/threads', async (req, res, next) => {
     );
     return res.json({ page, limit, rows });
   } catch (e) {
-    if (e?.issues) return res.status(400).json({ error: e.issues });
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
@@ -104,13 +108,14 @@ router.post('/threads', requireAuth, async (req, res, next) => {
     );
     return res.status(201).json(rows[0]);
   } catch (e) {
-    if (e?.issues) return res.status(400).json({ error: e.issues });
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
 
 router.get('/threads/:threadId', async (req, res, next) => {
   try {
+    const { threadId } = threadParamsSchema.parse(req.params || {});
     const { rows: threadRows } = await db.query(
       `SELECT t.thread_id, t.title, t.body, t.created_at, t.updated_at, t.is_locked, t.pinned,
               c.slug AS category_slug, c.name AS category_name,
@@ -119,7 +124,7 @@ router.get('/threads/:threadId', async (req, res, next) => {
        JOIN forum_categories c ON c.category_id = t.category_id
        LEFT JOIN users u ON u.user_id = t.author_id
        WHERE t.thread_id = $1`,
-      [req.params.threadId]
+      [threadId]
     );
     if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
     const { rows: postRows } = await db.query(
@@ -129,20 +134,22 @@ router.get('/threads/:threadId', async (req, res, next) => {
        LEFT JOIN users u ON u.user_id = p.author_id
        WHERE p.thread_id = $1
        ORDER BY p.created_at ASC`,
-      [req.params.threadId]
+      [threadId]
     );
     return res.json({ thread: threadRows[0], posts: postRows });
   } catch (e) {
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
 
 router.post('/threads/:threadId/posts', requireAuth, async (req, res, next) => {
   try {
+    const { threadId } = threadParamsSchema.parse(req.params || {});
     const payload = createPostSchema.parse(req.body || {});
     const { rows: threadRows } = await db.query(
       `SELECT thread_id, is_locked FROM forum_threads WHERE thread_id = $1`,
-      [req.params.threadId]
+      [threadId]
     );
     if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
     if (threadRows[0].is_locked) return res.status(403).json({ error: 'Thread is locked' });
@@ -151,15 +158,15 @@ router.post('/threads/:threadId/posts', requireAuth, async (req, res, next) => {
       `INSERT INTO forum_posts (thread_id, author_id, body)
        VALUES ($1, $2, $3)
        RETURNING post_id, body, created_at, updated_at`,
-      [req.params.threadId, req.user.sub, payload.body]
+      [threadId, req.user.sub, payload.body]
     );
     await db.query(
       `UPDATE forum_threads SET updated_at = NOW() WHERE thread_id = $1`,
-      [req.params.threadId]
+      [threadId]
     );
     return res.status(201).json(rows[0]);
   } catch (e) {
-    if (e?.issues) return res.status(400).json({ error: e.issues });
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
