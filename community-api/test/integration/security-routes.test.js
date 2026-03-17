@@ -113,6 +113,69 @@ test('auth endpoints return structured 429 payloads when throttled', async () =>
   );
 });
 
+test('auth verify-email request validates email payload', async () => {
+  await withServer(
+    (app) => app.use('/api/community/auth', authRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/auth/verify-email/request', {
+        method: 'POST',
+        body: { email: 'not-an-email' }
+      });
+      assert.equal(response.status, 400);
+      assert.equal(response.body.error, 'Validation failed');
+      assert.ok(Array.isArray(response.body.details));
+      assert.equal(response.body.details[0].path, 'email');
+    }
+  );
+});
+
+test('password reset confirmation token is one-time use', async () => {
+  let consumed = false;
+  const fakeClient = {
+    query: async (text) => {
+      const sql = String(text);
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+        return { rows: [], rowCount: 0 };
+      }
+      if (sql.includes('UPDATE auth_action_tokens') && sql.includes('RETURNING user_id')) {
+        if (consumed) return { rows: [], rowCount: 0 };
+        consumed = true;
+        return { rows: [{ user_id: 'user-1' }], rowCount: 1 };
+      }
+      if (sql.includes('UPDATE auth_credentials')) {
+        return { rows: [], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    release: () => {}
+  };
+
+  db.connect = async () => fakeClient;
+
+  await withServer(
+    (app) => app.use('/api/community/auth', authRoutes),
+    async (baseUrl) => {
+      const payload = {
+        token: 'a'.repeat(64),
+        password: 'new-password-123'
+      };
+      const firstResponse = await apiRequest(baseUrl, '/api/community/auth/password-reset/confirm', {
+        method: 'POST',
+        body: payload
+      });
+      const secondResponse = await apiRequest(baseUrl, '/api/community/auth/password-reset/confirm', {
+        method: 'POST',
+        body: payload
+      });
+
+      assert.equal(firstResponse.status, 200);
+      assert.equal(firstResponse.body.ok, true);
+      assert.equal(secondResponse.status, 400);
+      assert.equal(secondResponse.body.error, 'Invalid or expired token');
+    }
+  );
+});
+
 test('chat report rejects invalid message ids with structured validation errors', async () => {
   await withServer(
     (app) => app.use('/api/community/chat', chatRoutes),

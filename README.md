@@ -70,6 +70,8 @@ Security defaults:
 - `/community/challenges` — challenges and rewards
 - `/community/chat` — global/match/team chat panels
 - `/community/forum` — discussion forum with categories, threads, and replies
+- `/community/verify-email` — email verification request + token confirmation
+- `/community/reset-password` — password reset request + token confirmation
 - `/admin` — moderation + analytics dashboard shell
 - `/api/community/*` — backend API routes
 
@@ -78,6 +80,10 @@ Auth API:
 - `POST /api/community/auth/register`
 - `POST /api/community/auth/login`
 - `GET /api/community/auth/me`
+- `POST /api/community/auth/verify-email/request`
+- `POST /api/community/auth/verify-email/confirm`
+- `POST /api/community/auth/password-reset/request`
+- `POST /api/community/auth/password-reset/confirm`
 
 ### Content pages for trust & ad-readiness
 

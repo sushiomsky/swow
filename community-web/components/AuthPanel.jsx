@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
 import { toUserErrorMessage } from '../lib/errorUtils';
 import ErrorText from './ErrorText';
+import Link from 'next/link';
 
 export default function AuthPanel() {
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [region, setRegion] = useState('');
   const [error, setError] = useState('');
@@ -35,7 +37,13 @@ export default function AuthPanel() {
     setBusy(true);
     try {
       const payload = mode === 'register'
-        ? { username: username.trim(), password, display_name: displayName.trim() || undefined, region: region.trim() || undefined }
+        ? {
+          username: username.trim(),
+          password,
+          email: email.trim(),
+          display_name: displayName.trim() || undefined,
+          region: region.trim() || undefined
+        }
         : { username: username.trim(), password };
       if (mode === 'register') {
         await register(payload);
@@ -69,6 +77,15 @@ export default function AuthPanel() {
       <section className="card">
         <h2 className="text-lg font-semibold">Account</h2>
         <p className="mt-2 text-sm text-zinc-300">Signed in as <b>{sessionUser.username}</b></p>
+        {sessionUser.email && (
+          <p className="mt-1 text-xs text-zinc-400">
+            {sessionUser.email} • {sessionUser.email_verified ? 'verified' : 'not verified'}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-indigo-300">
+          <Link href="/community/verify-email">Verify email</Link>
+          <Link href="/community/reset-password">Reset password</Link>
+        </div>
         <button onClick={handleLogout} className="mt-3 rounded border border-zinc-700 px-4 py-2 text-sm">Log out</button>
       </section>
     );
@@ -101,6 +118,14 @@ export default function AuthPanel() {
         {mode === 'register' && (
           <>
             <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+              placeholder="Email"
+              required
+            />
+            <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
@@ -126,6 +151,11 @@ export default function AuthPanel() {
         <button disabled={busy} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
           {busy ? 'Please wait...' : mode === 'register' ? 'Create account' : 'Sign in'}
         </button>
+        {mode === 'login' && (
+          <p className="text-xs text-indigo-300">
+            <Link href="/community/reset-password">Forgot password?</Link>
+          </p>
+        )}
       </form>
     </section>
   );

@@ -85,6 +85,22 @@ export function createCommunityApiClient({ getToken, onUnauthorized } = {}) {
     login: (payload) => run('/auth/login', { method: 'POST', body: payload }),
     register: (payload) => run('/auth/register', { method: 'POST', body: payload }),
     me: () => runAuthed('/auth/me'),
+    requestEmailVerification: (email) => run('/auth/verify-email/request', {
+      method: 'POST',
+      body: { email }
+    }),
+    confirmEmailVerification: (token) => run('/auth/verify-email/confirm', {
+      method: 'POST',
+      body: { token }
+    }),
+    requestPasswordReset: (email) => run('/auth/password-reset/request', {
+      method: 'POST',
+      body: { email }
+    }),
+    confirmPasswordReset: ({ token, password }) => run('/auth/password-reset/confirm', {
+      method: 'POST',
+      body: { token, password }
+    }),
     updateProfile: (payload) => runAuthed('/users/profile', { method: 'PATCH', body: payload }),
     listNotifications: () => runAuthed('/notifications'),
     listFriends: () => runAuthed('/friends'),
