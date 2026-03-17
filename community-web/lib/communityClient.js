@@ -116,6 +116,25 @@ export function createCommunityApiClient({ getToken, onUnauthorized } = {}) {
       method: 'POST',
       body: payload
     }),
+    moderateForumThreadPin: (threadId, value) => runAuthed(`/forum/threads/${threadId}/moderate/pin`, {
+      method: 'POST',
+      body: { value }
+    }),
+    moderateForumThreadLock: (threadId, value) => runAuthed(`/forum/threads/${threadId}/moderate/lock`, {
+      method: 'POST',
+      body: { value }
+    }),
+    moderateForumThreadDelete: (threadId, reason) => runAuthed(`/forum/threads/${threadId}/moderate/delete`, {
+      method: 'POST',
+      body: reason ? { reason } : {}
+    }),
+    moderateForumPostDelete: (threadId, postId, reason) => runAuthed(
+      `/forum/threads/${threadId}/posts/${postId}/moderate/delete`,
+      {
+        method: 'POST',
+        body: reason ? { reason } : {}
+      }
+    ),
     listAdminUsers: ({ page, size, q, role } = {}) => runAuthed(
       withQuery('/admin/users', { page, size, q, role })
     ),

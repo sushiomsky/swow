@@ -50,7 +50,9 @@ function hashActionToken(token) {
 }
 
 function normalizeRole(role) {
-  return role === 'admin' ? 'admin' : 'user';
+  if (role === 'admin') return 'admin';
+  if (role === 'moderator') return 'moderator';
+  return 'user';
 }
 
 function normalizeEmail(email) {

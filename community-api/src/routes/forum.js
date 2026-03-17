@@ -16,6 +16,11 @@ const threadParamsSchema = z.object({
   threadId: z.string().uuid()
 });
 
+const threadPostParamsSchema = z.object({
+  threadId: z.string().uuid(),
+  postId: z.string().uuid()
+});
+
 const createThreadSchema = z.object({
   category_slug: z.string().min(1).max(64),
   title: z.string().min(4).max(160),
@@ -31,6 +36,32 @@ const createCategorySchema = z.object({
   name: z.string().min(2).max(80),
   description: z.string().max(240).default('')
 });
+
+const moderationToggleSchema = z.object({
+  value: z.boolean()
+});
+
+const moderationDeleteSchema = z.object({
+  reason: z.string().min(1).max(240).optional()
+});
+
+function isModerator(role) {
+  return role === 'admin' || role === 'moderator';
+}
+
+function requireModerator(req, res) {
+  if (isModerator(req.user?.role)) return true;
+  res.status(403).json({ error: 'Moderator only' });
+  return false;
+}
+
+async function recordModerationAudit(client, { actorUserId, action, threadId = null, postId = null, details = {} }) {
+  await client.query(
+    `INSERT INTO forum_moderation_audit (actor_user_id, action, target_thread_id, target_post_id, details)
+     VALUES ($1, $2, $3, $4, $5::jsonb)`,
+    [actorUserId, action, threadId, postId, JSON.stringify(details || {})]
+  );
+}
 
 router.get('/categories', async (_req, res, next) => {
   try {
@@ -168,6 +199,160 @@ router.post('/threads/:threadId/posts', requireAuth, async (req, res, next) => {
   } catch (e) {
     if (handleValidationError(res, e)) return;
     return next(e);
+  }
+});
+
+router.post('/threads/:threadId/moderate/pin', requireAuth, async (req, res, next) => {
+  if (!requireModerator(req, res)) return;
+  try {
+    const { threadId } = threadParamsSchema.parse(req.params || {});
+    const { value } = moderationToggleSchema.parse(req.body || {});
+    const { rows } = await db.query(
+      `UPDATE forum_threads
+       SET pinned = $2, updated_at = NOW()
+       WHERE thread_id = $1
+       RETURNING thread_id, pinned, is_locked, updated_at`,
+      [threadId, value]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Thread not found' });
+    await recordModerationAudit(db, {
+      actorUserId: req.user.sub,
+      action: value ? 'thread_pinned' : 'thread_unpinned',
+      threadId,
+      details: { pinned: value }
+    });
+    return res.json(rows[0]);
+  } catch (e) {
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  }
+});
+
+router.post('/threads/:threadId/moderate/lock', requireAuth, async (req, res, next) => {
+  if (!requireModerator(req, res)) return;
+  try {
+    const { threadId } = threadParamsSchema.parse(req.params || {});
+    const { value } = moderationToggleSchema.parse(req.body || {});
+    const { rows } = await db.query(
+      `UPDATE forum_threads
+       SET is_locked = $2, updated_at = NOW()
+       WHERE thread_id = $1
+       RETURNING thread_id, pinned, is_locked, updated_at`,
+      [threadId, value]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Thread not found' });
+    await recordModerationAudit(db, {
+      actorUserId: req.user.sub,
+      action: value ? 'thread_locked' : 'thread_unlocked',
+      threadId,
+      details: { is_locked: value }
+    });
+    return res.json(rows[0]);
+  } catch (e) {
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  }
+});
+
+router.post('/threads/:threadId/moderate/delete', requireAuth, async (req, res, next) => {
+  if (!requireModerator(req, res)) return;
+  let threadId;
+  let reason;
+  try {
+    ({ threadId } = threadParamsSchema.parse(req.params || {}));
+    ({ reason } = moderationDeleteSchema.parse(req.body || {}));
+  } catch (e) {
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  }
+
+  const client = await db.connect();
+  let inTransaction = false;
+  try {
+    await client.query('BEGIN');
+    inTransaction = true;
+    const { rows } = await client.query(
+      `DELETE FROM forum_threads
+       WHERE thread_id = $1
+       RETURNING thread_id`,
+      [threadId]
+    );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+    await recordModerationAudit(client, {
+      actorUserId: req.user.sub,
+      action: 'thread_deleted',
+      threadId,
+      details: reason ? { reason } : {}
+    });
+    await client.query('COMMIT');
+    inTransaction = false;
+    return res.json({ ok: true });
+  } catch (e) {
+    if (inTransaction) {
+      await client.query('ROLLBACK');
+    }
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/threads/:threadId/posts/:postId/moderate/delete', requireAuth, async (req, res, next) => {
+  if (!requireModerator(req, res)) return;
+  let threadId;
+  let postId;
+  let reason;
+  try {
+    ({ threadId, postId } = threadPostParamsSchema.parse(req.params || {}));
+    ({ reason } = moderationDeleteSchema.parse(req.body || {}));
+  } catch (e) {
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  }
+
+  const client = await db.connect();
+  let inTransaction = false;
+  try {
+    await client.query('BEGIN');
+    inTransaction = true;
+    const { rows } = await client.query(
+      `DELETE FROM forum_posts
+       WHERE thread_id = $1 AND post_id = $2
+       RETURNING post_id`,
+      [threadId, postId]
+    );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    await client.query(
+      `UPDATE forum_threads
+       SET updated_at = NOW()
+       WHERE thread_id = $1`,
+      [threadId]
+    );
+    await recordModerationAudit(client, {
+      actorUserId: req.user.sub,
+      action: 'post_deleted',
+      threadId,
+      postId,
+      details: reason ? { reason } : {}
+    });
+    await client.query('COMMIT');
+    inTransaction = false;
+    return res.json({ ok: true });
+  } catch (e) {
+    if (inTransaction) {
+      await client.query('ROLLBACK');
+    }
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  } finally {
+    client.release();
   }
 });
 

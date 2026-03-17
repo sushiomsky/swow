@@ -206,6 +206,72 @@ test('forum threads endpoint requires category query parameter', async () => {
   );
 });
 
+test('forum moderation actions return 403 for non-moderators', async () => {
+  await withServer(
+    (app) => app.use('/api/community/forum', forumRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(
+        baseUrl,
+        '/api/community/forum/threads/11111111-1111-1111-1111-111111111111/moderate/pin',
+        {
+          method: 'POST',
+          token: createToken('user', 'plain-user'),
+          body: { value: true }
+        }
+      );
+      assert.equal(response.status, 403);
+      assert.equal(response.body.error, 'Moderator only');
+    }
+  );
+});
+
+test('forum moderator pin action writes moderation audit', async () => {
+  const calls = [];
+  db.query = async (text, params = []) => {
+    const sql = String(text);
+    calls.push({ sql, params });
+    if (sql.includes('UPDATE forum_threads')) {
+      return {
+        rows: [{
+          thread_id: params[0],
+          pinned: params[1],
+          is_locked: false,
+          updated_at: new Date().toISOString()
+        }],
+        rowCount: 1
+      };
+    }
+    if (sql.includes('INSERT INTO forum_moderation_audit')) {
+      return { rows: [], rowCount: 1 };
+    }
+    return { rows: [], rowCount: 0 };
+  };
+
+  await withServer(
+    (app) => app.use('/api/community/forum', forumRoutes),
+    async (baseUrl) => {
+      const threadId = '22222222-2222-2222-2222-222222222222';
+      const response = await apiRequest(
+        baseUrl,
+        `/api/community/forum/threads/${threadId}/moderate/pin`,
+        {
+          method: 'POST',
+          token: createToken('moderator', 'mod-user'),
+          body: { value: true }
+        }
+      );
+      assert.equal(response.status, 200);
+      assert.equal(response.body.thread_id, threadId);
+      assert.equal(response.body.pinned, true);
+      const auditCall = calls.find((call) => call.sql.includes('INSERT INTO forum_moderation_audit'));
+      assert.ok(auditCall);
+      assert.equal(auditCall.params[0], 'mod-user');
+      assert.equal(auditCall.params[1], 'thread_pinned');
+      assert.equal(auditCall.params[2], threadId);
+    }
+  );
+});
+
 test('admin endpoints require admin role claim', async () => {
   db.query = async (text) => {
     if (String(text).includes('COUNT(*)::int AS total')) {

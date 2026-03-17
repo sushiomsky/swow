@@ -2,18 +2,23 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiGet } from '../lib/api';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
 import { toUserErrorMessage } from '../lib/errorUtils';
 import ErrorText from './ErrorText';
 
 export default function ForumThreadView({ threadId }) {
+  const router = useRouter();
   const [thread, setThread] = useState(null);
   const [posts, setPosts] = useState([]);
   const [reply, setReply] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const { api, isAuthenticated } = useCommunitySession();
+  const [moderationStatus, setModerationStatus] = useState('');
+  const [moderationBusy, setModerationBusy] = useState(false);
+  const { api, isAuthenticated, user } = useCommunitySession();
+  const canModerate = user?.role === 'admin' || user?.role === 'moderator';
 
   const load = async () => {
     const data = await apiGet(`/forum/threads/${threadId}`);
@@ -51,6 +56,48 @@ export default function ForumThreadView({ threadId }) {
     }
   };
 
+  const moderateThread = async (operation, value = null) => {
+    if (!canModerate) return;
+    setError('');
+    setModerationStatus('');
+    setModerationBusy(true);
+    try {
+      if (operation === 'pin') {
+        await api.moderateForumThreadPin(threadId, value);
+        setModerationStatus(value ? 'Thread pinned.' : 'Thread unpinned.');
+      } else if (operation === 'lock') {
+        await api.moderateForumThreadLock(threadId, value);
+        setModerationStatus(value ? 'Thread locked.' : 'Thread unlocked.');
+      } else if (operation === 'delete') {
+        await api.moderateForumThreadDelete(threadId, 'Moderated by staff');
+        setModerationStatus('Thread deleted.');
+        router.push('/community/forum');
+        return;
+      }
+      await load();
+    } catch (moderationError) {
+      setError(toUserErrorMessage(moderationError, 'Moderation action failed.'));
+    } finally {
+      setModerationBusy(false);
+    }
+  };
+
+  const deletePost = async (postId) => {
+    if (!canModerate) return;
+    setError('');
+    setModerationStatus('');
+    setModerationBusy(true);
+    try {
+      await api.moderateForumPostDelete(threadId, postId, 'Moderated by staff');
+      setModerationStatus('Post deleted.');
+      await load();
+    } catch (moderationError) {
+      setError(toUserErrorMessage(moderationError, 'Unable to delete post.'));
+    } finally {
+      setModerationBusy(false);
+    }
+  };
+
   if (!thread) {
     return (
       <section className="card">
@@ -69,6 +116,36 @@ export default function ForumThreadView({ threadId }) {
         <p className="mt-3 text-xs text-zinc-500">
           in {thread.category_name} • by {thread.author_name}
         </p>
+        {canModerate && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <button
+              disabled={moderationBusy}
+              className="rounded border border-zinc-600 px-2 py-1"
+              onClick={() => moderateThread('pin', !thread.pinned)}
+            >
+              {thread.pinned ? 'Unpin' : 'Pin'}
+            </button>
+            <button
+              disabled={moderationBusy}
+              className="rounded border border-zinc-600 px-2 py-1"
+              onClick={() => moderateThread('lock', !thread.is_locked)}
+            >
+              {thread.is_locked ? 'Unlock' : 'Lock'}
+            </button>
+            <button
+              disabled={moderationBusy}
+              className="rounded border border-rose-600 px-2 py-1 text-rose-300"
+              onClick={() => {
+                if (window.confirm('Delete this thread and all replies?')) {
+                  moderateThread('delete');
+                }
+              }}
+            >
+              Delete thread
+            </button>
+          </div>
+        )}
+        {moderationStatus && <p className="mt-2 text-xs text-emerald-300">{moderationStatus}</p>}
       </section>
 
       <section className="card space-y-3">
@@ -76,7 +153,18 @@ export default function ForumThreadView({ threadId }) {
         {posts.map((post) => (
           <article key={post.post_id} className="rounded border border-zinc-800 bg-zinc-950/70 p-3">
             <p className="whitespace-pre-wrap text-sm text-zinc-200">{post.body}</p>
-            <p className="mt-2 text-xs text-zinc-500">by {post.author_name}</p>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-xs text-zinc-500">by {post.author_name}</p>
+              {canModerate && (
+                <button
+                  disabled={moderationBusy}
+                  className="rounded border border-rose-600 px-2 py-1 text-xs text-rose-300"
+                  onClick={() => deletePost(post.post_id)}
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           </article>
         ))}
         {!posts.length && <p className="text-sm text-zinc-500">No replies yet.</p>}

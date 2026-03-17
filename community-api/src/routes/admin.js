@@ -26,7 +26,7 @@ const paginationQuerySchema = z.object({
 
 const usersQuerySchema = paginationQuerySchema.extend({
   q: z.string().max(80).optional().default(''),
-  role: z.enum(['user', 'admin']).optional()
+  role: z.enum(['user', 'moderator', 'admin']).optional()
 });
 
 const chatReportsQuerySchema = paginationQuerySchema.extend({

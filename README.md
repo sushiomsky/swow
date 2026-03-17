@@ -105,7 +105,7 @@ Auth API:
 - Challenges/progress/claims
 - Notifications
 - Chat history + real-time chat via WebSocket
-- Forum categories/threads/posts API
+- Forum categories/threads/posts API with moderator pin/lock/delete actions and audit trail
 - Admin endpoints (user moderation + DAU/WAU/MAU) with required `page`/`size` pagination on list/report APIs
 
 ### Local community development
