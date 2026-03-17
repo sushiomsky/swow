@@ -100,7 +100,7 @@ Auth API:
 - Notifications
 - Chat history + real-time chat via WebSocket
 - Forum categories/threads/posts API
-- Admin endpoints (user moderation + DAU/WAU/MAU)
+- Admin endpoints (user moderation + DAU/WAU/MAU) with required `page`/`size` pagination on list/report APIs
 
 ### Local community development
 

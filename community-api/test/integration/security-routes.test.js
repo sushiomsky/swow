@@ -144,18 +144,82 @@ test('forum threads endpoint requires category query parameter', async () => {
 });
 
 test('admin endpoints require admin role claim', async () => {
-  db.query = async () => ({ rows: [] });
+  db.query = async (text) => {
+    if (String(text).includes('COUNT(*)::int AS total')) {
+      return { rows: [{ total: 0 }] };
+    }
+    return { rows: [] };
+  };
   await withServer(
     (app) => app.use('/api/community/admin', adminRoutes),
     async (baseUrl) => {
-      const userResponse = await apiRequest(baseUrl, '/api/community/admin/users', {
+      const userResponse = await apiRequest(baseUrl, '/api/community/admin/users?page=1&size=10', {
         token: createToken('user', 'plain-user')
       });
-      const adminResponse = await apiRequest(baseUrl, '/api/community/admin/users', {
+      const adminResponse = await apiRequest(baseUrl, '/api/community/admin/users?page=1&size=10', {
         token: createToken('admin', 'admin-user')
       });
       assert.equal(userResponse.status, 403);
       assert.equal(adminResponse.status, 200);
+      assert.equal(adminResponse.body.page, 1);
+      assert.equal(adminResponse.body.size, 10);
+      assert.ok(Array.isArray(adminResponse.body.rows));
+    }
+  );
+});
+
+test('admin report endpoints require bounded page and size query params', async () => {
+  await withServer(
+    (app) => app.use('/api/community/admin', adminRoutes),
+    async (baseUrl) => {
+      const missingPagination = await apiRequest(baseUrl, '/api/community/admin/reports/chat', {
+        token: createToken('admin', 'admin-user')
+      });
+      const oversizedPageSize = await apiRequest(baseUrl, '/api/community/admin/reports/chat?page=1&size=999', {
+        token: createToken('admin', 'admin-user')
+      });
+      assert.equal(missingPagination.status, 400);
+      assert.equal(missingPagination.body.error, 'Validation failed');
+      assert.equal(oversizedPageSize.status, 400);
+      assert.equal(oversizedPageSize.body.error, 'Validation failed');
+    }
+  );
+});
+
+test('admin reports include paging metadata when page and size are provided', async () => {
+  db.query = async (text) => {
+    if (String(text).includes('COUNT(*)::int AS total')) {
+      return { rows: [{ total: 1 }] };
+    }
+    return {
+      rows: [
+        {
+          report_id: 'report-1',
+          reason: 'abuse',
+          status: 'open',
+          created_at: new Date().toISOString(),
+          message_id: 'message-1',
+          content: 'test message',
+          room_type: 'global',
+          room_id: 'main'
+        }
+      ]
+    };
+  };
+
+  await withServer(
+    (app) => app.use('/api/community/admin', adminRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/admin/reports/chat?page=1&size=10', {
+        token: createToken('admin', 'admin-user')
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.body.page, 1);
+      assert.equal(response.body.size, 10);
+      assert.equal(response.body.total, 1);
+      assert.equal(response.body.totalPages, 1);
+      assert.ok(Array.isArray(response.body.rows));
+      assert.equal(response.body.rows.length, 1);
     }
   );
 });

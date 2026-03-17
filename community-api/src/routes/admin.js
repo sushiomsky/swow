@@ -8,8 +8,20 @@ import { handleValidationError } from '../middleware/validation.js';
 
 const router = Router();
 
-const usersQuerySchema = z.object({
-  q: z.string().max(80).optional().default('')
+const MAX_ADMIN_PAGE_SIZE = 100;
+
+const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1),
+  size: z.coerce.number().int().min(1).max(MAX_ADMIN_PAGE_SIZE)
+});
+
+const usersQuerySchema = paginationQuerySchema.extend({
+  q: z.string().max(80).optional().default(''),
+  role: z.enum(['user', 'admin']).optional()
+});
+
+const chatReportsQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(['open', 'resolved']).optional()
 });
 
 const userParamSchema = z.object({
@@ -47,20 +59,55 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
+function pagingMeta(page, size, total) {
+  const totalPages = total === 0 ? 0 : Math.ceil(total / size);
+  return {
+    page,
+    size,
+    total,
+    totalPages,
+    hasPreviousPage: page > 1,
+    hasNextPage: page < totalPages
+  };
+}
+
 router.use(requireAuth, requireAdmin);
 
 router.get('/users', async (req, res, next) => {
   try {
-    const { q } = usersQuerySchema.parse(req.query || {});
-    const { rows } = await db.query(
-      `SELECT user_id, username, display_name, level, xp, region, muted_until, banned_until
-       FROM users
-       WHERE username ILIKE $1 OR display_name ILIKE $1
-       ORDER BY last_active DESC NULLS LAST
-       LIMIT 200`,
-      [`%${q}%`]
+    const { q, role, page, size } = usersQuerySchema.parse(req.query || {});
+    const filters = [];
+    const params = [];
+    if (q) {
+      params.push(`%${q}%`);
+      filters.push(`(username ILIKE $${params.length} OR display_name ILIKE $${params.length})`);
+    }
+    if (role) {
+      params.push(role);
+      filters.push(`role = $${params.length}`);
+    }
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+    const offset = (page - 1) * size;
+
+    const totalResult = await db.query(
+      `SELECT COUNT(*)::int AS total FROM users ${whereClause}`,
+      params
     );
-    return res.json(rows);
+
+    const rowsResult = await db.query(
+      `SELECT user_id, username, role, display_name, level, xp, region, muted_until, banned_until, last_active
+       FROM users
+       ${whereClause}
+       ORDER BY last_active DESC NULLS LAST, username ASC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, size, offset]
+    );
+
+    const total = Number(totalResult.rows[0]?.total || 0);
+    return res.json({
+      ...pagingMeta(page, size, total),
+      rows: rowsResult.rows
+    });
   } catch (e) {
     if (handleValidationError(res, e)) return;
     return next(e);
@@ -91,16 +138,41 @@ router.post('/users/:userId/ban', async (req, res, next) => {
   }
 });
 
-router.get('/reports/chat', async (_req, res, next) => {
+router.get('/reports/chat', async (req, res, next) => {
   try {
-    const { rows } = await db.query(
+    const { page, size, status } = chatReportsQuerySchema.parse(req.query || {});
+    const params = [];
+    const filters = [];
+    if (status) {
+      params.push(status);
+      filters.push(`r.status = $${params.length}`);
+    }
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+    const offset = (page - 1) * size;
+
+    const totalResult = await db.query(
+      `SELECT COUNT(*)::int AS total
+       FROM chat_reports r
+       ${whereClause}`,
+      params
+    );
+
+    const rowsResult = await db.query(
       `SELECT r.report_id, r.reason, r.status, r.created_at, m.message_id, m.content, m.room_type, m.room_id
        FROM chat_reports r
        JOIN chat_messages m ON m.message_id = r.message_id
-       ORDER BY r.created_at DESC`
+       ${whereClause}
+       ORDER BY r.created_at DESC, r.report_id DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, size, offset]
     );
-    return res.json(rows);
+    const total = Number(totalResult.rows[0]?.total || 0);
+    return res.json({
+      ...pagingMeta(page, size, total),
+      rows: rowsResult.rows
+    });
   } catch (e) {
+    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });
