@@ -107,6 +107,7 @@ export function createCommunityApiClient({ getToken, onUnauthorized } = {}) {
     sendFriendRequest: (friendId) => runAuthed(`/friends/request/${friendId}`, { method: 'POST', body: {} }),
     joinClan: (clanId) => runAuthed(`/clans/${clanId}/join`, { method: 'POST', body: {} }),
     leaveClan: () => runAuthed('/clans/leave', { method: 'POST', body: {} }),
+    listChatMessages: (roomType, roomId) => runAuthed(`/chat/${roomType}/${roomId}`),
     reportChatMessage: (messageId, reason = 'abuse') => runAuthed(`/chat/report/${messageId}`, {
       method: 'POST',
       body: { reason }

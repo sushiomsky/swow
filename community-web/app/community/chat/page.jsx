@@ -2,15 +2,20 @@
 
 import ChatRoom from '../../../components/ChatRoom';
 
+const CHAT_ROOMS = [
+  { roomType: 'global', roomId: 'lobby', label: 'Global lobby' },
+  { roomType: 'match', roomId: 'current-match', label: 'Current match' },
+  { roomType: 'clan', roomId: 'my-clan', label: 'My clan' }
+];
+
 export default function ChatPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Community Chat</h1>
-      <div className="grid gap-4 md:grid-cols-3">
-        <ChatRoom roomType="global" roomId="lobby" />
-        <ChatRoom roomType="match" roomId="current-match" />
-        <ChatRoom roomType="clan" roomId="my-clan" />
-      </div>
+      <p className="text-sm text-zinc-300">
+        Switch between rooms without losing context. Unread badges and history preload keep each room easy to follow.
+      </p>
+      <ChatRoom roomType="global" roomId="lobby" roomOptions={CHAT_ROOMS} />
     </div>
   );
 }
