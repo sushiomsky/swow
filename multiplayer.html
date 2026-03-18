@@ -76,6 +76,51 @@
             font-size: 10px; color: #555;
             pointer-events: none;
         }
+        #settingsToggler {
+            position: fixed; z-index: 450;
+            top: 10px; left: 10px;
+            font-family: 'C64ProRegular', monospace;
+            font-size: 11px;
+            color: #fff;
+            border: 1px solid #5b5b5b;
+            background: rgba(10, 10, 10, 0.9);
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+        #settingsPanel {
+            position: fixed; z-index: 460;
+            top: 50px; left: 10px;
+            width: min(320px, calc(100vw - 20px));
+            background: rgba(8, 8, 8, 0.95);
+            border: 1px solid #3f3f3f;
+            padding: 12px;
+            font-family: 'C64ProRegular', monospace;
+            font-size: 11px;
+            color: #ddd;
+            display: grid;
+            gap: 10px;
+        }
+        #settingsPanel h2 {
+            font-size: 12px;
+            color: #DFF60A;
+            margin-bottom: 2px;
+        }
+        #settingsPanel label {
+            display: grid;
+            gap: 4px;
+        }
+        #settingsPanel select {
+            background: #111;
+            color: #fff;
+            border: 1px solid #5b5b5b;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 6px 8px;
+        }
+        #settingsPanel .help {
+            color: #9a9a9a;
+            line-height: 1.35;
+        }
         .hide { display: none !important; }
     </style>
     <link rel="shortcut icon" href="/favicon.ico">
@@ -124,6 +169,36 @@
     <div id="controls-hint">
         ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu
     </div>
+    <button id="settingsToggler" type="button">⚙ Settings</button>
+    <section id="settingsPanel" class="hide">
+        <h2>Gameplay Settings</h2>
+        <label>
+            Controls
+            <select id="settingControls">
+                <option value="arrows">Arrows + Ctrl</option>
+                <option value="wasd">WASD + Left Shift</option>
+                <option value="ijkl">IJKL + Space</option>
+            </select>
+        </label>
+        <label>
+            Visual filter
+            <select id="settingVisualFilter">
+                <option value="none">None</option>
+                <option value="scanlines">Scan lines</option>
+                <option value="bwTv">Black and white TV</option>
+                <option value="colorTv">Color TV</option>
+                <option value="greenC64monitor">Green C64 monitor</option>
+            </select>
+        </label>
+        <label>
+            Sound
+            <select id="settingSound">
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </label>
+        <p class="help">Settings apply immediately during gameplay and are saved for future sessions.</p>
+    </section>
 
     <script type="module" src="/src/client/MultiplayerApp.js"></script>
 </body>

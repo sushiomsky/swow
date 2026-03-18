@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import AuthPanel from '../components/AuthPanel';
 import ChatRoom from '../components/ChatRoom';
+import ActiveGamesPanel from '../components/ActiveGamesPanel';
 
 export const metadata = {
   title: 'Home',
@@ -35,6 +36,8 @@ export default function HomePage() {
         <Link href="/community/chat" className="card"><h2 className="text-lg font-semibold">Chat Rooms</h2><p className="mt-2 text-sm text-zinc-300">Global, match, and clan communication.</p></Link>
         <Link href="/admin" className="card"><h2 className="text-lg font-semibold">Admin</h2><p className="mt-2 text-sm text-zinc-300">Moderation, reports, events, analytics.</p></Link>
       </section>
+
+      <ActiveGamesPanel />
 
       <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <AuthPanel />

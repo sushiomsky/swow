@@ -309,6 +309,12 @@ class GameServer {
     _checkDungeonEmpty(dungeon) {
         const hasRealPlayers = dungeon.players.some(p => p.id !== null);
         if (!hasRealPlayers && dungeon.lifecycleState !== STATE.DESTROYED) {
+            const mode = dungeon.matchMode || 'endless_br';
+            if (mode === 'classic_private_pair') {
+                this._removePrivateLobbyByDungeonId(dungeon.id);
+                this.onDungeonDestroyed(dungeon.id);
+                return;
+            }
             dungeon.lifecycleState = STATE.EMPTY;
             dungeon.speedMultiplier = 1.8; // Apply fast mode when dungeon becomes empty
         }
@@ -568,6 +574,52 @@ class GameServer {
             }
         } while (this.privatePairLobbies.has(code));
         return code;
+    }
+
+    _removePrivateLobbyByDungeonId(dungeonId) {
+        for (const [code, lobby] of this.privatePairLobbies.entries()) {
+            if (lobby?.dungeon?.id === dungeonId) {
+                this.privatePairLobbies.delete(code);
+            }
+        }
+    }
+
+    _hasWaitingPrivateLobby(dungeonId) {
+        for (const [, lobby] of this.privatePairLobbies.entries()) {
+            if (lobby?.dungeon?.id === dungeonId) return true;
+        }
+        return false;
+    }
+
+    getActiveGamesSnapshot() {
+        const games = [];
+        for (const [dungeonId, dungeon] of this.dungeons.entries()) {
+            if (dungeon.lifecycleState === STATE.DESTROYED) continue;
+            const players = dungeon.players.filter((player) => player.id !== null);
+            if (!players.length) continue;
+            const mode = dungeon.matchMode || 'endless_br';
+            const waitingPrivateLobby = mode === 'classic_private_pair' && this._hasWaitingPrivateLobby(dungeonId);
+            games.push({
+                dungeon_id: dungeonId,
+                mode,
+                status: waitingPrivateLobby ? 'waiting_for_partner' : 'in_progress',
+                player_count: players.length,
+                max_players: mode === 'sitngo_br' ? SITNGO_MAX_PLAYERS : 2,
+                scene: dungeon.scene,
+                level: dungeon.level,
+                lifecycle_state: dungeon.lifecycleState,
+            });
+        }
+
+        games.sort((a, b) => Number(a.dungeon_id) - Number(b.dungeon_id));
+
+        return {
+            generated_at: new Date().toISOString(),
+            total_games: games.length,
+            total_players: games.reduce((sum, game) => sum + game.player_count, 0),
+            queued_sitngo_players: this.sitNGoQueue.length,
+            games,
+        };
     }
 
     _send(ws, data) {

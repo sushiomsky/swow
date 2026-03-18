@@ -37,6 +37,20 @@ const WS_URL = `${WS_PROTOCOL}//${location.hostname}${location.port ? ':' + loca
 const SPRITE_URL = '/images/v3.0/sprite.png';
 const SPRITE_W = 248, SPRITE_H = 355;
 const SCALE = 3;
+const CONTROL_SCHEMES = {
+    arrows: {
+        label: 'ARROWS + CTRL',
+        keys: { up: 38, down: 40, left: 37, right: 39, fire: 17 }
+    },
+    wasd: {
+        label: 'WASD + LEFT SHIFT',
+        keys: { up: 87, down: 83, left: 65, right: 68, fire: 16 }
+    },
+    ijkl: {
+        label: 'IJKL + SPACE',
+        keys: { up: 73, down: 75, left: 74, right: 76, fire: 32 }
+    }
+};
 
 // ─── Audio (thin wrapper) ──────────────────────────────────────────────────
 
@@ -88,8 +102,8 @@ class AudioPlayer {
         this.active = [];
     }
 
-    processSounds(sounds) {
-        if (!sounds) return;
+    processSounds(sounds, enabled = true) {
+        if (!enabled || !sounds) return;
         for (const s of sounds) {
             if (s.stopFirst) this.stop(s.name);
             this.play(s.name, s.loop);
@@ -456,7 +470,12 @@ class MultiplayerApp {
         this.renderer = null;
         this.audio = new AudioPlayer();
         this.pressedKeys = {};
-        this.options = { visualFilter: localStorage.getItem('visualFilter') || 'scanlines', palette: 'default' };
+        this.options = {
+            visualFilter: localStorage.getItem('visualFilter') || 'scanlines',
+            controlScheme: localStorage.getItem('multiplayerControlScheme') || 'arrows',
+            sound: localStorage.getItem('sound') || 'on',
+            palette: 'default'
+        };
 
         this._loadSprite().then(() => this._init());
     }
@@ -498,6 +517,9 @@ class MultiplayerApp {
 
         this._initKeys();
         this._bindButtons();
+        this._initSettingsUI();
+        this._syncSettingsUI();
+        this._updateControlsHint();
 
         // Animation loop (client-side, just renders last known state)
         const loop = () => {
@@ -533,6 +555,90 @@ class MultiplayerApp {
             this._setStatus(`Private code detected: ${autoCode.toUpperCase()}. Click JOIN PRIVATE.`);
             this._setStatusError(false);
         }
+    }
+
+    _initSettingsUI() {
+        const toggler = q('settingsToggler');
+        const controlsSelect = q('settingControls');
+        const visualFilterSelect = q('settingVisualFilter');
+        const soundSelect = q('settingSound');
+
+        if (toggler) {
+            toggler.onclick = () => {
+                this._toggleSettings();
+            };
+        }
+
+        if (controlsSelect) {
+            controlsSelect.onchange = (event) => {
+                const value = event?.target?.value || 'arrows';
+                this._applyControlScheme(value);
+            };
+        }
+
+        if (visualFilterSelect) {
+            visualFilterSelect.onchange = (event) => {
+                const value = event?.target?.value || 'scanlines';
+                this._applyVisualFilter(value);
+            };
+        }
+
+        if (soundSelect) {
+            soundSelect.onchange = (event) => {
+                const value = event?.target?.value || 'on';
+                this._applySound(value);
+            };
+        }
+    }
+
+    _settingsVisible() {
+        const panel = q('settingsPanel');
+        return panel ? !panel.classList.contains('hide') : false;
+    }
+
+    _toggleSettings(forceVisible) {
+        const panel = q('settingsPanel');
+        if (!panel) return;
+        const show = typeof forceVisible === 'boolean' ? forceVisible : panel.classList.contains('hide');
+        panel.classList.toggle('hide', !show);
+    }
+
+    _syncSettingsUI() {
+        const controlsSelect = q('settingControls');
+        const visualFilterSelect = q('settingVisualFilter');
+        const soundSelect = q('settingSound');
+        if (controlsSelect) controlsSelect.value = this.options.controlScheme;
+        if (visualFilterSelect) visualFilterSelect.value = this.options.visualFilter;
+        if (soundSelect) soundSelect.value = this.options.sound;
+    }
+
+    _applyControlScheme(controlScheme) {
+        const nextScheme = CONTROL_SCHEMES[controlScheme] ? controlScheme : 'arrows';
+        this.options.controlScheme = nextScheme;
+        localStorage.setItem('multiplayerControlScheme', nextScheme);
+        this._updateControlsHint();
+    }
+
+    _applyVisualFilter(visualFilter) {
+        this.options.visualFilter = visualFilter;
+        localStorage.setItem('visualFilter', visualFilter);
+        this.renderer.applyVisualFilter(visualFilter);
+    }
+
+    _applySound(sound) {
+        const nextSound = sound === 'off' ? 'off' : 'on';
+        this.options.sound = nextSound;
+        localStorage.setItem('sound', nextSound);
+        if (nextSound === 'off') {
+            this.audio.stopAll();
+        }
+    }
+
+    _updateControlsHint() {
+        const controlsHint = document.getElementById('controls-hint');
+        if (!controlsHint) return;
+        const scheme = CONTROL_SCHEMES[this.options.controlScheme] || CONTROL_SCHEMES.arrows;
+        controlsHint.textContent = `${scheme.label} to move/shoot | M: settings | ESC: back to menu`;
     }
 
     _connect(joinType, payload = null) {
@@ -646,28 +752,38 @@ class MultiplayerApp {
             case 'state':
                 this.lastState = msg.state;
                 this.dungeonId = msg.state.dungeonId;
-                this.audio.processSounds(msg.state.sounds);
+                this.audio.processSounds(msg.state.sounds, this.options.sound === 'on');
                 break;
         }
     }
 
     _getControls() {
-        // Each player uses arrows + ctrl on their own machine (correct for network play).
-        // For local same-machine 2P, use the split-screen single-player mode (index.html) instead.
+        const scheme = CONTROL_SCHEMES[this.options.controlScheme] || CONTROL_SCHEMES.arrows;
+        const keys = scheme.keys;
         return {
-            up:    !!this.pressedKeys[38],
-            down:  !!this.pressedKeys[40],
-            left:  !!this.pressedKeys[37],
-            right: !!this.pressedKeys[39],
-            fire:  !!this.pressedKeys[17],
+            up: !!this.pressedKeys[keys.up],
+            down: !!this.pressedKeys[keys.down],
+            left: !!this.pressedKeys[keys.left],
+            right: !!this.pressedKeys[keys.right],
+            fire: !!this.pressedKeys[keys.fire],
         };
     }
 
     _initKeys() {
         document.addEventListener('keydown', (e) => {
             this.pressedKeys[e.which] = true;
+            if (77 === e.which) {
+                this._toggleSettings();
+                e.preventDefault();
+                return;
+            }
             // Escape: back to menu
             if (27 === e.which) {
+                if (this._settingsVisible()) {
+                    this._toggleSettings(false);
+                    e.preventDefault();
+                    return;
+                }
                 if (this.ws) { this.ws.close(); clearInterval(this._inputInterval); }
                 this.lastState = null;
                 this._hasJoinedGame = false;

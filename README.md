@@ -74,6 +74,7 @@ Security defaults:
 - `/community/reset-password` — password reset request + token confirmation
 - `/admin` — moderation + analytics dashboard shell
 - `/api/community/*` — backend API routes
+- `/multiplayer/active-games` — live active multiplayer sessions snapshot (used by landing page)
 
 Auth API:
 
@@ -140,6 +141,7 @@ make up
 - Community web now uses a unified realtime provider with shared socket lifecycle, room subscriptions, and reconnect replay.
 - Shared frontend UX helpers: `lib/errorUtils.js` (`toUserErrorMessage`) + `components/ErrorText.jsx` for consistent error rendering.
 - Multiplayer load script: `node scripts/multiplayer-load-test.js` (configure via `MP_LOAD_*` env vars).
+- Multiplayer web client now supports in-game settings during live play (controls, visual filter, sound) via the `Settings` panel.
 - Recent local load sample (30 private pairs / 60 clients for 10s): `state_messages_per_second=2858.23`, `avg_server_cpu_percent=23.27`.
 
 ---

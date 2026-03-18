@@ -7,6 +7,7 @@ const { GameServer } = require('./src/server/GameServer');
 
 const PORT = process.env.MP_PORT || 5001;
 const ROOT = __dirname;
+let gameServer = null;
 
 const MIME = {
     '.html': 'text/html',
@@ -21,7 +22,26 @@ const MIME = {
 };
 
 const httpServer = http.createServer((req, res) => {
-    let urlPath = req.url.split('?')[0];
+    const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    let urlPath = requestUrl.pathname;
+
+    if (req.method === 'GET' && urlPath === '/multiplayer/active-games') {
+        const snapshot = gameServer ? gameServer.getActiveGamesSnapshot() : {
+            generated_at: new Date().toISOString(),
+            total_games: 0,
+            total_players: 0,
+            queued_sitngo_players: 0,
+            games: [],
+        };
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+            'Access-Control-Allow-Origin': '*',
+        });
+        res.end(JSON.stringify(snapshot));
+        return;
+    }
+
     if (urlPath === '/') urlPath = '/multiplayer.html';
 
     const filePath = path.join(ROOT, urlPath);
@@ -38,7 +58,7 @@ const httpServer = http.createServer((req, res) => {
     });
 });
 
-const gameServer = new GameServer(httpServer);
+gameServer = new GameServer(httpServer);
 
 httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🎮 Wizard of Wor — Multiplayer server on http://0.0.0.0:${PORT}`);
