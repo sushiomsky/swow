@@ -72,7 +72,9 @@ class DungeonInstance {
 
         // Fake audio object (stop() used by monster scan logic)
         this.audio = {
-            stop: (name) => { /* sounds managed by queueSound */ }
+            stop: (name) => {
+                this.queueStopSound(name);
+            }
         };
 
         this.frameCounters = {
@@ -221,6 +223,10 @@ class DungeonInstance {
 
     queueSound(name, loop = false, stopFirst = false) {
         this._soundQueue.push({ name, loop, stopFirst });
+    }
+
+    queueStopSound(name) {
+        this._soundQueue.push({ name, stopOnly: true });
     }
 
     drainSounds() {

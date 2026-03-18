@@ -105,6 +105,10 @@ class AudioPlayer {
     processSounds(sounds, enabled = true) {
         if (!enabled || !sounds) return;
         for (const s of sounds) {
+            if (s.stopOnly) {
+                this.stop(s.name);
+                continue;
+            }
             if (s.stopFirst) this.stop(s.name);
             this.play(s.name, s.loop);
         }
