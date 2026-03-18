@@ -75,6 +75,7 @@ Security defaults:
 - `/admin` — moderation + analytics dashboard shell
 - `/api/community/*` — backend API routes
 - `/multiplayer/active-games` — live active multiplayer sessions snapshot (used by landing page)
+- `/multiplayer.html?mode=<endless|sitngo|team|pair-host|pair-join>` — direct multiplayer mode launch links used by landing page
 
 Auth API:
 

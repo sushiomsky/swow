@@ -51,6 +51,17 @@ const CONTROL_SCHEMES = {
         keys: { up: 73, down: 75, left: 74, right: 76, fire: 32 }
     }
 };
+const AUTO_MODE_MAP = {
+    endless: 'join_solo',
+    sitngo: 'join_sitngo',
+    'sit-n-go': 'join_sitngo',
+    team: 'join_team_br',
+    'team-br': 'join_team_br',
+    'pair-host': 'join_pair',
+    'private-host': 'join_pair',
+    'pair-join': 'join_private_pair',
+    'private-join': 'join_private_pair'
+};
 
 // ─── Audio (thin wrapper) ──────────────────────────────────────────────────
 
@@ -559,6 +570,22 @@ class MultiplayerApp {
             this._setStatus(`Private code detected: ${autoCode.toUpperCase()}. Click JOIN PRIVATE.`);
             this._setStatusError(false);
         }
+
+        const modeParam = new URLSearchParams(location.search).get('mode');
+        const normalizedMode = String(modeParam || '').trim().toLowerCase();
+        const autoJoinType = AUTO_MODE_MAP[normalizedMode];
+        if (!autoJoinType) return;
+
+        if (autoJoinType === 'join_private_pair') {
+            if (!autoCode) {
+                this._setStatus('Private join mode selected. Enter a code to continue.');
+                this._setStatusError(false);
+                return;
+            }
+            this._connect('join_private_pair', { code: autoCode });
+            return;
+        }
+        this._connect(autoJoinType);
     }
 
     _initSettingsUI() {

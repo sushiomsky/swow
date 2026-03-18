@@ -3,6 +3,44 @@ import AuthPanel from '../components/AuthPanel';
 import ChatRoom from '../components/ChatRoom';
 import ActiveGamesPanel from '../components/ActiveGamesPanel';
 
+const GAME_MODES = [
+  {
+    title: 'Classic Solo',
+    href: '/index.html',
+    description: 'Original arcade run for one player.'
+  },
+  {
+    title: 'Classic Local 2P',
+    href: '/index.html',
+    description: 'Start two-player from the title screen (press 2).'
+  },
+  {
+    title: 'Endless BR',
+    href: '/multiplayer.html?mode=endless',
+    description: 'Join connected dungeon battles instantly.'
+  },
+  {
+    title: 'Sit-n-Go BR',
+    href: '/multiplayer.html?mode=sitngo',
+    description: 'Queue and launch once enough players join.'
+  },
+  {
+    title: 'Team BR',
+    href: '/multiplayer.html?mode=team',
+    description: 'Auto-balanced gold vs blue team battle royale.'
+  },
+  {
+    title: 'Private Classic Host',
+    href: '/multiplayer.html?mode=pair-host',
+    description: 'Create a private classic room and share the code.'
+  },
+  {
+    title: 'Private Classic Join',
+    href: '/multiplayer.html?mode=pair-join',
+    description: 'Join an existing private room with a code.'
+  }
+];
+
 export const metadata = {
   title: 'Home',
   description: 'Wizard of Wor platform with classic gameplay, community features, account access, and live global chat.'
@@ -35,6 +73,19 @@ export default function HomePage() {
         <Link href="/community/forum" className="card"><h2 className="text-lg font-semibold">Forum</h2><p className="mt-2 text-sm text-zinc-300">Discuss strategy and find teammates.</p></Link>
         <Link href="/community/chat" className="card"><h2 className="text-lg font-semibold">Chat Rooms</h2><p className="mt-2 text-sm text-zinc-300">Global, match, and clan communication.</p></Link>
         <Link href="/admin" className="card"><h2 className="text-lg font-semibold">Admin</h2><p className="mt-2 text-sm text-zinc-300">Moderation, reports, events, analytics.</p></Link>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-2xl font-bold">All Game Modes</h2>
+        <p className="text-sm text-zinc-300">Launch any mode directly from the website.</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {GAME_MODES.map((mode) => (
+            <a key={mode.title} href={mode.href} className="card">
+              <h3 className="text-lg font-semibold">{mode.title}</h3>
+              <p className="mt-2 text-sm text-zinc-300">{mode.description}</p>
+            </a>
+          ))}
+        </div>
       </section>
 
       <ActiveGamesPanel />
