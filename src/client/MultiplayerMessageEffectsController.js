@@ -60,10 +60,7 @@ export class MultiplayerMessageEffectsController {
         this.uiController.setStatus('');
         this.uiController.setStatusError(false);
         this.uiController.setHudDungeonText(this._buildHudText(msg));
-        // Resume audio context after user interaction
-        if (this.audio.ctx && this.audio.ctx.state === 'suspended') {
-            this.audio.ctx.resume();
-        }
+        this.audio.resumeContext();
     }
 
     handleState(msg) {

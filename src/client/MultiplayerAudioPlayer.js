@@ -72,4 +72,9 @@ export class MultiplayerAudioPlayer {
             this.play(sound.name, sound.loop);
         }
     }
+
+    resumeContext() {
+        if (!this.ctx || this.ctx.state !== 'suspended') return;
+        this.ctx.resume();
+    }
 }
