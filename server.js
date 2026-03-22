@@ -1,10 +1,13 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 const ROOT = __dirname;
+const MP_HOST = process.env.MP_HOST || '127.0.0.1';
+const MP_PORT = process.env.MP_PORT || 5001;
 
 const MIME_TYPES = {
     '.html': 'text/html',
@@ -20,7 +23,7 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
     let urlPath = req.url.split('?')[0]; // strip query params
-    if (urlPath === '/') urlPath = '/index.html';
+    if (urlPath === '/') urlPath = '/src/platform/platform.html';
     if (urlPath === '/platform') urlPath = '/src/platform/platform.html';
 
     const filePath = path.join(ROOT, urlPath);
@@ -53,5 +56,39 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
     console.log(`🎮 Wizard of Wor running at http://${HOST}:${PORT}`);
+    console.log(`   Platform: http://localhost:${PORT}/`);
+    console.log(`   Classic:  http://localhost:${PORT}/index.html`);
+    console.log(`   WS proxy: /multiplayer → ${MP_HOST}:${MP_PORT}`);
     console.log(`   Press Ctrl+C to stop`);
+});
+
+// Proxy WebSocket upgrades on /multiplayer to the multiplayer server
+// so the platform works in local dev without Caddy.
+server.on('upgrade', (req, socket, head) => {
+    const urlPath = req.url.split('?')[0];
+    if (urlPath !== '/multiplayer') {
+        socket.destroy();
+        return;
+    }
+
+    const upstream = net.createConnection({ host: MP_HOST, port: MP_PORT }, () => {
+        // Reconstruct the raw HTTP upgrade request and forward it
+        const reqLine = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`;
+        const headers = Object.entries(req.headers)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('\r\n');
+        upstream.write(reqLine + headers + '\r\n\r\n');
+        if (head && head.length) upstream.write(head);
+
+        // Bi-directional pipe
+        socket.pipe(upstream);
+        upstream.pipe(socket);
+    });
+
+    upstream.on('error', () => {
+        try { socket.end(); } catch (_) { /* noop */ }
+    });
+    socket.on('error', () => {
+        try { upstream.end(); } catch (_) { /* noop */ }
+    });
 });
