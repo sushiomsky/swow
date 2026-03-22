@@ -37,6 +37,7 @@ import { MultiplayerUiController } from './MultiplayerUiController.js';
 import { MultiplayerLaunchController } from './MultiplayerLaunchController.js';
 import { MultiplayerMessageController } from './MultiplayerMessageController.js';
 import { MultiplayerMessageEffectsController } from './MultiplayerMessageEffectsController.js';
+import { MultiplayerShareController } from './MultiplayerShareController.js';
 import { MultiplayerSessionController } from './MultiplayerSessionController.js';
 import { MultiplayerAppBootstrapController } from './MultiplayerAppBootstrapController.js';
 
@@ -77,6 +78,7 @@ class MultiplayerApp {
         this.launchController = null;
         this.messageController = null;
         this.messageEffectsController = null;
+        this.shareController = new MultiplayerShareController({ uiController: this.uiController });
         this.bootstrapController = null;
         this.options = {
             visualFilter: localStorage.getItem('visualFilter') || 'scanlines',
@@ -194,7 +196,7 @@ class MultiplayerApp {
             setLastState: (state) => {
                 this.lastState = state;
             },
-            onCopyPrivateLink: (msg) => this._copyPrivateLink(msg),
+            onCopyPrivateLink: (msg) => this.shareController.copyPrivateLink(msg),
         });
         this.messageController = new MultiplayerMessageController({
             effectsController: this.messageEffectsController,
