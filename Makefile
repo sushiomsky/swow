@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: setup up down restart logs ps pull agent-list agent-quality agent-smoke agent-performance agent-ops agent-release
+.PHONY: setup up down restart logs ps pull agent-list agent-quality agent-smoke agent-performance agent-ux agent-design agent-ops agent-release
 
 setup:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -35,6 +35,12 @@ agent-smoke:
 
 agent-performance:
 	bash scripts/agents/run-agent.sh performance
+
+agent-ux:
+	bash scripts/agents/run-agent.sh ux
+
+agent-design:
+	bash scripts/agents/run-agent.sh design
 
 agent-ops:
 	bash scripts/agents/run-agent.sh ops

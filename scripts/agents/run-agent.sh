@@ -18,8 +18,10 @@ Available project agents:
   quality      - API check + API integration tests + community-web build
   smoke        - Surface smoke checks (classic-web, classic-multiplayer, community-api, community-web)
   performance  - Multiplayer throughput load test (scripts/multiplayer-load-test.js)
+  ux           - Route and UX landmark checks against running community web
+  design       - Visual consistency checks (cards/hero/layout framing)
   ops          - Runtime service status and public health diagnostics
-  release      - Composite pipeline: quality + smoke + performance + ops
+  release      - Composite pipeline: quality + smoke + ux + design + performance + ops
 
 Usage:
   bash scripts/agents/run-agent.sh <agent-name>
@@ -57,6 +59,114 @@ run_performance_agent() {
   log "Performance probe completed"
 }
 
+run_ux_agent() {
+  log "Running UX checks"
+  local web_port="${UX_AGENT_WEB_PORT:-13000}"
+  local active_games_base="${UX_ACTIVE_GAMES_BASE_URL:-http://127.0.0.1:5001}"
+  local web_log="$run_dir/ux-community-web.log"
+  local report_log="$run_dir/ux-check.log"
+  local web_pid=""
+  local web_started_here=0
+
+  cleanup_ux() {
+    if [ -n "$web_pid" ] && kill -0 "$web_pid" >/dev/null 2>&1; then
+      kill "$web_pid" >/dev/null 2>&1 || true
+      wait "$web_pid" >/dev/null 2>&1 || true
+    fi
+  }
+
+  if curl -fsS "http://127.0.0.1:${web_port}/" >/dev/null 2>&1; then
+    log "Using existing community-web at http://127.0.0.1:${web_port}"
+  else
+    log "Starting temporary community-web server on :${web_port}"
+    npm --prefix "$root_dir/community-web" run build >"$run_dir/ux-community-web-build.log" 2>&1
+    (
+      cd "$root_dir/community-web"
+      NEXT_PUBLIC_COMMUNITY_API_BASE="/api/community" exec ./node_modules/.bin/next start -p "$web_port"
+    ) >"$web_log" 2>&1 &
+    web_pid="$!"
+    web_started_here=1
+    for _ in $(seq 1 120); do
+      if curl -fsS "http://127.0.0.1:${web_port}/" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+    done
+    if ! curl -fsS "http://127.0.0.1:${web_port}/" >/dev/null 2>&1; then
+      cleanup_ux
+      log "Failed to start temporary community-web for UX checks"
+      exit 1
+    fi
+  fi
+
+  if [ "$web_started_here" -eq 1 ]; then
+    trap cleanup_ux EXIT
+  fi
+
+  UX_CHECK_BASE_URL="http://127.0.0.1:${web_port}" \
+    UX_ACTIVE_GAMES_BASE_URL="$active_games_base" \
+    node "$root_dir/scripts/agents/ux-check.mjs" | tee "$report_log"
+
+  if [ "$web_started_here" -eq 1 ]; then
+    trap - EXIT
+    cleanup_ux
+  fi
+  log "UX checks passed"
+}
+
+run_design_agent() {
+  log "Running design checks"
+  local web_port="${DESIGN_AGENT_WEB_PORT:-13000}"
+  local web_log="$run_dir/design-community-web.log"
+  local report_log="$run_dir/design-check.log"
+  local web_pid=""
+  local web_started_here=0
+
+  cleanup_design() {
+    if [ -n "$web_pid" ] && kill -0 "$web_pid" >/dev/null 2>&1; then
+      kill "$web_pid" >/dev/null 2>&1 || true
+      wait "$web_pid" >/dev/null 2>&1 || true
+    fi
+  }
+
+  if curl -fsS "http://127.0.0.1:${web_port}/" >/dev/null 2>&1; then
+    log "Using existing community-web at http://127.0.0.1:${web_port}"
+  else
+    log "Starting temporary community-web server on :${web_port}"
+    npm --prefix "$root_dir/community-web" run build >"$run_dir/design-community-web-build.log" 2>&1
+    (
+      cd "$root_dir/community-web"
+      NEXT_PUBLIC_COMMUNITY_API_BASE="/api/community" exec ./node_modules/.bin/next start -p "$web_port"
+    ) >"$web_log" 2>&1 &
+    web_pid="$!"
+    web_started_here=1
+    for _ in $(seq 1 120); do
+      if curl -fsS "http://127.0.0.1:${web_port}/" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+    done
+    if ! curl -fsS "http://127.0.0.1:${web_port}/" >/dev/null 2>&1; then
+      cleanup_design
+      log "Failed to start temporary community-web for design checks"
+      exit 1
+    fi
+  fi
+
+  if [ "$web_started_here" -eq 1 ]; then
+    trap cleanup_design EXIT
+  fi
+
+  DESIGN_CHECK_BASE_URL="http://127.0.0.1:${web_port}" \
+    node "$root_dir/scripts/agents/design-check.mjs" | tee "$report_log"
+
+  if [ "$web_started_here" -eq 1 ]; then
+    trap - EXIT
+    cleanup_design
+  fi
+  log "Design checks passed"
+}
+
 run_ops_agent() {
   log "Collecting ops diagnostics"
   {
@@ -78,6 +188,8 @@ run_ops_agent() {
 run_release_agent() {
   run_quality_agent
   run_smoke_agent
+  run_ux_agent
+  run_design_agent
   run_performance_agent
   run_ops_agent
   log "Release agent completed"
@@ -95,6 +207,12 @@ case "$agent" in
     ;;
   performance)
     run_performance_agent
+    ;;
+  ux)
+    run_ux_agent
+    ;;
+  design)
+    run_design_agent
     ;;
   ops)
     run_ops_agent

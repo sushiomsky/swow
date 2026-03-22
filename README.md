@@ -153,8 +153,10 @@ You can run reusable local "agents" to keep development and operations consisten
 - `npm run agent:quality` — community API check + integration tests + community web build
 - `npm run agent:smoke` — smoke checks for classic web, multiplayer, community API, and community web
 - `npm run agent:performance` — multiplayer load probe via `scripts/multiplayer-load-test.js`
+- `npm run agent:ux` — route and UX landmark checks (header/footer/main, landing sections, active-games contract)
+- `npm run agent:design` — design consistency checks (card density, hero presence, shared layout framing)
 - `npm run agent:ops` — runtime status + public endpoint diagnostics
-- `npm run agent:release` — full pipeline (`quality` + `smoke` + `performance` + `ops`)
+- `npm run agent:release` — full pipeline (`quality` + `smoke` + `ux` + `design` + `performance` + `ops`)
 
 Equivalent Make targets are available (`make agent-quality`, `make agent-release`, etc.).
 
@@ -163,6 +165,8 @@ Agent runner:
 - `scripts/agents/run-agent.sh`
 - logs are stored in `ci-logs/agents/<timestamp>-<agent>/`
 - `agent:smoke` requires `COMMUNITY_DATABASE_URL` and `COMMUNITY_REDIS_URL` in your environment
+- `agent:ux` / `agent:design` auto-start a temporary `community-web` server on `:13000` if not already running
+- `agent:ux` checks `/multiplayer/active-games` against `http://127.0.0.1:5001` by default (override with `UX_ACTIVE_GAMES_BASE_URL`)
 
 ---
 

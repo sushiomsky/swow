@@ -10,6 +10,8 @@
     "agent:quality": "bash scripts/agents/run-agent.sh quality",
     "agent:smoke": "bash scripts/agents/run-agent.sh smoke",
     "agent:performance": "bash scripts/agents/run-agent.sh performance",
+    "agent:ux": "bash scripts/agents/run-agent.sh ux",
+    "agent:design": "bash scripts/agents/run-agent.sh design",
     "agent:ops": "bash scripts/agents/run-agent.sh ops",
     "agent:release": "bash scripts/agents/run-agent.sh release"
   },
