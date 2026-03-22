@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: setup up down restart logs ps pull
+.PHONY: setup up down restart logs ps pull agent-list agent-quality agent-smoke agent-performance agent-ops agent-release
 
 setup:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
@@ -23,3 +23,21 @@ ps:
 
 pull:
 	git pull --rebase && docker compose up -d --build
+
+agent-list:
+	bash scripts/agents/run-agent.sh list
+
+agent-quality:
+	bash scripts/agents/run-agent.sh quality
+
+agent-smoke:
+	bash scripts/agents/run-agent.sh smoke
+
+agent-performance:
+	bash scripts/agents/run-agent.sh performance
+
+agent-ops:
+	bash scripts/agents/run-agent.sh ops
+
+agent-release:
+	bash scripts/agents/run-agent.sh release

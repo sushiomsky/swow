@@ -145,6 +145,25 @@ make up
 - Multiplayer web client now supports in-game settings during live play (controls, visual filter, sound) via the `Settings` panel.
 - Recent local load sample (30 private pairs / 60 clients for 10s): `state_messages_per_second=2858.23`, `avg_server_cpu_percent=23.27`.
 
+### Local project agents (automation workflows)
+
+You can run reusable local "agents" to keep development and operations consistent:
+
+- `npm run agent:list` — show available agents
+- `npm run agent:quality` — community API check + integration tests + community web build
+- `npm run agent:smoke` — smoke checks for classic web, multiplayer, community API, and community web
+- `npm run agent:performance` — multiplayer load probe via `scripts/multiplayer-load-test.js`
+- `npm run agent:ops` — runtime status + public endpoint diagnostics
+- `npm run agent:release` — full pipeline (`quality` + `smoke` + `performance` + `ops`)
+
+Equivalent Make targets are available (`make agent-quality`, `make agent-release`, etc.).
+
+Agent runner:
+
+- `scripts/agents/run-agent.sh`
+- logs are stored in `ci-logs/agents/<timestamp>-<agent>/`
+- `agent:smoke` requires `COMMUNITY_DATABASE_URL` and `COMMUNITY_REDIS_URL` in your environment
+
 ---
 
 ## Gameplay

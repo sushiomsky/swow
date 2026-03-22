@@ -5,7 +5,13 @@
   "scripts": {
     "dev": "vite",
     "start": "node server.js",
-    "multiplayer": "node server-multiplayer.js"
+    "multiplayer": "node server-multiplayer.js",
+    "agent:list": "bash scripts/agents/run-agent.sh list",
+    "agent:quality": "bash scripts/agents/run-agent.sh quality",
+    "agent:smoke": "bash scripts/agents/run-agent.sh smoke",
+    "agent:performance": "bash scripts/agents/run-agent.sh performance",
+    "agent:ops": "bash scripts/agents/run-agent.sh ops",
+    "agent:release": "bash scripts/agents/run-agent.sh release"
   },
   "keywords": [],
   "author": "",
