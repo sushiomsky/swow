@@ -1,23 +1,33 @@
 import { q } from '../utils.js';
+import { describeControlBinding } from '../input/SharedControls.js';
 
 export class MultiplayerSettingsController {
     constructor({
-        controlSchemes,
         getOptions,
-        onControlSchemeChange,
+        onControlBindingDeviceChange,
+        onCaptureControlAction,
         onVisualFilterChange,
-        onSoundChange
+        onSoundChange,
+        getControlBindingSummary,
+        getControlActionSummary
     }) {
-        this.controlSchemes = controlSchemes;
         this.getOptions = getOptions;
-        this.onControlSchemeChange = onControlSchemeChange;
+        this.onControlBindingDeviceChange = onControlBindingDeviceChange;
+        this.onCaptureControlAction = onCaptureControlAction;
         this.onVisualFilterChange = onVisualFilterChange;
         this.onSoundChange = onSoundChange;
+        this.getControlBindingSummary = getControlBindingSummary;
+        this.getControlActionSummary = getControlActionSummary;
     }
 
     init() {
         const toggler = q('settingsToggler');
         const controlsSelect = q('settingControls');
+        const controlsUpButton = q('settingControlUp');
+        const controlsDownButton = q('settingControlDown');
+        const controlsLeftButton = q('settingControlLeft');
+        const controlsRightButton = q('settingControlRight');
+        const controlsFireButton = q('settingControlFire');
         const visualFilterSelect = q('settingVisualFilter');
         const soundSelect = q('settingSound');
 
@@ -29,12 +39,18 @@ export class MultiplayerSettingsController {
 
         if (controlsSelect) {
             controlsSelect.onchange = (event) => {
-                const value = event?.target?.value || 'arrows';
-                if (typeof this.onControlSchemeChange === 'function') {
-                    this.onControlSchemeChange(value);
+                const value = event?.target?.value || 'keyboard';
+                if (typeof this.onControlBindingDeviceChange === 'function') {
+                    this.onControlBindingDeviceChange(value);
                 }
+                this.updateControlsHint();
             };
         }
+        if (controlsUpButton) controlsUpButton.onclick = () => this._captureControlAction('up');
+        if (controlsDownButton) controlsDownButton.onclick = () => this._captureControlAction('down');
+        if (controlsLeftButton) controlsLeftButton.onclick = () => this._captureControlAction('left');
+        if (controlsRightButton) controlsRightButton.onclick = () => this._captureControlAction('right');
+        if (controlsFireButton) controlsFireButton.onclick = () => this._captureControlAction('fire');
 
         if (visualFilterSelect) {
             visualFilterSelect.onchange = (event) => {
@@ -72,16 +88,38 @@ export class MultiplayerSettingsController {
         const controlsSelect = q('settingControls');
         const visualFilterSelect = q('settingVisualFilter');
         const soundSelect = q('settingSound');
-        if (controlsSelect) controlsSelect.value = options.controlScheme || 'arrows';
+        if (controlsSelect) controlsSelect.value = options.controlDevice || 'keyboard';
         if (visualFilterSelect) visualFilterSelect.value = options.visualFilter || 'scanlines';
         if (soundSelect) soundSelect.value = options.sound || 'on';
+        this._syncControlButtons();
     }
 
     updateControlsHint() {
         const options = this.getOptions ? this.getOptions() : {};
         const controlsHint = document.getElementById('controls-hint');
         if (!controlsHint) return;
-        const scheme = this.controlSchemes[options.controlScheme] || this.controlSchemes.arrows;
-        controlsHint.textContent = `${scheme.label} to move/shoot | M: settings | ESC: back to menu`;
+        const summary = typeof this.getControlBindingSummary === 'function'
+            ? this.getControlBindingSummary()
+            : describeControlBinding(options.controlBinding);
+        controlsHint.textContent = `${summary} | M: settings | ESC: back to menu`;
+    }
+
+    _captureControlAction(action) {
+        if (typeof this.onCaptureControlAction === 'function') this.onCaptureControlAction(action);
+    }
+
+    _syncControlButtons() {
+        const upButton = q('settingControlUp');
+        const downButton = q('settingControlDown');
+        const leftButton = q('settingControlLeft');
+        const rightButton = q('settingControlRight');
+        const fireButton = q('settingControlFire');
+        const summary = this.getControlActionSummary || (() => '');
+
+        if (upButton) upButton.textContent = `UP: ${summary('up')}`;
+        if (downButton) downButton.textContent = `DOWN: ${summary('down')}`;
+        if (leftButton) leftButton.textContent = `LEFT: ${summary('left')}`;
+        if (rightButton) rightButton.textContent = `RIGHT: ${summary('right')}`;
+        if (fireButton) fireButton.textContent = `FIRE: ${summary('fire')}`;
     }
 }

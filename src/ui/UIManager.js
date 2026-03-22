@@ -1,13 +1,25 @@
 import { x, q, F } from '../utils.js';
+import {
+    createKeyboardBinding,
+    getDeviceValue,
+    normalizeControlBinding,
+    setBindingDevice,
+} from '../input/SharedControls.js';
+import { ControlBindingConfigurator } from '../input/ControlBindingConfigurator.js';
 
 export class UIManager {
     constructor(engine, app) {
         this.engine = engine;
         this.app = app;
+        this.controlsRuntime = null;
+        this.yellowConfigurator = null;
+        this.blueConfigurator = null;
         this.init();
     }
 
     init() {
+        this.controlsRuntime = this.app.controlsRuntime;
+
         q("menuOverlay").onclick = () => {
             q("menu").classList.contains("opened") && this.closeMenu();
         };
@@ -63,31 +75,7 @@ export class UIManager {
             }
         });
 
-        x("#yellowControlSelect > div", (h) => {
-            h.onclick = () => {
-                var k = this.getDataValue(h);
-                this.app.options.yellowControl = k;
-                localStorage.setItem("yellowControl", k);
-                this.refreshActiveOptions();
-                if ("keyboardArrows" == this.app.options.yellowControl && "keyboardArrows" == this.app.options.blueControl)
-                    q('blueControlSelect > div[data-value="keyboardWasd"]').click();
-                else if ("keyboardWasd" == this.app.options.yellowControl && "keyboardWasd" == this.app.options.blueControl)
-                    q('blueControlSelect > div[data-value="keyboardArrows"]').click();
-            }
-        });
-
-        x("#blueControlSelect > div", (h) => {
-            h.onclick = () => {
-                var k = this.getDataValue(h);
-                this.app.options.blueControl = k;
-                localStorage.setItem("blueControl", k);
-                this.refreshActiveOptions();
-                if ("keyboardArrows" == this.app.options.blueControl && "keyboardArrows" == this.app.options.yellowControl)
-                    q('yellowControlSelect > div[data-value="keyboardWasd"]').click();
-                else if ("keyboardWasd" == this.app.options.blueControl && "keyboardWasd" == this.app.options.yellowControl)
-                    q('yellowControlSelect > div[data-value="keyboardArrows"]').click();
-            }
-        });
+        this.initControlConfigurators();
     }
 
     openMenu() {
@@ -118,11 +106,14 @@ export class UIManager {
 
     refreshActiveOptions() {
         x("#menu .items > div", (n) => { n.classList.remove("active") });
-        for (var h = ["visualFilter", "sound", "yellowControl", "blueControl"], k = 0; k < h.length; k++) {
+        for (var h = ["visualFilter", "sound"], k = 0; k < h.length; k++) {
             const selector = `${h[k]}Select div[data-value="${this.app.options[h[k]]}"]`;
             const el = q(selector);
             if (el) el.classList.add("active");
         }
+
+        this._refreshControlDeviceActive('yellowControlSelect', this.app.options.yellowControlBinding);
+        this._refreshControlDeviceActive('blueControlSelect', this.app.options.blueControlBinding);
     }
 
     getDataValue(el) {
@@ -135,5 +126,95 @@ export class UIManager {
 
     setToggler(h) {
         "small" === h ? q("menuToggler").classList.add("small") : q("menuToggler").classList.remove("small");
+    }
+
+    initControlConfigurators() {
+        const yellowItems = x('#yellowControlSelect > div[data-value]', (el) => el);
+        const blueItems = x('#blueControlSelect > div[data-value]', (el) => el);
+
+        yellowItems.forEach((item) => {
+            item.onclick = () => {
+                const nextBinding = setBindingDevice(this.app.options.yellowControlBinding, this.getDataValue(item));
+                if (typeof this.app.savePlayerControlBinding === 'function') {
+                    this.app.savePlayerControlBinding('yellow', nextBinding);
+                } else {
+                    this.app.options.yellowControlBinding = nextBinding;
+                }
+                this.refreshActiveOptions();
+                if (this.yellowConfigurator) this.yellowConfigurator.syncUI();
+            };
+        });
+
+        blueItems.forEach((item) => {
+            item.onclick = () => {
+                const nextBinding = setBindingDevice(this.app.options.blueControlBinding, this.getDataValue(item));
+                if (typeof this.app.savePlayerControlBinding === 'function') {
+                    this.app.savePlayerControlBinding('blue', nextBinding);
+                } else {
+                    this.app.options.blueControlBinding = nextBinding;
+                }
+                this.refreshActiveOptions();
+                if (this.blueConfigurator) this.blueConfigurator.syncUI();
+            };
+        });
+
+        this.yellowConfigurator = new ControlBindingConfigurator({
+            runtime: this.controlsRuntime,
+            getBinding: () => this.app.options.yellowControlBinding,
+            setBinding: (nextBinding) => {
+                const normalized = normalizeControlBinding(nextBinding, createKeyboardBinding('arrows'));
+                if (typeof this.app.savePlayerControlBinding === 'function') {
+                    this.app.savePlayerControlBinding('yellow', normalized);
+                } else {
+                    this.app.options.yellowControlBinding = normalized;
+                }
+            },
+            actionElements: {
+                up: q('yellowBindUp'),
+                down: q('yellowBindDown'),
+                left: q('yellowBindLeft'),
+                right: q('yellowBindRight'),
+                fire: q('yellowBindFire'),
+            },
+            onBindingChanged: () => {
+                this.refreshActiveOptions();
+            },
+            statusPrefix: 'YELLOW: ',
+        });
+        this.yellowConfigurator.init();
+
+        this.blueConfigurator = new ControlBindingConfigurator({
+            runtime: this.controlsRuntime,
+            getBinding: () => this.app.options.blueControlBinding,
+            setBinding: (nextBinding) => {
+                const normalized = normalizeControlBinding(nextBinding, createKeyboardBinding('wasd'));
+                if (typeof this.app.savePlayerControlBinding === 'function') {
+                    this.app.savePlayerControlBinding('blue', normalized);
+                } else {
+                    this.app.options.blueControlBinding = normalized;
+                }
+            },
+            actionElements: {
+                up: q('blueBindUp'),
+                down: q('blueBindDown'),
+                left: q('blueBindLeft'),
+                right: q('blueBindRight'),
+                fire: q('blueBindFire'),
+            },
+            onBindingChanged: () => {
+                this.refreshActiveOptions();
+            },
+            statusPrefix: 'BLUE: ',
+        });
+        this.blueConfigurator.init();
+    }
+
+    _refreshControlDeviceActive(containerId, binding) {
+        const container = q(containerId);
+        if (!container) return;
+        x(`#${containerId} > div[data-value]`, (el) => el.classList.remove('active'));
+        const value = getDeviceValue(binding);
+        const el = q(`${containerId} > div[data-value="${value}"]`);
+        if (el) el.classList.add('active');
     }
 }

@@ -397,8 +397,8 @@ export class GameEngine {
         this.frameCounters.title++;
         if (this.frameCounters.title > u(b, 13)) { this.frameCounters.title = 0; this.animateSkip.title = !1; this.scene = "title" }
         else if (this.frameCounters.title == u(b, 7)) { this.scene = "enemyRoster"; this.animateSkip.enemyRoster = !1; }
-        if (!0 === b.pressedKeys[m.keys[0].fire]) this.startNewGame(1);
-        else if (!0 === b.pressedKeys[m.keys[1].fire]) this.startNewGame(2);
+        if (!0 === b.getControls(0).fire) this.startNewGame(1);
+        else if (!0 === b.getControls(1).fire) this.startNewGame(2);
         if (!0 === b.pressedKeys[49]) { b.setPressedKeyHold(49); this.startNewGame(1) }
         else if (!0 === b.pressedKeys[50]) { b.setPressedKeyHold(50); this.startNewGame(2) }
     }

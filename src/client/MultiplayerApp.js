@@ -40,23 +40,22 @@ import { MultiplayerMessageEffectsController } from './MultiplayerMessageEffects
 import { MultiplayerShareController } from './MultiplayerShareController.js';
 import { MultiplayerSessionController } from './MultiplayerSessionController.js';
 import { MultiplayerAppBootstrapController } from './MultiplayerAppBootstrapController.js';
+import {
+    SharedControlsRuntime,
+    createKeyboardBinding,
+    describeControlAction,
+    describeControlBinding,
+    getDeviceValue,
+    normalizeControlBinding,
+    readControlBinding,
+    setBindingAction,
+    setBindingDevice,
+    writeControlBinding,
+} from '../input/SharedControls.js';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
-const CONTROL_SCHEMES = {
-    arrows: {
-        label: 'ARROWS + CTRL',
-        keys: { up: 38, down: 40, left: 37, right: 39, fire: 17 }
-    },
-    wasd: {
-        label: 'WASD + LEFT SHIFT',
-        keys: { up: 87, down: 83, left: 65, right: 68, fire: 16 }
-    },
-    ijkl: {
-        label: 'IJKL + SPACE',
-        keys: { up: 73, down: 75, left: 74, right: 76, fire: 32 }
-    }
-};
+const MULTIPLAYER_CONTROL_STORAGE_KEY = 'multiplayerControlBinding';
 // ─── Main App ──────────────────────────────────────────────────────────────
 
 class MultiplayerApp {
@@ -72,6 +71,7 @@ class MultiplayerApp {
         this.sessionController = null;
         this.renderer = null;
         this.audio = new MultiplayerAudioPlayer();
+        this.controlsRuntime = new SharedControlsRuntime();
         this.inputController = null;
         this.settingsController = null;
         this.uiController = new MultiplayerUiController();
@@ -82,10 +82,13 @@ class MultiplayerApp {
         this.bootstrapController = null;
         this.options = {
             visualFilter: localStorage.getItem('visualFilter') || 'scanlines',
-            controlScheme: localStorage.getItem('multiplayerControlScheme') || 'arrows',
+            controlBinding: readControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, createKeyboardBinding('arrows')),
+            controlDevice: 'keyboard',
             sound: localStorage.getItem('sound') || 'on',
             palette: 'default'
         };
+        writeControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, this.options.controlBinding);
+        this.options.controlDevice = getDeviceValue(this.options.controlBinding);
 
         this._bootstrap();
     }
@@ -152,8 +155,8 @@ class MultiplayerApp {
 
     _initInputController() {
         this.inputController = new MultiplayerInputController({
-            controlSchemes: CONTROL_SCHEMES,
-            getControlScheme: () => this.options.controlScheme,
+            runtime: this.controlsRuntime,
+            getControlBinding: () => this.options.controlBinding,
             onToggleSettings: (forceVisible) => this.settingsController?.toggleVisibility(forceVisible),
             onExitToMenu: () => this.sessionController?.exitToMenu(),
             isSettingsVisible: () => this.settingsController?.isVisible() || false,
@@ -164,11 +167,13 @@ class MultiplayerApp {
 
     _initSettingsController() {
         this.settingsController = new MultiplayerSettingsController({
-            controlSchemes: CONTROL_SCHEMES,
             getOptions: () => this.options,
-            onControlSchemeChange: (value) => this._applyControlScheme(value),
+            onControlBindingDeviceChange: (value) => this._applyControlDevice(value),
+            onCaptureControlAction: (action) => this._captureControlAction(action),
             onVisualFilterChange: (value) => this._applyVisualFilter(value),
             onSoundChange: (value) => this._applySound(value),
+            getControlBindingSummary: () => describeControlBinding(this.options.controlBinding),
+            getControlActionSummary: (action) => describeControlAction(this.options.controlBinding, action),
         });
         this.settingsController.init();
     }
@@ -203,11 +208,38 @@ class MultiplayerApp {
         });
     }
 
-    _applyControlScheme(controlScheme) {
-        const nextScheme = CONTROL_SCHEMES[controlScheme] ? controlScheme : 'arrows';
-        this.options.controlScheme = nextScheme;
-        localStorage.setItem('multiplayerControlScheme', nextScheme);
+    _applyControlDevice(deviceValue) {
+        this.options.controlBinding = setBindingDevice(this.options.controlBinding, deviceValue);
+        this.options.controlDevice = getDeviceValue(this.options.controlBinding);
+        writeControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, this.options.controlBinding);
         this.settingsController?.updateControlsHint();
+        this.settingsController?.syncUI();
+    }
+
+    _captureControlAction(action) {
+        this.controlsRuntime.captureNextInput({
+            device: this.options.controlBinding.device,
+            gamepadIndex: this.options.controlBinding.gamepadIndex,
+            onCaptured: (capturedMapping) => {
+                this.options.controlBinding = normalizeControlBinding(
+                    setBindingAction(this.options.controlBinding, action, capturedMapping),
+                    this.options.controlBinding
+                );
+                this.options.controlDevice = getDeviceValue(this.options.controlBinding);
+                writeControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, this.options.controlBinding);
+                this.settingsController?.syncUI();
+                this.settingsController?.updateControlsHint();
+            },
+            onStatus: (statusText) => {
+                const status = document.getElementById('status');
+                if (statusText) {
+                    this.uiController.setStatus(`Control capture: ${statusText}`);
+                    this.uiController.setStatusError(false);
+                } else if (status && status.textContent?.startsWith('Control capture:')) {
+                    this.uiController.setStatus('');
+                }
+            },
+        });
     }
 
     _applyVisualFilter(visualFilter) {

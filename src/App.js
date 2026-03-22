@@ -3,11 +3,24 @@ import { AudioEngine } from './audio/AudioEngine.js';
 import { GameEngine } from './engine/GameEngine.js';
 import { UIManager } from './ui/UIManager.js';
 import { x, q, F, z } from './utils.js';
+import {
+    SharedControlsRuntime,
+    createKeyboardBinding,
+    createLegacyControlBinding,
+    normalizeControlBinding,
+    readControlBinding,
+    toLegacyControlValue,
+    writeControlBinding,
+} from './input/SharedControls.js';
+
+const YELLOW_CONTROL_STORAGE_KEY = 'yellowControlBinding';
+const BLUE_CONTROL_STORAGE_KEY = 'blueControlBinding';
 
 class App {
     constructor() {
         this.options = {};
-        this.pressedKeys = [];
+        this.controlsRuntime = new SharedControlsRuntime();
+        this.pressedKeys = this.controlsRuntime.pressedKeys;
         this.enableKeys = !1;
         this.spriteImage = new Image();
         this.spriteWidth = 248;
@@ -62,6 +75,16 @@ class App {
             blueControl: localStorage.getItem("blueControl") || "keyboardWasd",
             highScores: localStorage.getItem("highScores") || "0,0,0,0,0"
         };
+
+        const defaultYellowBinding = createLegacyControlBinding(this.options.yellowControl, 0);
+        const defaultBlueBinding = createLegacyControlBinding(this.options.blueControl, 1);
+        this.options.yellowControlBinding = readControlBinding(YELLOW_CONTROL_STORAGE_KEY, defaultYellowBinding);
+        this.options.blueControlBinding = readControlBinding(BLUE_CONTROL_STORAGE_KEY, defaultBlueBinding);
+        writeControlBinding(YELLOW_CONTROL_STORAGE_KEY, this.options.yellowControlBinding);
+        writeControlBinding(BLUE_CONTROL_STORAGE_KEY, this.options.blueControlBinding);
+        this.options.yellowControl = toLegacyControlValue(this.options.yellowControlBinding);
+        this.options.blueControl = toLegacyControlValue(this.options.blueControlBinding);
+
         var a = this.options.highScores.split(",");
         this.options.highScores = [];
         for (var c = 0; c < a.length; c++) this.options.highScores[c] = +a[c];
@@ -83,27 +106,11 @@ class App {
     }
 
     initKeyHandling() {
-        document.onkeydown = (a) => {
-            var c = a.which;
-            if (27 == c) this.engine.resetGame();
-            if (!this.enableKeys) a.preventDefault();
-            if (16 == c && 1 < a.location) c = 0;
-            else if (17 == c && 2 > a.location) c = 0;
-            if (13 == c) c = 17;
-            if (!1 === this.pressedKeys[c] || void 0 === this.pressedKeys[c]) this.pressedKeys[c] = !0;
+        this.controlsRuntime.onKeyDown = (_event, keyCode) => {
+            if (27 == keyCode) this.engine.resetGame();
         };
-        document.onkeyup = (a) => {
-            var c = a.which;
-            if (!this.enableKeys) a.preventDefault();
-            if (16 == c && 1 < a.location) c = 0;
-            else if (17 == c && 2 > a.location) c = 0;
-            if (13 == c) c = 17;
-            this.pressedKeys[c] = !1;
-        };
-        window.onblur = () => {
-            for (var a = 0; a < this.pressedKeys.length; a++)
-                if (!0 === this.pressedKeys[a] || "hold" === this.pressedKeys[a]) this.pressedKeys[a] = !1;
-        };
+        this.controlsRuntime.shouldPreventDefault = () => !this.enableKeys;
+        this.controlsRuntime.attach();
     }
 
     initEngine() {
@@ -225,44 +232,39 @@ class App {
     }
 
     refreshPressedKeysByGamepad() {
-        // Simplified gamepad support from original w.js
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
-        for (let i = 0; i < gamepads.length && i < 2; i++) {
-            const gp = gamepads[i];
-            if (gp) {
-                // Map buttons to virtual keys or handle directly
-                // This is a placeholder for the more complex mapping in the original
-            }
-        }
+        // SharedControlsRuntime reads gamepad state on demand via getControls().
     }
 
     getControls(num) {
-        // Implementation of J() logically moves here
-        const engineIdx = this.getEngineControlIndex(num);
-        return {
-            up: this.pressedKeys[m.keys[engineIdx].up],
-            down: this.pressedKeys[m.keys[engineIdx].down],
-            left: this.pressedKeys[m.keys[engineIdx].left],
-            right: this.pressedKeys[m.keys[engineIdx].right],
-            fire: this.pressedKeys[m.keys[engineIdx].fire]
-        };
+        const binding = this.getControlBinding(num);
+        return this.controlsRuntime.getControls(binding);
     }
 
-    getEngineControlIndex(num) {
-        if (0 == num && "keyboardArrows" == this.options.yellowControl) return 0;
-        if (0 == num && "keyboardWasd" == this.options.yellowControl) return 1;
-        if (1 == num && "keyboardArrows" == this.options.blueControl) return 0;
-        if (1 == num && "keyboardWasd" == this.options.blueControl) return 1;
-        // Gamepad logic simplified for now
-        return num;
+    getControlBinding(num) {
+        if (num === 1) return normalizeControlBinding(this.options.blueControlBinding, createKeyboardBinding('wasd'));
+        return normalizeControlBinding(this.options.yellowControlBinding, createKeyboardBinding('arrows'));
     }
 
     setPressedKeyHold(key, num) {
-        if (typeof key === "number") this.pressedKeys[key] = "hold";
-        else {
-            const idx = this.getEngineControlIndex(num);
-            this.pressedKeys[m.keys[idx][key]] = "hold";
+        if (typeof key === "number") {
+            this.controlsRuntime.setHold(null, key);
+            return;
         }
+        this.controlsRuntime.setHold(this.getControlBinding(num), key);
+    }
+
+    savePlayerControlBinding(player, binding) {
+        if (player === 'blue') {
+            this.options.blueControlBinding = normalizeControlBinding(binding, createKeyboardBinding('wasd'));
+            this.options.blueControl = toLegacyControlValue(this.options.blueControlBinding);
+            localStorage.setItem("blueControl", this.options.blueControl);
+            writeControlBinding(BLUE_CONTROL_STORAGE_KEY, this.options.blueControlBinding);
+            return;
+        }
+        this.options.yellowControlBinding = normalizeControlBinding(binding, createKeyboardBinding('arrows'));
+        this.options.yellowControl = toLegacyControlValue(this.options.yellowControlBinding);
+        localStorage.setItem("yellowControl", this.options.yellowControl);
+        writeControlBinding(YELLOW_CONTROL_STORAGE_KEY, this.options.yellowControlBinding);
     }
 }
 

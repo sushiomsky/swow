@@ -121,6 +121,24 @@
             color: #9a9a9a;
             line-height: 1.35;
         }
+        #settingsPanel .control-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+        #settingsPanel .control-grid button {
+            background: #151515;
+            color: #fff;
+            border: 1px solid #5b5b5b;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 7px 8px;
+            text-align: left;
+            cursor: pointer;
+        }
+        #settingsPanel .control-grid button:hover {
+            background: #202020;
+        }
         .hide { display: none !important; }
     </style>
     <link rel="shortcut icon" href="/favicon.ico">
@@ -175,11 +193,18 @@
         <label>
             Controls
             <select id="settingControls">
-                <option value="arrows">Arrows + Ctrl</option>
-                <option value="wasd">WASD + Left Shift</option>
-                <option value="ijkl">IJKL + Space</option>
+                <option value="keyboard">Keyboard</option>
+                <option value="gamepad0">Gamepad #1</option>
+                <option value="gamepad1">Gamepad #2</option>
             </select>
         </label>
+        <div class="control-grid">
+            <button type="button" id="settingControlUp">UP: -</button>
+            <button type="button" id="settingControlDown">DOWN: -</button>
+            <button type="button" id="settingControlLeft">LEFT: -</button>
+            <button type="button" id="settingControlRight">RIGHT: -</button>
+            <button type="button" id="settingControlFire">FIRE: -</button>
+        </div>
         <label>
             Visual filter
             <select id="settingVisualFilter">
