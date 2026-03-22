@@ -60,6 +60,7 @@ case "$surface" in
     curl -fsS "http://127.0.0.1:18080/" >"$log_dir/root.html"
     curl -fsS "http://127.0.0.1:18080/index.html" >"$log_dir/index.html"
     curl -fsS "http://127.0.0.1:18080/multiplayer.html" >"$log_dir/multiplayer.html"
+    curl -fsS "http://127.0.0.1:18080/platform" >"$log_dir/platform.html"
     ;;
 
   classic-multiplayer)

@@ -76,6 +76,14 @@
     background: #27b327;
 }
 
+.btn.dark {
+    background: #333;
+}
+
+.btn.dark:hover {
+    background: #555;
+}
+
 #status {
     font-size: 13px;
     color: #59FE59;

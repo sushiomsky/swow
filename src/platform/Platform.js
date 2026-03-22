@@ -43,6 +43,7 @@ function createSingleplayerDOM() {
             <div id="menuToggler" class="hide"><span>Menu</span></div>
             <div id="menu">
                 <div class="l1 back nosubmenu">&lt; Close</div>
+                <div class="l1 nosubmenu platform-back" style="background:#333;">&lt; BACK TO MENU</div>
                 <div id="toggleFullscreen" class="l1 nosubmenu">Fullscreen</div>
                 <div class="l1">Visual filter<div id="visualFilterSelect" class="items closed">
                         <div data-value="none">none</div>
@@ -106,6 +107,7 @@ function createMultiplayerDOM() {
                     <button class="btn" id="btnPairJoin">JOIN PRIVATE</button>
                 </div>
                 <button class="btn green hide" id="btnRetry">&#8635; RETRY LAST MODE</button>
+                <button class="btn dark" id="btnBackToMenu" style="margin-top:12px; background:#333;">&#9664; BACK TO MENU</button>
             </div>
             <div id="status" role="status" aria-live="polite"></div>
             <p style="margin-top:30px; font-size:11px; color:#555;">
@@ -251,6 +253,10 @@ export class Platform {
         this._loadCSS('/src/styles/singleplayer.css');
         this._gameRoot.appendChild(createSingleplayerDOM());
 
+        // Wire platform-back button
+        const backBtn = this._gameRoot.querySelector('.platform-back');
+        if (backBtn) backBtn.addEventListener('click', () => this.goToMenu());
+
         const mod = await loadSingleplayer();
         mod.initSingleplayer();
     }
@@ -258,6 +264,10 @@ export class Platform {
     async _startMultiplayer() {
         this._loadCSS('/src/styles/multiplayer.css');
         this._gameRoot.appendChild(createMultiplayerDOM());
+
+        // Wire platform-back button
+        const backBtn = this._gameRoot.querySelector('#btnBackToMenu');
+        if (backBtn) backBtn.addEventListener('click', () => this.goToMenu());
 
         const mod = await loadMultiplayer();
         mod.initMultiplayer();
