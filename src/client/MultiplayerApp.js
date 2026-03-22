@@ -36,6 +36,7 @@ import { MultiplayerSettingsController } from './MultiplayerSettingsController.j
 import { MultiplayerUiController } from './MultiplayerUiController.js';
 import { MultiplayerLaunchController } from './MultiplayerLaunchController.js';
 import { MultiplayerMessageController } from './MultiplayerMessageController.js';
+import { MultiplayerMessageEffectsController } from './MultiplayerMessageEffectsController.js';
 import { MultiplayerSessionController } from './MultiplayerSessionController.js';
 import { MultiplayerAppBootstrapController } from './MultiplayerAppBootstrapController.js';
 
@@ -75,6 +76,7 @@ class MultiplayerApp {
         this.uiController = new MultiplayerUiController();
         this.launchController = null;
         this.messageController = null;
+        this.messageEffectsController = null;
         this.bootstrapController = null;
         this.options = {
             visualFilter: localStorage.getItem('visualFilter') || 'scanlines',
@@ -181,21 +183,21 @@ class MultiplayerApp {
     }
 
     _initMessageController() {
-        this.messageController = new MultiplayerMessageController({
+        this.messageEffectsController = new MultiplayerMessageEffectsController({
             session: this.session,
             uiController: this.uiController,
             audio: this.audio,
             options: this.options,
             getLastJoinType: () => this.sessionController?.getLastJoinType(),
-            onJoinError: () => this.sessionController?.setIsConnecting(false),
-            onInit: () => {
-                this.sessionController?.setIsConnecting(false);
-                this.sessionController?.setHasJoinedGame(true);
-            },
+            setIsConnecting: (value) => this.sessionController?.setIsConnecting(value),
+            setHasJoinedGame: (value) => this.sessionController?.setHasJoinedGame(value),
             setLastState: (state) => {
                 this.lastState = state;
             },
             onCopyPrivateLink: (msg) => this._copyPrivateLink(msg),
+        });
+        this.messageController = new MultiplayerMessageController({
+            effectsController: this.messageEffectsController,
         });
     }
 
