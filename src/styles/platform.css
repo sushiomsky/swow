@@ -1,0 +1,111 @@
+/* platform.css — Main menu overlay and platform chrome */
+
+#main-menu {
+    position: fixed;
+    z-index: 600;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'C64ProRegular', monospace;
+    color: #fff;
+}
+
+#main-menu h1 {
+    font-family: 'WizardOfWor', monospace;
+    font-size: 42px;
+    color: #DFF60A;
+    margin-bottom: 8px;
+    letter-spacing: 3px;
+}
+
+#main-menu .subtitle {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 32px;
+    letter-spacing: 1px;
+}
+
+#main-menu .menu-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 20px;
+}
+
+#main-menu .menu-group-label {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+}
+
+#main-menu .menu-btn {
+    display: block;
+    width: 340px;
+    margin: 6px 0;
+    padding: 16px 24px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    background: #a00;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+    transition: background 0.15s;
+}
+
+#main-menu .menu-btn:hover {
+    background: #c00;
+}
+
+#main-menu .menu-btn.blue {
+    background: #15c;
+}
+
+#main-menu .menu-btn.blue:hover {
+    background: #27e;
+}
+
+#main-menu .menu-btn.green {
+    background: #1f8f1f;
+}
+
+#main-menu .menu-btn.green:hover {
+    background: #27b327;
+}
+
+#main-menu .menu-btn.dark {
+    background: #333;
+}
+
+#main-menu .menu-btn.dark:hover {
+    background: #555;
+}
+
+#main-menu .menu-footer {
+    margin-top: 24px;
+    font-size: 10px;
+    color: #444;
+    text-align: center;
+    line-height: 1.5;
+}
+
+#main-menu .menu-footer a {
+    color: #6c5eb5;
+    text-decoration: none;
+}
+
+#main-menu .menu-footer a:hover {
+    text-decoration: underline;
+}

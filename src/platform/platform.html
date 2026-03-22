@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Wizard Of Wor — browser-based arcade game platform with singleplayer and multiplayer modes.">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="index,follow">
+    <link rel="stylesheet" href="/src/styles/shared.css">
+    <link rel="stylesheet" href="/src/styles/platform.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <title>Wizard Of Wor</title>
+    <meta property="og:title" content="Wizard Of Wor">
+    <meta property="og:type" content="game">
+    <meta property="og:url" content="https://wizardofwor.duckdns.org/">
+    <meta property="og:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+    <meta property="og:site_name" content="Wizard Of Wor">
+    <meta property="og:description" content="Wizard Of Wor is a legendary arcade game from 1983. Play singleplayer or multiplayer in your browser!">
+</head>
+<body>
+    <!-- Main menu overlay — shown when no game mode is active -->
+    <div id="main-menu">
+        <h1>WIZARD OF WOR</h1>
+        <p class="subtitle">Browser Arcade Platform</p>
+
+        <div class="menu-group">
+            <span class="menu-group-label">Singleplayer</span>
+            <button class="menu-btn" id="menu-sp-1p">&#9654; PLAY CLASSIC</button>
+        </div>
+
+        <div class="menu-group">
+            <span class="menu-group-label">Multiplayer</span>
+            <button class="menu-btn blue" id="menu-mp">&#127760; MULTIPLAYER ARENA</button>
+        </div>
+
+        <div class="menu-group">
+            <button class="menu-btn dark" id="menu-handbook">&#128214; GAME HANDBOOK</button>
+        </div>
+
+        <div class="menu-footer">
+            <a href="/community" target="_blank">Community</a>
+        </div>
+    </div>
+
+    <!-- Game root — modes inject their DOM here -->
+    <div id="game-root"></div>
+
+    <script>
+        // Signal to mode modules that they should NOT auto-init
+        window.__SWOW_PLATFORM__ = true;
+    </script>
+    <script type="module">
+        import { Platform } from '/src/platform/Platform.js';
+        const platform = new Platform();
+        platform.init();
+        window.__platform = platform;
+    </script>
+</body>
+</html>

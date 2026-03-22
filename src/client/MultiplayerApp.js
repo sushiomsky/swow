@@ -272,7 +272,33 @@ class MultiplayerApp {
         this.sessionController?.exitToMenu();
     }
 
+    destroy() {
+        if (this.socketClient) this.socketClient.disconnect();
+        if (this.bootstrapController) this.bootstrapController.stopRenderLoop();
+        if (this.controlsRuntime) this.controlsRuntime.detach();
+        if (this.audio) this.audio.stopAll();
+        this.lastState = null;
+    }
+}
 
+// Lifecycle API for platform integration
+let _instance = null;
 
-// Boot
-new MultiplayerApp();
+export function initMultiplayer() {
+    if (_instance) return _instance;
+    _instance = new MultiplayerApp();
+    return _instance;
+}
+
+export function destroyMultiplayer() {
+    if (!_instance) return;
+    _instance.destroy();
+    _instance = null;
+}
+
+export { MultiplayerApp };
+
+// Auto-init when loaded as a standalone page (multiplayer.html direct usage)
+if (!window.__SWOW_PLATFORM__) {
+    initMultiplayer();
+}

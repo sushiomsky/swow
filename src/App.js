@@ -123,12 +123,13 @@ class App {
         this.visualFilterContext.imageSmoothingEnabled = !1;
         this.visualFilterContext.mozImageSmoothingEnabled = !1;
 
-        document.addEventListener("visibilitychange", () => {
+        this._visibilityHandler = () => {
             if (document.hidden) this.engine.togglePause(!0);
             else if (!this.ui.isVisible()) this.engine.togglePause(!1);
-        });
+        };
+        document.addEventListener("visibilitychange", this._visibilityHandler);
 
-        window.onresize = () => {
+        this._resizeHandler = () => {
             const border = q("border");
             this.fullWidth = border.offsetWidth;
             this.fullHeight = border.offsetHeight;
@@ -144,9 +145,32 @@ class App {
             this.visualFilter.width = window.innerWidth;
             this.visualFilter.height = window.innerHeight;
         };
-        window.onresize();
+        window.addEventListener("resize", this._resizeHandler);
+        this._resizeHandler();
         this.animationLoop();
         this.startScan();
+    }
+
+    destroy() {
+        if (this._scanIntervalId) {
+            clearInterval(this._scanIntervalId);
+            this._scanIntervalId = null;
+        }
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+        if (this._visibilityHandler) {
+            document.removeEventListener("visibilitychange", this._visibilityHandler);
+            this._visibilityHandler = null;
+        }
+        if (this._resizeHandler) {
+            window.removeEventListener("resize", this._resizeHandler);
+            this._resizeHandler = null;
+        }
+        this.controlsRuntime.detach();
+        if (this.audio) this.audio.stopAllSound();
+        if (this.engine) this.engine.resetGame();
     }
 
     changeGameSpriteColors(palette) {
@@ -211,7 +235,7 @@ class App {
     }
 
     animationLoop() {
-        window.animFrame(() => {
+        this._rafId = window.animFrame(() => {
             if (!this.engine.paused) {
                 this.animationFrameCounter++;
                 this.engine.animationRoutine();
@@ -221,7 +245,7 @@ class App {
     }
 
     startScan() {
-        setInterval(() => {
+        this._scanIntervalId = setInterval(() => {
             if (!this.engine.paused) {
                 this.refreshPressedKeysByGamepad();
                 this.scanFrameCounter++;
@@ -268,6 +292,25 @@ class App {
     }
 }
 
-const app = new App();
-app.init();
-export default app;
+// Lifecycle API for platform integration
+let _instance = null;
+
+export function initSingleplayer() {
+    if (_instance) return _instance;
+    _instance = new App();
+    _instance.init();
+    return _instance;
+}
+
+export function destroySingleplayer() {
+    if (!_instance) return;
+    _instance.destroy();
+    _instance = null;
+}
+
+export { App };
+
+// Auto-init when loaded as a standalone page (index.html direct usage)
+if (!window.__SWOW_PLATFORM__) {
+    initSingleplayer();
+}

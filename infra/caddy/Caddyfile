@@ -7,7 +7,7 @@
     @community_api path /api/community* /socket.io*
     reverse_proxy @community_api community-api:7000
 
-    @classic_game path /index.html /multiplayer.html /favicon.ico /src* /audio* /fonts* /images* /public*
+    @classic_game path /index.html /multiplayer.html /platform /favicon.ico /src* /audio* /fonts* /images* /public*
     reverse_proxy @classic_game web:8080
 
     reverse_proxy community-web:3000

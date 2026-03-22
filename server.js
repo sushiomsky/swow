@@ -21,6 +21,7 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
     let urlPath = req.url.split('?')[0]; // strip query params
     if (urlPath === '/') urlPath = '/index.html';
+    if (urlPath === '/platform') urlPath = '/src/platform/platform.html';
 
     const filePath = path.join(ROOT, urlPath);
 

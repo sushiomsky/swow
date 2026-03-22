@@ -42,8 +42,15 @@ export class MultiplayerAppBootstrapController {
         const loop = () => {
             const state = typeof this.getLastState === 'function' ? this.getLastState() : null;
             if (state) renderer.render(state);
-            requestAnimationFrame(loop);
+            this._rafId = requestAnimationFrame(loop);
         };
-        requestAnimationFrame(loop);
+        this._rafId = requestAnimationFrame(loop);
+    }
+
+    stopRenderLoop() {
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
     }
 }
