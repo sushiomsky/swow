@@ -1,8 +1,9 @@
 /**
- * play.js — Arcade-first entry controller.
+ * play.js — Arcade-first entry controller with attract mode.
  *
- * Ultra-minimal: preloads game, shows retro title screen,
- * starts game instantly on click/keypress. No navigation, no menus.
+ * The SP engine runs continuously behind a semi-transparent overlay,
+ * showing the game's title screen cycle as attract mode.
+ * Clicking PLAY starts gameplay instantly (engine already loaded).
  */
 
 // ─── Module loaders (lazy, cached) ────────────────────────────────
@@ -19,10 +20,12 @@ async function loadMP() {
 }
 
 // ─── State ────────────────────────────────────────────────────────
-let _state = 'title';    // title | playing | gameover
-let _activeMode = null;   // 'sp' | 'mp' | null
-let _pendingTimers = [];
-let _cssLinks = [];
+let _state = 'loading';   // loading | title | playing | gameover
+let _activeMode = null;   // 'sp' | 'mp'
+let _spApp = null;
+let _engine = null;
+let _spCSSLink = null;
+let _mpCSSLinks = [];
 let _handlers = {};
 
 const overlay = document.getElementById('play-overlay');
@@ -125,32 +128,101 @@ function loadCSS(href) {
     link.rel = 'stylesheet';
     link.href = href;
     document.head.appendChild(link);
-    _cssLinks.push(link);
+    return link;
 }
 
-// ─── Teardown (clean up active mode) ──────────────────────────────
-async function teardown() {
-    _pendingTimers.forEach(id => clearInterval(id));
-    _pendingTimers = [];
+// ─── Game event handlers (persistent while SP is alive) ───────────
+function registerHandlers() {
+    if (Object.keys(_handlers).length > 0) return;
 
+    _handlers['swow:player-death'] = () => {
+        if (_state !== 'playing' && _state !== 'gameover') return;
+        gameRoot.classList.remove('shake');
+        void gameRoot.offsetWidth;
+        gameRoot.classList.add('shake');
+    };
+
+    _handlers['swow:game-over'] = (e) => {
+        if (_state !== 'playing') return;
+        buildGameOverOverlay(e.detail);
+        _state = 'gameover';
+    };
+
+    _handlers['swow:game-restart'] = () => {
+        document.getElementById('play-gameover')?.remove();
+        if (_state === 'gameover' || _state === 'playing') _state = 'playing';
+    };
+
+    _handlers['swow:kill-score'] = (e) => {
+        if (_state !== 'playing') return;
+        const { score, x, y } = e.detail;
+        const canvas = gameRoot.querySelector('canvas');
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const sx = rect.left + (x / 320) * rect.width;
+        const sy = rect.top + (y / 200) * rect.height;
+        const pop = document.createElement('div');
+        pop.className = 'kill-popup';
+        pop.textContent = '+' + score;
+        pop.style.left = sx + 'px';
+        pop.style.top = sy + 'px';
+        document.body.appendChild(pop);
+        setTimeout(() => pop.remove(), 800);
+    };
+
+    for (const [event, handler] of Object.entries(_handlers)) {
+        document.addEventListener(event, handler);
+    }
+}
+
+function unregisterHandlers() {
     for (const [event, handler] of Object.entries(_handlers)) {
         document.removeEventListener(event, handler);
     }
     _handlers = {};
+}
 
-    if (_activeMode === 'sp' && _spModule) {
-        try { _spModule.destroySingleplayer(); } catch (_) { /* ok */ }
-    } else if (_activeMode === 'mp' && _mpModule) {
-        try { _mpModule.destroyMultiplayer(); } catch (_) { /* ok */ }
+// ─── SP attract engine (persistent background) ───────────────────
+async function initAttract() {
+    if (_spApp) return;
+
+    if (!_spCSSLink) {
+        _spCSSLink = loadCSS('/frontend/styles/singleplayer.css');
     }
-    _activeMode = null;
-
-    _cssLinks.forEach(l => l.remove());
-    _cssLinks = [];
 
     gameRoot.innerHTML = '';
+    gameRoot.appendChild(createSPDOM());
+
+    const mod = await loadSP();
+    _spApp = mod.initSingleplayer();
+    _activeMode = 'sp';
+
+    // Wait for engine to initialize
+    await new Promise(resolve => {
+        const check = setInterval(() => {
+            if (_spApp.engine) {
+                _engine = _spApp.engine;
+                clearInterval(check);
+                resolve();
+            }
+        }, 50);
+    });
+
+    registerHandlers();
+}
+
+async function teardownSP() {
+    unregisterHandlers();
+    if (_spModule) {
+        try { _spModule.destroySingleplayer(); } catch (_) { /* ok */ }
+    }
+    _spApp = null;
+    _engine = null;
+    _activeMode = null;
+    document.getElementById('sp-root')?.remove();
     document.getElementById('play-gameover')?.remove();
     document.querySelectorAll('.kill-popup').forEach(el => el.remove());
+    if (_spCSSLink) { _spCSSLink.remove(); _spCSSLink = null; }
 }
 
 // ─── Build game-over overlay ──────────────────────────────────────
@@ -189,83 +261,41 @@ function buildGameOverOverlay(detail) {
             ev.currentTarget.textContent = '✓ COPIED';
         });
     });
-    el.querySelector('#go-replay')?.addEventListener('click', () => startSP(1));
+    el.querySelector('#go-replay')?.addEventListener('click', () => startGame(1));
 }
 
-// ─── Start Singleplayer ───────────────────────────────────────────
-async function startSP(numPlayers = 1) {
-    await teardown();
+// ─── Start game (instant — engine already running) ────────────────
+function startGame(numPlayers) {
+    if (!_engine) return;
     showOverlay(false);
-    _activeMode = 'sp';
+    document.getElementById('play-gameover')?.remove();
+    _engine.startNewGame(numPlayers);
+    _state = 'playing';
+}
 
-    loadCSS('/frontend/styles/singleplayer.css');
-    gameRoot.appendChild(createSPDOM());
+// ─── Go to title (show overlay over attract) ─────────────────────
+async function goToTitle() {
+    document.getElementById('play-gameover')?.remove();
+    document.querySelectorAll('.kill-popup').forEach(el => el.remove());
 
-    // Screen shake on player death
-    _handlers['swow:player-death'] = () => {
-        gameRoot.classList.remove('shake');
-        void gameRoot.offsetWidth;
-        gameRoot.classList.add('shake');
-    };
-
-    // Game over → show score overlay
-    _handlers['swow:game-over'] = (e) => {
-        buildGameOverOverlay(e.detail);
-        _state = 'gameover';
-    };
-
-    // Game restart (fire key in-engine) → remove overlay
-    _handlers['swow:game-restart'] = () => {
-        document.getElementById('play-gameover')?.remove();
-        _state = 'playing';
-    };
-
-    // Kill score popups
-    _handlers['swow:kill-score'] = (e) => {
-        const { score, x, y } = e.detail;
-        const canvas = gameRoot.querySelector('canvas');
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const sx = rect.left + (x / 320) * rect.width;
-        const sy = rect.top + (y / 200) * rect.height;
-        const pop = document.createElement('div');
-        pop.className = 'kill-popup';
-        pop.textContent = '+' + score;
-        pop.style.left = sx + 'px';
-        pop.style.top = sy + 'px';
-        document.body.appendChild(pop);
-        setTimeout(() => pop.remove(), 800);
-    };
-
-    for (const [event, handler] of Object.entries(_handlers)) {
-        document.addEventListener(event, handler);
+    if (_activeMode === 'mp') {
+        await teardownMP();
+        await initAttract();
     }
 
-    const mod = await loadSP();
-    const app = mod.initSingleplayer();
-
-    // Auto-start game (skip title screen)
-    const timerId = setInterval(() => {
-        if (app.engine) {
-            clearInterval(timerId);
-            _pendingTimers = _pendingTimers.filter(id => id !== timerId);
-            app.engine.startNewGame(numPlayers);
-        }
-    }, 50);
-    _pendingTimers.push(timerId);
-    _state = 'playing';
+    showOverlay(true);
+    _state = 'title';
 }
 
 // ─── Start Multiplayer ────────────────────────────────────────────
 async function startMP(roomCode) {
-    await teardown();
+    await teardownSP();
     showOverlay(false);
     _activeMode = 'mp';
 
-    loadCSS('/frontend/styles/multiplayer.css');
+    _mpCSSLinks.push(loadCSS('/frontend/styles/multiplayer.css'));
     gameRoot.appendChild(createMPDOM());
 
-    // Wire back button to return to title
     const backBtn = gameRoot.querySelector('#btnBackToMenu');
     if (backBtn) backBtn.addEventListener('click', () => goToTitle());
 
@@ -285,42 +315,39 @@ async function startMP(roomCode) {
     _state = 'playing';
 }
 
-// ─── Return to title ──────────────────────────────────────────────
-async function goToTitle() {
-    await teardown();
-    _state = 'title';
-    showOverlay(true);
+async function teardownMP() {
+    if (_mpModule) {
+        try { _mpModule.destroyMultiplayer(); } catch (_) { /* ok */ }
+    }
+    _activeMode = null;
+    document.getElementById('mp-root')?.remove();
+    _mpCSSLinks.forEach(l => l.remove());
+    _mpCSSLinks = [];
 }
 
 // ─── Bind UI ──────────────────────────────────────────────────────
-document.getElementById('btn-play').addEventListener('click', () => startSP(1));
-document.getElementById('btn-2p').addEventListener('click', () => startSP(2));
+document.getElementById('btn-play').addEventListener('click', () => startGame(1));
+document.getElementById('btn-2p').addEventListener('click', () => startGame(2));
 document.getElementById('btn-multi').addEventListener('click', () => startMP());
 
 // Keyboard shortcuts (global)
 document.addEventListener('keydown', (e) => {
-    // Title screen shortcuts
     if (_state === 'title') {
         switch (e.code) {
             case 'Space': case 'Enter': case 'Digit1':
-                e.preventDefault(); startSP(1); return;
+                e.preventDefault(); startGame(1); return;
             case 'Digit2':
-                e.preventDefault(); startSP(2); return;
+                e.preventDefault(); startGame(2); return;
         }
         if (e.key === 'm' || e.key === 'M') {
             e.preventDefault(); startMP(); return;
         }
     }
-    // ESC → back to title (from any game mode)
     if (e.code === 'Escape' && (_state === 'playing' || _state === 'gameover')) {
         e.preventDefault();
         goToTitle();
     }
 });
-
-// ─── Preload ──────────────────────────────────────────────────────
-loadSP();
-new Image().src = '/images/v3.0/sprite.png';
 
 // ─── URL params: auto-join room / challenge banner ────────────────
 const _params = new URLSearchParams(window.location.search);
@@ -337,5 +364,8 @@ if (_roomCode) {
         overlay.insertBefore(banner, overlay.firstChild);
         window.history.replaceState({}, '', window.location.pathname);
     }
+
+    // Start attract mode engine, then show overlay on top
     showOverlay(true);
+    initAttract().then(() => { _state = 'title'; });
 }
