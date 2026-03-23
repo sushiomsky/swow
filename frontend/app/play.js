@@ -546,9 +546,28 @@ if (_roomCode) {
                 if (state.state === 'playing') {
                     console.log('[Autoplay] Game started');
                     
+                    // Check if bot mode requested
+                    if (_autoplay === 'bot') {
+                        console.log('[Autoplay] Bot mode detected, loading bot...');
+                        
+                        // Load and start bot
+                        try {
+                            const { SimpleBot } = await import('/frontend/app/SimpleBot.js');
+                            window.bot = new SimpleBot();
+                            window.bot.start();
+                            console.log('[Autoplay] Bot started!');
+                        } catch (err) {
+                            console.error('[Autoplay] Failed to start bot:', err);
+                        }
+                    }
+                    
                     // Emit custom event for automation
                     window.dispatchEvent(new CustomEvent('autoplay:ready', {
-                        detail: { mode: 'sp', players, state }
+                        detail: { 
+                            mode: _autoplay === 'bot' ? 'bot' : 'sp', 
+                            players, 
+                            state 
+                        }
                     }));
                 }
             }

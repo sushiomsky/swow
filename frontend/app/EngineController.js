@@ -261,6 +261,75 @@ class EngineController {
         return base;
     }
     
+    // ─── Bot Control API ──────────────────────────────────────────────
+    
+    /**
+     * Simulate key press for bot control
+     * @param {string} action - 'up', 'down', 'left', 'right', 'fire'
+     * @param {number} player - Player number (1 or 2, defaults to 1)
+     */
+    pressAction(action, player = 1) {
+        if (!this.initialized || this.state !== 'playing') {
+            console.warn('[Engine] Cannot press action - game not playing');
+            return false;
+        }
+        
+        const validActions = ['up', 'down', 'left', 'right', 'fire'];
+        if (!validActions.includes(action)) {
+            console.warn('[Engine] Invalid action:', action);
+            return false;
+        }
+        
+        try {
+            if (this.mode === 'sp' && this._spApp) {
+                // Get the control binding for this player
+                const binding = this._spApp.getControlBinding?.(player);
+                if (binding && this._spApp.controlsRuntime) {
+                    this._spApp.controlsRuntime.setHold(binding, action);
+                    return true;
+                }
+            } else if (this.mode === 'mp' && this._mpApp) {
+                // For MP, just send the action directly
+                // The multiplayer input system will handle it
+                if (this._mpApp.input && this._mpApp.input.sendInput) {
+                    this._mpApp.input.sendInput({ action, pressed: true });
+                    return true;
+                }
+            }
+        } catch (err) {
+            console.error('[Engine] pressAction error:', err);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Release all held keys (useful for bot state cleanup)
+     */
+    releaseAll() {
+        if (!this.initialized) return;
+        
+        try {
+            if (this.mode === 'sp' && this._spApp && this._spApp.controlsRuntime) {
+                // Release all keys by calling clearAll or resetting pressedKeys
+                if (this._spApp.controlsRuntime.clearAllHolds) {
+                    this._spApp.controlsRuntime.clearAllHolds();
+                } else {
+                    // Fallback: manually clear
+                    const actions = ['up', 'down', 'left', 'right', 'fire'];
+                    actions.forEach(action => {
+                        this._spApp.controlsRuntime.setHold(
+                            this._spApp.getControlBinding(1),
+                            action
+                        );
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('[Engine] releaseAll error:', err);
+        }
+    }
+    
     // ─── Event System ─────────────────────────────────────────────────
     
     on(event, handler) {
@@ -401,6 +470,51 @@ if (typeof window !== 'undefined') {
                 return window.engine.getState();
             }
         },
+        
+        // ─── Bot Control API ──────────────────────────────────────────
+        
+        /**
+         * Press an action (for bot control)
+         * @param {string} action - 'up', 'down', 'left', 'right', 'fire'
+         * @param {number} player - Player number (defaults to 1)
+         */
+        press: (action, player = 1) => {
+            try {
+                return window.engine.pressAction(action, player);
+            } catch (err) {
+                console.error('[swowDebug] press() failed:', err);
+                return false;
+            }
+        },
+        
+        /**
+         * Convenience methods for bot control
+         */
+        move: (direction) => {
+            const valid = ['up', 'down', 'left', 'right'];
+            if (!valid.includes(direction)) {
+                console.error('[swowDebug] Invalid direction:', direction);
+                return false;
+            }
+            return window.swowDebug.press(direction);
+        },
+        
+        shoot: () => {
+            return window.swowDebug.press('fire');
+        },
+        
+        /**
+         * Release all held keys (cleanup for bots)
+         */
+        releaseAll: () => {
+            try {
+                return window.engine.releaseAll();
+            } catch (err) {
+                console.error('[swowDebug] releaseAll() failed:', err);
+            }
+        },
+        
+        // ─── State & Introspection ────────────────────────────────────
         
         getState: () => {
             try {
