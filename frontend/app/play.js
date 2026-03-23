@@ -326,38 +326,56 @@ async function goToTitle() {
 
 // ─── Start Multiplayer ────────────────────────────────────────────
 async function startMP(roomCode) {
-    // Tear down existing mode (SP or MP)
-    if (_activeMode === 'mp') {
-        await teardownMP();
-    } else {
-        await teardownSP();
+    try {
+        // Show loading if auto-joining from URL
+        if (roomCode && _state === 'loading') {
+            showOverlay(true);
+            overlay.innerHTML = '<div class="play-loading">🎮 Connecting to multiplayer...</div>';
+        }
+
+        // Tear down existing mode (SP or MP)
+        if (_activeMode === 'mp') {
+            await teardownMP();
+        } else {
+            await teardownSP();
+        }
+        
+        document.getElementById('play-gameover')?.remove();
+        showOverlay(false);
+        _activeMode = 'mp';
+
+        _mpCSSLinks.push(loadCSS('/frontend/styles/multiplayer.css'));
+        gameRoot.appendChild(createMPDOM());
+
+        const backBtn = gameRoot.querySelector('#btnBackToMenu');
+        if (backBtn) backBtn.addEventListener('click', () => goToTitle());
+
+        // MP post-match handler
+        _mpGameOverHandler = (e) => buildMPPostMatchOverlay(e.detail);
+        document.addEventListener('swow:mp-game-over', _mpGameOverHandler);
+
+        // Set room URL param only if joining specific room, keep it in URL
+        if (roomCode) {
+            const url = new URL(window.location);
+            url.searchParams.set('room', roomCode);
+            window.history.replaceState({}, '', url);
+        }
+
+        const mod = await loadMP();
+        mod.initMultiplayer();
+
+        _state = 'playing';
+    } catch (err) {
+        console.error('Failed to start multiplayer:', err);
+        // Fall back to title screen on error
+        await goToTitle();
+        const banner = document.createElement('div');
+        banner.className = 'play-challenge';
+        banner.style.color = '#f44';
+        banner.innerHTML = '❌ Failed to connect to multiplayer. Please try again.';
+        overlay.insertBefore(banner, overlay.firstChild);
+        setTimeout(() => banner.remove(), 5000);
     }
-    
-    document.getElementById('play-gameover')?.remove();
-    showOverlay(false);
-    _activeMode = 'mp';
-
-    _mpCSSLinks.push(loadCSS('/frontend/styles/multiplayer.css'));
-    gameRoot.appendChild(createMPDOM());
-
-    const backBtn = gameRoot.querySelector('#btnBackToMenu');
-    if (backBtn) backBtn.addEventListener('click', () => goToTitle());
-
-    // MP post-match handler
-    _mpGameOverHandler = (e) => buildMPPostMatchOverlay(e.detail);
-    document.addEventListener('swow:mp-game-over', _mpGameOverHandler);
-
-    // Set room URL param only if joining specific room, keep it in URL
-    if (roomCode) {
-        const url = new URL(window.location);
-        url.searchParams.set('room', roomCode);
-        window.history.replaceState({}, '', url);
-    }
-
-    const mod = await loadMP();
-    mod.initMultiplayer();
-
-    _state = 'playing';
 }
 
 async function teardownMP() {

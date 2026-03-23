@@ -196,6 +196,17 @@ html, body {
 }
 .play-challenge strong { color: #ff0; font-size: 1.1em; }
 
+/* Loading indicator */
+.play-loading {
+    font-family: 'C64ProRegular', monospace;
+    font-size: 1rem;
+    color: #0ff;
+    text-align: center;
+    letter-spacing: 0.1em;
+    margin-top: 20px;
+    animation: go-blink 1s infinite alternate;
+}
+
 /* ─── Game root ──────────────────────────────────────────────────── */
 #game-root {
     position: relative;
