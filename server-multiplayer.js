@@ -3,7 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { GameServer } = require('./src/server/GameServer');
+const { GameServer } = require('./frontend/game/multiplayer/server/GameServer');
 
 const PORT = process.env.MP_PORT || 5001;
 const ROOT = __dirname;

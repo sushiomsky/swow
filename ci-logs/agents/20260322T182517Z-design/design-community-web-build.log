@@ -1,0 +1,50 @@
+
+> wow-community-web@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/21) ...
+   Generating static pages (5/21) 
+   Generating static pages (10/21) 
+   Generating static pages (15/21) 
+ ✓ Generating static pages (21/21)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    3.84 kB         116 kB
+├ ○ /_not-found                          873 B          88.2 kB
+├ ○ /admin                               3.7 kB          104 kB
+├ ○ /community                           175 B          96.2 kB
+├ ○ /community/about                     158 B          87.5 kB
+├ ƒ /community/challenges                158 B          87.5 kB
+├ ○ /community/chat                      2.55 kB         106 kB
+├ ƒ /community/clans/[id]                2.51 kB         106 kB
+├ ○ /community/contact                   158 B          87.5 kB
+├ ○ /community/faq                       158 B          87.5 kB
+├ ○ /community/features                  158 B          87.5 kB
+├ ○ /community/forum                     3.88 kB         113 kB
+├ ƒ /community/forum/[threadId]          4.05 kB         113 kB
+├ ○ /community/leaderboards              1.27 kB         105 kB
+├ ○ /community/privacy-policy            158 B          87.5 kB
+├ ƒ /community/profile/[username]        2.44 kB         106 kB
+├ ○ /community/reset-password            3.46 kB         104 kB
+├ ○ /community/social                    2.49 kB         106 kB
+├ ○ /community/terms-of-service          158 B          87.5 kB
+├ ○ /community/verify-email              3.36 kB         104 kB
+├ ○ /robots.txt                          0 B                0 B
+└ ○ /sitemap.xml                         0 B                0 B
++ First Load JS shared by all            87.3 kB
+  ├ chunks/117-4aaf927e7e3e3b9f.js       31.7 kB
+  ├ chunks/fd9d1056-6a7e3c6855942280.js  53.6 kB
+  └ other shared chunks (total)          1.95 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

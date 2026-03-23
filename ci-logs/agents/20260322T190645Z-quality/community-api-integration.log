@@ -1,0 +1,74 @@
+
+> wow-community-api@1.0.0 test:integration
+> node --test test/integration/*.test.js
+
+TAP version 13
+# Subtest: auth login returns structured validation errors
+ok 1 - auth login returns structured validation errors
+  ---
+  duration_ms: 44.844444
+  ...
+# Subtest: auth endpoints return structured 429 payloads when throttled
+ok 2 - auth endpoints return structured 429 payloads when throttled
+  ---
+  duration_ms: 13.637134
+  ...
+# Subtest: auth verify-email request validates email payload
+ok 3 - auth verify-email request validates email payload
+  ---
+  duration_ms: 5.305964
+  ...
+# Subtest: password reset confirmation token is one-time use
+ok 4 - password reset confirmation token is one-time use
+  ---
+  duration_ms: 49.216533
+  ...
+# Subtest: chat report rejects invalid message ids with structured validation errors
+ok 5 - chat report rejects invalid message ids with structured validation errors
+  ---
+  duration_ms: 10.812298
+  ...
+# Subtest: forum threads endpoint requires category query parameter
+ok 6 - forum threads endpoint requires category query parameter
+  ---
+  duration_ms: 7.022826
+  ...
+# Subtest: forum moderation actions return 403 for non-moderators
+ok 7 - forum moderation actions return 403 for non-moderators
+  ---
+  duration_ms: 4.667828
+  ...
+# Subtest: forum moderator pin action writes moderation audit
+ok 8 - forum moderator pin action writes moderation audit
+  ---
+  duration_ms: 4.720148
+  ...
+# Subtest: admin endpoints require admin role claim
+ok 9 - admin endpoints require admin role claim
+  ---
+  duration_ms: 7.99683
+  ...
+# Subtest: admin report endpoints require bounded page and size query params
+ok 10 - admin report endpoints require bounded page and size query params
+  ---
+  duration_ms: 6.401339
+  ...
+# Subtest: admin reports include paging metadata when page and size are provided
+ok 11 - admin reports include paging metadata when page and size are provided
+  ---
+  duration_ms: 3.621263
+  ...
+# Subtest: admin leaderboard adjust validates payload shape
+ok 12 - admin leaderboard adjust validates payload shape
+  ---
+  duration_ms: 3.965451
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 981.664483

@@ -1,0 +1,5 @@
+🎮 Wizard of Wor running at http://0.0.0.0:18080
+   Platform: http://localhost:18080/
+   Classic:  http://localhost:18080/index.html
+   WS proxy: /multiplayer → 127.0.0.1:5001
+   Press Ctrl+C to stop

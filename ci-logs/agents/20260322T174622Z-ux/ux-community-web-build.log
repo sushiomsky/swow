@@ -1,0 +1,32 @@
+
+> wow-community-web@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/21) ...
+   Generating static pages (5/21) 
+   Generating static pages (10/21) 
+   Generating static pages (15/21) 
+ ✓ Generating static pages (21/21)
+
+> Build error occurred
+Error: ENOENT: no such file or directory, rename '/root/swow/community-web/.next/export/500.html' -> '/root/swow/community-web/.next/server/pages/500.html'
+    at async Object.rename (node:internal/fs/promises:777:10)
+    at async /root/swow/community-web/node_modules/next/dist/build/index.js:1873:33
+    at async Span.traceAsyncFn (/root/swow/community-web/node_modules/next/dist/trace/trace.js:154:20)
+    at async /root/swow/community-web/node_modules/next/dist/build/index.js:1924:25
+    at async Span.traceAsyncFn (/root/swow/community-web/node_modules/next/dist/trace/trace.js:154:20)
+    at async /root/swow/community-web/node_modules/next/dist/build/index.js:1546:17
+    at async Span.traceAsyncFn (/root/swow/community-web/node_modules/next/dist/trace/trace.js:154:20)
+    at async build (/root/swow/community-web/node_modules/next/dist/build/index.js:368:9) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'rename',
+  path: '/root/swow/community-web/.next/export/500.html',
+  dest: '/root/swow/community-web/.next/server/pages/500.html'
+}

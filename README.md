@@ -378,25 +378,29 @@ Both players are controlled locally from the same browser tab. Open two tabs (or
 
 ```
 /                        unified platform entry (platform.html — mode selection menu)
-src/platform/
-  Platform.js            central controller — mode state machine, DOM injection, CSS lifecycle
-  platform.html          unified HTML shell (main menu + game-root container)
-src/styles/
-  shared.css             fonts, resets, canvas, visual filter (shared across all modes)
-  platform.css           main menu overlay, loading indicator, floating back button
-  singleplayer.css       singleplayer slide-out menu and chrome
-  multiplayer.css        multiplayer overlay, lobby, settings, HUD
-src/                     ES module source (the active game code)
-  App.js                 singleplayer bootstrap — lifecycle-controlled via initSingleplayer/destroySingleplayer
-  constants.js           sprite atlas, dungeon layouts, palettes, keycodes
-  utils.js               shared drawing helpers and utilities
-  engine/                GameEngine — scene state machine, collision, scoring
-  entities/              Player, Monster, Bullet — game entity logic
-  audio/                 AudioEngine — Web Audio API wrapper
-  ui/                    UIManager — DOM menu wiring, fullscreen, options
-  input/                 SharedControlsRuntime — keyboard/gamepad bindings, remapping
-  server/                Authoritative multiplayer server modules (Node.js / CommonJS)
-  client/                Multiplayer client renderer and orchestrator (ES modules, browser)
+frontend/
+  app/                   platform layer
+    Platform.js          central controller — mode state machine, DOM injection, CSS lifecycle
+    platform.html        unified HTML shell (main menu + game-root container)
+  game/
+    singleplayer/        classic singleplayer game
+      App.js             bootstrap — lifecycle-controlled via initSingleplayer/destroySingleplayer
+      engine/            GameEngine — scene state machine, collision, scoring
+      entities/          Player, Monster, Bullet — game entity logic
+      audio/             AudioEngine — Web Audio API wrapper
+      ui/                UIManager — DOM menu wiring, fullscreen, options
+    multiplayer/
+      client/            browser client — renderer, socket, input, settings, lobby UI
+      server/            authoritative server — game loop, dungeon lifecycle, WS handling
+    shared/              code shared between singleplayer and multiplayer
+      constants.js       sprite atlas, dungeon layouts, palettes, keycodes
+      utils.js           drawing helpers and utilities
+      input/             SharedControlsRuntime — keyboard/gamepad bindings, remapping
+  styles/                extracted CSS
+    shared.css           fonts, resets, canvas, visual filter (shared across all modes)
+    platform.css         main menu overlay, loading indicator, floating back button
+    singleplayer.css     singleplayer slide-out menu and chrome
+    multiplayer.css      multiplayer overlay, lobby, settings, HUD
 index.html               standalone singleplayer entry (backward compat)
 multiplayer.html         standalone multiplayer entry (backward compat)
 js/v5.0/w.js             original unpacked+patched source (reference only)
