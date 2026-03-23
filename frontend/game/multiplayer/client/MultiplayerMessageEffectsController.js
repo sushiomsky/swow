@@ -112,4 +112,67 @@ export class MultiplayerMessageEffectsController {
             this._gameOverDispatched = false;
         }
     }
+    
+    // ─── Battle Royale: Cross-Dungeon Events ──────────────────────────────
+    
+    /**
+     * Handle player leaving current dungeon via tunnel
+     * @param {object} msg - { playerId, targetDungeonId }
+     */
+    handlePlayerLeftViaTunnel(msg) {
+        console.log('[Battle Royale] Player left via tunnel:', msg.playerId, '→', msg.targetDungeonId);
+        
+        // Show brief notification
+        const notification = document.createElement('div');
+        notification.className = 'tunnel-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 255, 255, 0.9);
+            color: black;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 10000;
+            animation: fadeOut 3s forwards;
+        `;
+        notification.textContent = `Player ${msg.playerId.substr(0, 4)} entered tunnel`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+    }
+    
+    /**
+     * Handle player arriving in current dungeon via tunnel
+     * @param {object} msg - { playerId, playerSlot, entrySide }
+     */
+    handlePlayerArrivedViaTunnel(msg) {
+        console.log('[Battle Royale] Player arrived via tunnel:', msg.playerId, 'at', msg.entrySide, 'entrance');
+        
+        // Show brief notification
+        const notification = document.createElement('div');
+        notification.className = 'tunnel-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 0, 0.9);
+            color: black;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 10000;
+            animation: fadeOut 3s forwards;
+        `;
+        notification.textContent = `Player ${msg.playerId.substr(0, 4)} arrived from tunnel`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+        
+        // Optional: Play sound effect
+        // this.audio.playSound('teleport');
+    }
 }

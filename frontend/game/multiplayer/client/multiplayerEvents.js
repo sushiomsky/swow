@@ -11,4 +11,7 @@ export const SERVER_EVENTS = Object.freeze({
     WAITING_FOR_PARTNER: 'waiting_for_partner',
     PRIVATE_PAIR_CREATED: 'private_pair_created',
     JOIN_ERROR: 'join_error',
+    // Battle Royale: Cross-dungeon events
+    PLAYER_LEFT_VIA_TUNNEL: 'player_left_via_tunnel',
+    PLAYER_ARRIVED_VIA_TUNNEL: 'player_arrived_via_tunnel',
 });

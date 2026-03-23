@@ -32,6 +32,15 @@ export class MultiplayerMessageController {
             case SERVER_EVENTS.STATE:
                 this.effectsController.handleState(msg);
                 break;
+            
+            // Battle Royale: Cross-dungeon events
+            case SERVER_EVENTS.PLAYER_LEFT_VIA_TUNNEL:
+                this.effectsController.handlePlayerLeftViaTunnel(msg);
+                break;
+            
+            case SERVER_EVENTS.PLAYER_ARRIVED_VIA_TUNNEL:
+                this.effectsController.handlePlayerArrivedViaTunnel(msg);
+                break;
         }
     }
 }
