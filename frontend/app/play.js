@@ -326,11 +326,13 @@ async function goToTitle() {
 
 // ─── Start Multiplayer ────────────────────────────────────────────
 async function startMP(roomCode) {
-    await teardownSP();
-    // Remove any previous MP game-over handler
-    if (_mpGameOverHandler) {
-        document.removeEventListener('swow:mp-game-over', _mpGameOverHandler);
+    // Tear down existing mode (SP or MP)
+    if (_activeMode === 'mp') {
+        await teardownMP();
+    } else {
+        await teardownSP();
     }
+    
     document.getElementById('play-gameover')?.remove();
     showOverlay(false);
     _activeMode = 'mp';
@@ -345,6 +347,7 @@ async function startMP(roomCode) {
     _mpGameOverHandler = (e) => buildMPPostMatchOverlay(e.detail);
     document.addEventListener('swow:mp-game-over', _mpGameOverHandler);
 
+    // Set room URL param only if joining specific room, keep it in URL
     if (roomCode) {
         const url = new URL(window.location);
         url.searchParams.set('room', roomCode);
@@ -353,10 +356,6 @@ async function startMP(roomCode) {
 
     const mod = await loadMP();
     mod.initMultiplayer();
-
-    if (roomCode) {
-        window.history.replaceState({}, '', window.location.pathname);
-    }
 
     _state = 'playing';
 }
