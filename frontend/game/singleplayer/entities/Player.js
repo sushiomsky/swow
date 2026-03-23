@@ -112,6 +112,7 @@ export class Player {
                     } else {
                         this.status = "dead";
                         r(b, "Death");
+                        document.dispatchEvent(new CustomEvent('swow:player-death'));
                     }
                     this.bullet = !1;
                     return;

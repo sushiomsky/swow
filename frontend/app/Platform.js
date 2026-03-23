@@ -243,9 +243,29 @@ export class Platform {
     }
 
     async _teardown() {
-        // Clear any pending timers (e.g. 2P auto-start interval)
+        // Clear any pending timers (e.g. auto-start interval)
         this._pendingTimers.forEach(id => clearInterval(id));
         this._pendingTimers = [];
+
+        // Remove death-shake listener
+        if (this._deathShakeHandler) {
+            document.removeEventListener('swow:player-death', this._deathShakeHandler);
+            this._deathShakeHandler = null;
+        }
+        // Remove game-over/restart listeners
+        if (this._gameOverHandler) {
+            document.removeEventListener('swow:game-over', this._gameOverHandler);
+            document.removeEventListener('swow:game-restart', this._gameRestartHandler);
+            this._gameOverHandler = null;
+            this._gameRestartHandler = null;
+        }
+        // Remove kill score listener
+        if (this._killScoreHandler) {
+            document.removeEventListener('swow:kill-score', this._killScoreHandler);
+            this._killScoreHandler = null;
+        }
+        document.getElementById('gameover-overlay')?.remove();
+        document.querySelectorAll('.kill-popup').forEach(el => el.remove());
 
         if (this._mode === MODES.SINGLEPLAYER) {
             const mod = await loadSingleplayer();
@@ -313,20 +333,68 @@ export class Platform {
         // Add floating back-to-menu button
         this._addFloatingBackButton();
 
+        // Screen shake on player death
+        this._deathShakeHandler = () => {
+            this._gameRoot.classList.remove('shake');
+            void this._gameRoot.offsetWidth;
+            this._gameRoot.classList.add('shake');
+        };
+        document.addEventListener('swow:player-death', this._deathShakeHandler);
+
+        // Game over score overlay
+        this._gameOverHandler = (e) => {
+            const { p1Score, p2Score, numPlayers, isNewHigh } = e.detail;
+            const existing = document.getElementById('gameover-overlay');
+            if (existing) existing.remove();
+            const el = document.createElement('div');
+            el.id = 'gameover-overlay';
+            let html = '<div class="gameover-content">';
+            if (isNewHigh) html += '<div class="gameover-newhigh">★ NEW HIGH SCORE ★</div>';
+            html += `<div class="gameover-score">${Math.max(p1Score, p2Score)}</div>`;
+            if (numPlayers > 1) html += `<div class="gameover-detail">P1: ${p1Score}  P2: ${p2Score}</div>`;
+            html += '<div class="gameover-hint">PRESS FIRE TO PLAY AGAIN</div>';
+            html += '</div>';
+            el.innerHTML = html;
+            this._gameRoot.appendChild(el);
+        };
+        this._gameRestartHandler = () => {
+            document.getElementById('gameover-overlay')?.remove();
+        };
+        document.addEventListener('swow:game-over', this._gameOverHandler);
+        document.addEventListener('swow:game-restart', this._gameRestartHandler);
+
+        // Kill score popups
+        this._killScoreHandler = (e) => {
+            const { score, x, y } = e.detail;
+            const canvas = this._gameRoot.querySelector('canvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            // Map game coords (320x200) to screen position
+            const sx = rect.left + (x / 320) * rect.width;
+            const sy = rect.top + (y / 200) * rect.height;
+            const el = document.createElement('div');
+            el.className = 'kill-popup';
+            el.textContent = '+' + score;
+            el.style.left = sx + 'px';
+            el.style.top = sy + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        };
+        document.addEventListener('swow:kill-score', this._killScoreHandler);
+
         const mod = await loadSingleplayer();
         const app = mod.initSingleplayer();
 
-        // Auto-start 2-player game if requested
-        if (options.numPlayers === 2) {
-            const timerId = setInterval(() => {
-                if (app.engine) {
-                    clearInterval(timerId);
-                    this._pendingTimers = this._pendingTimers.filter(id => id !== timerId);
-                    app.engine.startNewGame(2);
-                }
-            }, 50);
-            this._pendingTimers.push(timerId);
-        }
+        // Auto-start game when engine is ready (skip title screen)
+        const numPlayers = options.numPlayers || 1;
+        const timerId = setInterval(() => {
+            if (app.engine) {
+                clearInterval(timerId);
+                this._pendingTimers = this._pendingTimers.filter(id => id !== timerId);
+                app.engine.startNewGame(numPlayers);
+            }
+        }, 50);
+        this._pendingTimers.push(timerId);
     }
 
     async _startMultiplayer() {

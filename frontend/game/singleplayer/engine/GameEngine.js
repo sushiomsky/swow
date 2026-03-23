@@ -69,6 +69,7 @@ export class GameEngine {
         for (var key in this.frameCounters) this.frameCounters[key] = 0;
         this.scene = "getReady";
         z(0);
+        document.dispatchEvent(new CustomEvent('swow:game-restart'));
     }
 
     nextDungeon() {
@@ -310,6 +311,13 @@ export class GameEngine {
             a = m.sprite.texts.game; l(this.app, a.x, a.y, a.w, a.h, 23, 58);
             a = m.sprite.texts.over; l(this.app, a.x, a.y, a.w, a.h, 191, 58)
         }
+        // Blinking "PRESS FIRE" hint (outside skip guard so it updates each frame)
+        if (this.frameCounters.gameOver >= u(this.app, 1.5)) {
+            t(this.app, 104, 108, 112, 12, 0);
+            if (Math.floor(this.app.animationFrameCounter / 30) % 2) {
+                v(this.app, "PRESS FIRE", 120, 110, 7);
+            }
+        }
     }
 
     animateDoubleScore() {
@@ -418,7 +426,17 @@ export class GameEngine {
             if (0 < this.players[0].score) this.subscribeToToplist(this.players[0].score);
             if (1 < this.numOfPlayers && 0 < this.players[1].score) this.subscribeToToplist(this.players[1].score);
         }
-        if (this.frameCounters.gameOver >= u(b, 8)) {
+        // Allow quick restart after a brief display (1.5s)
+        if (this.frameCounters.gameOver >= u(b, 1.5)) {
+            if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[49]) {
+                this.startNewGame(1); return;
+            }
+            if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[50]) {
+                this.startNewGame(this.numOfPlayers); return;
+            }
+        }
+        // Auto-return to title after 4 seconds
+        if (this.frameCounters.gameOver >= u(b, 4)) {
             this.frameCounters.title = 0; this.animateSkip.title = !1; this.animateSkip.enemyRoster = !1; this.scene = "title"; b.ui.setToggler("full")
         }
     }
@@ -446,7 +464,15 @@ export class GameEngine {
 
     gameOver() {
         this.app.audio.stopAllSound(); r(this.app, "GameOver");
-        this.frameCounters.gameOver = 0; this.scene = "gameOver"
+        this.frameCounters.gameOver = 0; this.scene = "gameOver";
+        // Notify platform with final scores
+        const p1Score = this.players[0].score;
+        const p2Score = this.numOfPlayers > 1 ? this.players[1].score : 0;
+        const topScore = Math.max(p1Score, p2Score);
+        const prevHigh = this.app.options.highScores[0] || 0;
+        document.dispatchEvent(new CustomEvent('swow:game-over', {
+            detail: { p1Score, p2Score, numPlayers: this.numOfPlayers, isNewHigh: topScore > prevHigh }
+        }));
     }
 
     scanDungeon() {

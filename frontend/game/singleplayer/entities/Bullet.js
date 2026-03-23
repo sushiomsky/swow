@@ -41,9 +41,11 @@ export class Bullet {
                     if ("alive" == k.status && y(k.x, k.y, 18, 18, this.x, this.y, this.bw, this.bh)) {
                         k.status = "shooted";
                         g = !0;
+                        var kx = k.x, ky = k.y;
                         k = m.scoring[k.type];
                         e.doubleScoreNow && (k *= 2);
                         this.owner.score += k;
+                        document.dispatchEvent(new CustomEvent('swow:kill-score', { detail: { score: k, x: kx, y: ky } }));
                     }
                 }
                 if (g) {
@@ -61,6 +63,7 @@ export class Bullet {
                     k = m.scoring.worrior;
                     e.doubleScoreNow && (k *= 2);
                     this.owner.score += k;
+                    document.dispatchEvent(new CustomEvent('swow:kill-score', { detail: { score: k, x: h.x, y: h.y } }));
                     h.status = "dead";
                     h.bullet = !1;
                     b.audio.stop("Fire");
