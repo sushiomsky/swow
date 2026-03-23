@@ -471,7 +471,7 @@ export class GameEngine {
         const topScore = Math.max(p1Score, p2Score);
         const prevHigh = this.app.options.highScores[0] || 0;
         document.dispatchEvent(new CustomEvent('swow:game-over', {
-            detail: { p1Score, p2Score, numPlayers: this.numOfPlayers, isNewHigh: topScore > prevHigh }
+            detail: { p1Score, p2Score, numPlayers: this.numOfPlayers, isNewHigh: topScore > prevHigh, wave: this.level }
         }));
     }
 

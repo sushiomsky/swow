@@ -188,6 +188,8 @@ export class Platform {
         this._menuEl = document.getElementById('main-menu');
         this._bindMenuButtons();
         this._bindKeyboardShortcuts();
+        this._showChallengeBanner();
+        this._fetchLivePlayerCount();
         this.switchMode(MODES.MENU);
     }
 
@@ -214,6 +216,42 @@ export class Platform {
             e.preventDefault();
         };
         document.addEventListener('keydown', this._keyHandler);
+    }
+
+    _showChallengeBanner() {
+        const params = new URLSearchParams(window.location.search);
+        const challengeScore = parseInt(params.get('challenge'));
+        if (!challengeScore || isNaN(challengeScore)) return;
+        const banner = document.createElement('div');
+        banner.id = 'challenge-banner';
+        banner.innerHTML = `<span>🏆 Someone scored <strong>${challengeScore}</strong> — can you beat it?</span>`;
+        this._menuEl?.insertBefore(banner, this._menuEl.firstChild);
+        // Clean URL without reload
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    _fetchLivePlayerCount() {
+        const badge = document.createElement('span');
+        badge.id = 'live-players';
+        badge.className = 'live-badge hide';
+        const mpBtn = document.getElementById('menu-mp');
+        if (mpBtn) mpBtn.parentElement.appendChild(badge);
+
+        const update = () => {
+            fetch('/multiplayer/active-games')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data && data.total_players > 0) {
+                        badge.textContent = `${data.total_players} player${data.total_players > 1 ? 's' : ''} online`;
+                        badge.classList.remove('hide');
+                    } else {
+                        badge.classList.add('hide');
+                    }
+                })
+                .catch(() => badge.classList.add('hide'));
+        };
+        update();
+        this._livePlayerInterval = setInterval(update, 15000);
     }
 
     async switchMode(mode, options = {}) {
@@ -341,21 +379,53 @@ export class Platform {
         };
         document.addEventListener('swow:player-death', this._deathShakeHandler);
 
-        // Game over score overlay
+        // Game over score overlay with share buttons and nudges
         this._gameOverHandler = (e) => {
-            const { p1Score, p2Score, numPlayers, isNewHigh } = e.detail;
+            const { p1Score, p2Score, numPlayers, isNewHigh, wave } = e.detail;
             const existing = document.getElementById('gameover-overlay');
             if (existing) existing.remove();
+            const topScore = Math.max(p1Score, p2Score);
             const el = document.createElement('div');
             el.id = 'gameover-overlay';
+
+            const gameUrl = window.location.origin + '/?challenge=' + topScore;
+            const shareText = `I scored ${topScore} in Wizard of Wor (Wave ${wave}) — beat me! ${gameUrl}`;
+            const twitterUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
+
             let html = '<div class="gameover-content">';
             if (isNewHigh) html += '<div class="gameover-newhigh">★ NEW HIGH SCORE ★</div>';
-            html += `<div class="gameover-score">${Math.max(p1Score, p2Score)}</div>`;
+            html += `<div class="gameover-score">${topScore}</div>`;
+            html += `<div class="gameover-wave">WAVE ${wave}</div>`;
             if (numPlayers > 1) html += `<div class="gameover-detail">P1: ${p1Score}  P2: ${p2Score}</div>`;
+            // Share buttons
+            html += '<div class="gameover-share">';
+            html += `<a class="share-btn share-twitter" href="${twitterUrl}" target="_blank" rel="noopener">𝕏 SHARE</a>`;
+            html += `<button class="share-btn share-copy" data-text="${shareText.replace(/"/g, '&quot;')}">📋 COPY</button>`;
+            html += '</div>';
+            // Post-game nudge
+            html += '<div class="gameover-nudge">';
+            const bestScore = parseInt(localStorage.getItem('highScores')?.split(',')[0]) || 0;
+            if (bestScore > topScore) {
+                html += `<span class="nudge-text">YOUR BEST: ${bestScore} — TRY AGAIN!</span>`;
+            }
+            html += `<button class="nudge-btn nudge-mp">🌐 TRY MULTIPLAYER</button>`;
+            html += '</div>';
             html += '<div class="gameover-hint">PRESS FIRE TO PLAY AGAIN</div>';
             html += '</div>';
             el.innerHTML = html;
             this._gameRoot.appendChild(el);
+
+            // Wire share-copy button
+            el.querySelector('.share-copy')?.addEventListener('click', (ev) => {
+                const text = ev.currentTarget.dataset.text;
+                navigator.clipboard?.writeText(text).then(() => {
+                    ev.currentTarget.textContent = '✓ COPIED';
+                });
+            });
+            // Wire multiplayer nudge
+            el.querySelector('.nudge-mp')?.addEventListener('click', () => {
+                this.switchMode(MODES.MULTIPLAYER);
+            });
         };
         this._gameRestartHandler = () => {
             document.getElementById('gameover-overlay')?.remove();

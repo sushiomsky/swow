@@ -47,6 +47,56 @@
     font-size: 0.8rem; color: #888; margin-top: 1em;
     animation: gameover-blink 1s infinite alternate;
 }
+.gameover-wave {
+    font-size: 0.9rem; color: #aaa; margin-top: 0.1em; letter-spacing: 0.15em;
+}
+.gameover-share {
+    display: flex; gap: 10px; justify-content: center; margin-top: 0.8em;
+    pointer-events: auto;
+}
+.share-btn {
+    display: inline-block; padding: 6px 14px;
+    font-family: 'C64Pro', monospace; font-size: 0.7rem;
+    color: #fff; border: 1px solid #555; background: #222;
+    cursor: pointer; text-decoration: none; letter-spacing: 0.1em;
+    transition: background 0.15s, border-color 0.15s;
+}
+.share-btn:hover {
+    background: #444; border-color: #aaa;
+}
+.share-twitter { border-color: #1da1f2; }
+.share-twitter:hover { background: #1da1f2; }
+.gameover-nudge {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    margin-top: 0.6em; pointer-events: auto;
+}
+.nudge-text {
+    font-size: 0.7rem; color: #888; letter-spacing: 0.1em;
+}
+.nudge-btn {
+    padding: 5px 12px; font-family: 'C64Pro', monospace; font-size: 0.65rem;
+    color: #fff; background: #15c; border: none; cursor: pointer;
+    letter-spacing: 0.1em; transition: background 0.15s;
+}
+.nudge-btn:hover { background: #27e; }
+
+/* Challenge banner on main menu */
+#challenge-banner {
+    background: linear-gradient(90deg, #f80 0%, #f00 100%);
+    color: #fff; padding: 10px 20px; margin-bottom: 16px;
+    font-size: 0.85rem; letter-spacing: 0.1em; text-align: center;
+    animation: gameover-fadein 0.6s ease-out;
+}
+#challenge-banner strong { color: #ff0; font-size: 1.1em; }
+
+/* Live player count badge */
+.live-badge {
+    display: block; text-align: center;
+    font-size: 0.65rem; color: #0f0; margin-top: 4px;
+    letter-spacing: 0.15em;
+    animation: gameover-blink 2s infinite alternate;
+}
+.live-badge.hide { display: none; }
 
 /* Kill score popups */
 .kill-popup {
