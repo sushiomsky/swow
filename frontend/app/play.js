@@ -348,8 +348,23 @@ function buildMPPostMatchOverlay(detail) {
 }
 
 // ─── Start game (instant — engine already running) ────────────────
-function startGame(numPlayers) {
-    if (!_engine) return;
+async function startGame(numPlayers) {
+    // Wait for engine to be ready
+    if (!_engine) {
+        console.log('[play.js] Engine not ready, initializing attract mode...');
+        try {
+            await initAttract();
+        } catch (err) {
+            console.error('[play.js] Failed to init engine:', err);
+            return;
+        }
+    }
+    
+    if (!_engine) {
+        console.error('[play.js] Engine still not available after init');
+        return;
+    }
+    
     showOverlay(false);
     document.getElementById('play-gameover')?.remove();
     _engine.startNewGame(numPlayers);
@@ -469,19 +484,19 @@ function _teardownForEngine() {
 
 // ─── Bind UI ──────────────────────────────────────────────────────
 // UI buttons now trigger engine controller methods (can also use engine directly)
-document.getElementById('btn-play').addEventListener('click', () => {
+document.getElementById('btn-play').addEventListener('click', async () => {
     if (window.engine && window.engine.state === 'menu') {
         window.engine.startNewGame(1);
     } else {
-        startGame(1);
+        await startGame(1);
     }
 });
 
-document.getElementById('btn-2p').addEventListener('click', () => {
+document.getElementById('btn-2p').addEventListener('click', async () => {
     if (window.engine && window.engine.state === 'menu') {
         window.engine.startNewGame(2);
     } else {
-        startGame(2);
+        await startGame(2);
     }
 });
 
