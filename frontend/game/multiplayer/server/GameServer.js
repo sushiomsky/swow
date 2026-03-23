@@ -1,14 +1,15 @@
 /**
  * GameServer — WebSocket server for private 2-player rooms.
  *
- * Minimal multiplayer: create a room, share a code/link, friend joins, game starts.
- * No matchmaking, no queues, no cross-dungeon tunnels.
+ * NOW WITH CONNECTED DUNGEONS: Dungeons can be linked via tunnels
+ * for battle royale mode. Players can travel between dungeons.
  */
 'use strict';
 
 const WebSocket = require('ws');
 const { DungeonInstance, STATE } = require('./DungeonInstance');
 const { ServerPlayer } = require('./ServerPlayer');
+const { DungeonGraph } = require('./DungeonGraph');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
@@ -25,10 +26,15 @@ class GameServer {
         this.connections = new Map();
         this.dungeons = new Map();
         this.privatePairLobbies = new Map();
+        
+        // NEW: Dungeon graph for battle royale mode
+        this.dungeonGraph = new DungeonGraph();
+        this.battleRoyaleMode = process.env.BATTLE_ROYALE === 'true'; // Feature flag
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
         console.log(`[GameServer] started at ${TICK_MS}ms/tick`);
+        console.log(`[GameServer] Battle Royale mode: ${this.battleRoyaleMode ? 'ENABLED' : 'DISABLED'}`);
     }
 
     // ─── Connection Lifecycle ─────────────────────────────────────────────────
@@ -153,6 +159,44 @@ class GameServer {
     _createDungeon() {
         const d = new DungeonInstance(this);
         this.dungeons.set(d.id, d);
+        
+        // NEW: Add to dungeon graph if battle royale mode
+        if (this.battleRoyaleMode) {
+            this.dungeonGraph.addDungeon(d.id);
+            
+            // Auto-connect to existing dungeons (ring topology)
+            const connected = this.dungeonGraph.autoConnect(d.id, 2, 'ring');
+            
+            // Create tunnel links for connected dungeons
+            connected.forEach((targetId, index) => {
+                const side = index === 0 ? 'right' : 'left';
+                const entrySide = side === 'right' ? 'left' : 'right';
+                
+                // Link this dungeon to target
+                if (side === 'right') {
+                    d.rightTunnelTarget = { dungeonId: targetId, entrySide };
+                } else {
+                    d.leftTunnelTarget = { dungeonId: targetId, entrySide };
+                }
+                
+                // Link target back to this dungeon
+                const targetDungeon = this.dungeons.get(targetId);
+                if (targetDungeon) {
+                    if (entrySide === 'right') {
+                        targetDungeon.rightTunnelTarget = { dungeonId: d.id, entrySide: side };
+                    } else {
+                        targetDungeon.leftTunnelTarget = { dungeonId: d.id, entrySide: side };
+                    }
+                }
+                
+                console.log(`[GameServer] Linked dungeon ${d.id} (${side}) ←→ ${targetId} (${entrySide})`);
+            });
+            
+            // Log graph stats
+            const stats = this.dungeonGraph.getStats();
+            console.log(`[GameServer] Graph: ${stats.dungeonCount} dungeons, ${stats.uniqueConnections} connections`);
+        }
+        
         return d;
     }
 
@@ -166,7 +210,133 @@ class GameServer {
 
     onDungeonDestroyed(dungeonId) {
         this.dungeons.delete(dungeonId);
+        
+        // NEW: Remove from graph if battle royale mode
+        if (this.battleRoyaleMode) {
+            this.dungeonGraph.removeDungeon(dungeonId);
+        }
+        
         console.log(`[GameServer] dungeon ${dungeonId} destroyed`);
+    }
+    
+    // ─── Cross-Dungeon Transfer ───────────────────────────────────────────────
+    
+    /**
+     * Transfer a player from one dungeon to another via tunnel
+     * Called by DungeonInstance.tunnelTransfer()
+     * 
+     * @param {ServerPlayer} player - The player to transfer
+     * @param {DungeonInstance} sourceDungeon - Current dungeon
+     * @param {string} targetDungeonId - Destination dungeon ID
+     * @param {string} entrySide - 'left' or 'right' (where player enters)
+     */
+    transferPlayerToDungeon(player, sourceDungeon, targetDungeonId, entrySide) {
+        console.log(`[Transfer] Player ${player.id} from ${sourceDungeon.id} → ${targetDungeonId} (${entrySide})`);
+        
+        // Get target dungeon
+        const targetDungeon = this.dungeons.get(targetDungeonId);
+        if (!targetDungeon) {
+            console.error(`[Transfer] Target dungeon ${targetDungeonId} not found`);
+            return false;
+        }
+        
+        // Check if target dungeon has space
+        const availableSlot = this._findAvailableSlot(targetDungeon);
+        if (availableSlot === null) {
+            console.warn(`[Transfer] Target dungeon ${targetDungeonId} is full`);
+            // TODO: Send error message to client
+            return false;
+        }
+        
+        // Save player state
+        const savedState = {
+            score: player.score,
+            lives: player.lives,
+            status: player.status,
+            // Don't save position - spawn at tunnel entrance
+        };
+        
+        // Get connection for this player
+        const conn = this.connections.get(player.id);
+        if (!conn) {
+            console.error(`[Transfer] No connection found for player ${player.id}`);
+            return false;
+        }
+        
+        // Remove player from source dungeon
+        sourceDungeon.removePlayer(player);
+        
+        // Broadcast to source dungeon that player left
+        this._broadcastToDungeon(sourceDungeon, {
+            type: 'player_left_via_tunnel',
+            playerId: player.id,
+            targetDungeonId: targetDungeonId
+        }, player.id);
+        
+        // Create new player in target dungeon
+        const newPlayer = new ServerPlayer(availableSlot, targetDungeon, player.id, targetDungeon.id);
+        newPlayer.homeSlot = availableSlot;
+        newPlayer.score = savedState.score;
+        newPlayer.lives = savedState.lives;
+        newPlayer.status = savedState.status;
+        
+        // Spawn at tunnel entrance position
+        if (entrySide === 'right') {
+            newPlayer.d = 'right';
+            newPlayer.col = 1;
+            newPlayer.x = 34; // Right side entrance
+        } else {
+            newPlayer.d = 'left';
+            newPlayer.col = 11;
+            newPlayer.x = 274; // Left side entrance
+        }
+        
+        targetDungeon.addPlayer(newPlayer);
+        
+        // Update connection
+        conn.player = newPlayer;
+        conn.dungeonId = targetDungeon.id;
+        
+        // Send full dungeon init to transferred player
+        this._sendInit(conn, targetDungeon);
+        
+        // Broadcast to target dungeon that player arrived
+        this._broadcastToDungeon(targetDungeon, {
+            type: 'player_arrived_via_tunnel',
+            playerId: player.id,
+            playerSlot: availableSlot,
+            entrySide: entrySide
+        }, player.id);
+        
+        console.log(`[Transfer] SUCCESS: Player ${player.id} now in ${targetDungeon.id} (slot ${availableSlot})`);
+        return true;
+    }
+    
+    /**
+     * Find an available player slot in a dungeon
+     * @returns {number|null} - Slot index (0 or 1) or null if full
+     */
+    _findAvailableSlot(dungeon) {
+        for (let i = 0; i < dungeon.players.length; i++) {
+            if (dungeon.players[i].id === null) {
+                return i;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Broadcast a message to all players in a dungeon
+     * @param {DungeonInstance} dungeon
+     * @param {object} message
+     * @param {string} excludePlayerId - Optional player ID to exclude
+     */
+    _broadcastToDungeon(dungeon, message, excludePlayerId = null) {
+        for (const [playerId, conn] of this.connections.entries()) {
+            if (conn.dungeonId === dungeon.id && playerId !== excludePlayerId) {
+                this._send(conn.ws, message);
+            }
+        }
     }
 
     // ─── Game Loop ────────────────────────────────────────────────────────────
