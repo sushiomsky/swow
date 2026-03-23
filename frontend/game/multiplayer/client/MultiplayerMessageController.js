@@ -17,10 +17,6 @@ export class MultiplayerMessageController {
                 this.effectsController.handleWaitingForPartner();
                 break;
 
-            case SERVER_EVENTS.WAITING_FOR_SITNGO:
-                this.effectsController.handleWaitingForSitNGo(msg);
-                break;
-
             case SERVER_EVENTS.PRIVATE_PAIR_CREATED:
                 this.effectsController.handlePrivatePairCreated(msg);
                 break;

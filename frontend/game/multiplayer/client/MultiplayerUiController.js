@@ -12,16 +12,15 @@ export class MultiplayerUiController {
     }
 
     setButtonState(disabled) {
-        const ids = ['btnSolo', 'btnSitNGo', 'btnTeamBr', 'btnPairCreate', 'btnPairJoin', 'btnRetry'];
+        const ids = ['btnPairCreate', 'btnPairJoin'];
         for (const id of ids) {
             const el = document.getElementById(id);
             if (el) el.disabled = !!disabled;
         }
     }
 
-    toggleRetry(show) {
-        const el = document.getElementById('btnRetry');
-        if (el) el.classList.toggle('hide', !show);
+    toggleRetry() {
+        // no-op: retry button removed in simplification
     }
 
     hideOverlay() {

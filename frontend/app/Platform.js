@@ -94,31 +94,17 @@ function createMultiplayerDOM() {
     root.innerHTML = `
         <div id="overlay">
             <h1>WIZARD OF WOR</h1>
-            <p>Connected Dungeons &mdash; Multiplayer</p>
-            <p class="subtext">Choose a mode: endless BR, sit-n-go BR, team BR, or private 2-player classic with a shareable link.</p>
+            <p>2-Player Private Room</p>
             <div style="margin-top:20px;">
-                <button class="btn" id="btnSolo">&#9654; ENDLESS BR (join anytime)</button>
-                <button class="btn blue" id="btnSitNGo">&#9207; SIT-N-GO BR (queued start)</button>
-                <button class="btn green" id="btnTeamBr">&#128737; TEAM BR (gold vs blue)</button>
-                <button class="btn blue" id="btnPairCreate">&#128279; CREATE PRIVATE CLASSIC</button>
+                <button class="btn blue" id="btnPairCreate">&#128279; CREATE ROOM</button>
                 <div style="margin-top: 12px;">
-                    <input id="pairCode" type="text" maxlength="12" placeholder="Private code"
+                    <input id="pairCode" type="text" maxlength="12" placeholder="Room code"
                         style="padding: 10px 12px; font-family: inherit; width: 240px; text-transform: uppercase; letter-spacing: 2px;">
-                    <button class="btn" id="btnPairJoin">JOIN PRIVATE</button>
+                    <button class="btn" id="btnPairJoin">JOIN ROOM</button>
                 </div>
-                <button class="btn green hide" id="btnRetry">&#8635; RETRY LAST MODE</button>
                 <button class="btn dark" id="btnBackToMenu" style="margin-top:12px; background:#333;">&#9664; BACK TO MENU</button>
             </div>
             <div id="status" role="status" aria-live="polite"></div>
-            <p style="margin-top:30px; font-size:11px; color:#555;">
-                <b>Endless BR:</b> join anytime, get your own dungeon and invade through tunnels.<br>
-                <b>Sit-n-Go BR:</b> waits for enough players, then starts a closed ring of linked dungeons.<br>
-                <b>Team BR:</b> players auto-balance between gold and blue teams.<br>
-                <b>Private Classic:</b> host creates a private code/link and shares it with one friend.
-            </p>
-            <p style="margin-top:16px; font-size:11px;">
-                <a href="/public/handbook.html" target="_blank" style="color:#6c5eb5; text-decoration:none;">&#128214; Game Handbook &amp; Reference</a>
-            </p>
         </div>
         <div id="body">
             <div id="border">
@@ -130,40 +116,6 @@ function createMultiplayerDOM() {
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
         <div id="controls-hint">ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu</div>
-        <button id="settingsToggler" type="button">&#9881; Settings</button>
-        <section id="settingsPanel" class="hide">
-            <h2>Gameplay Settings</h2>
-            <label>Controls
-                <select id="settingControls">
-                    <option value="keyboard">Keyboard</option>
-                    <option value="gamepad0">Gamepad #1</option>
-                    <option value="gamepad1">Gamepad #2</option>
-                </select>
-            </label>
-            <div class="control-grid">
-                <button type="button" id="settingControlUp">UP: -</button>
-                <button type="button" id="settingControlDown">DOWN: -</button>
-                <button type="button" id="settingControlLeft">LEFT: -</button>
-                <button type="button" id="settingControlRight">RIGHT: -</button>
-                <button type="button" id="settingControlFire">FIRE: -</button>
-            </div>
-            <label>Visual filter
-                <select id="settingVisualFilter">
-                    <option value="none">None</option>
-                    <option value="scanlines">Scan lines</option>
-                    <option value="bwTv">Black and white TV</option>
-                    <option value="colorTv">Color TV</option>
-                    <option value="greenC64monitor">Green C64 monitor</option>
-                </select>
-            </label>
-            <label>Sound
-                <select id="settingSound">
-                    <option value="on">On</option>
-                    <option value="off">Off</option>
-                </select>
-            </label>
-            <p class="help">Settings apply immediately during gameplay and are saved for future sessions.</p>
-        </section>
     `;
     return root;
 }
@@ -209,7 +161,7 @@ export class Platform {
         const el = (id) => document.getElementById(id);
         el('menu-sp-1p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }));
         el('menu-sp-2p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }));
-        el('menu-mp')?.addEventListener('click', () => this.switchMode(MODES.MULTIPLAYER, { autoJoin: 'solo' }));
+        el('menu-mp')?.addEventListener('click', () => this.switchMode(MODES.MULTIPLAYER));
         el('menu-handbook')?.addEventListener('click', () => {
             window.open('/public/handbook.html', '_blank');
         });
@@ -222,7 +174,7 @@ export class Platform {
                 case '1': case ' ': case 'Enter':
                     this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }); break;
                 case '2': this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }); break;
-                case 'm': case 'M': this.switchMode(MODES.MULTIPLAYER, { autoJoin: 'solo' }); break;
+                case 'm': case 'M': this.switchMode(MODES.MULTIPLAYER); break;
                 case 'h': case 'H': window.open('/public/handbook.html', '_blank'); break;
                 default: return;
             }
@@ -488,26 +440,21 @@ export class Platform {
         this._loadCSS('/frontend/styles/multiplayer.css');
         this._gameRoot.appendChild(createMultiplayerDOM());
 
-        // Wire platform-back button
         const backBtn = this._gameRoot.querySelector('#btnBackToMenu');
         if (backBtn) backBtn.addEventListener('click', () => this.goToMenu());
 
-        // Set URL params so LaunchController auto-joins the right mode
-        if (options.autoJoin || options.roomCode) {
+        // Pass room code via URL so LaunchController auto-joins
+        if (options.roomCode) {
             const url = new URL(window.location);
-            if (options.roomCode) {
-                url.searchParams.set('room', options.roomCode);
-            } else if (options.autoJoin) {
-                url.searchParams.set('mode', options.autoJoin === 'solo' ? 'endless' : options.autoJoin);
-            }
+            url.searchParams.set('room', options.roomCode);
             window.history.replaceState({}, '', url);
         }
 
         const mod = await loadMultiplayer();
         mod.initMultiplayer();
 
-        // Clean URL params after init (LaunchController has already read them)
-        if (options.autoJoin || options.roomCode) {
+        // Clean URL after init
+        if (options.roomCode) {
             window.history.replaceState({}, '', window.location.pathname);
         }
     }

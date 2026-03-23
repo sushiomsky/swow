@@ -4,7 +4,6 @@ export class MultiplayerMessageEffectsController {
         uiController,
         audio,
         options,
-        getLastJoinType,
         setIsConnecting,
         setHasJoinedGame,
         setLastState,
@@ -14,7 +13,6 @@ export class MultiplayerMessageEffectsController {
         this.uiController = uiController;
         this.audio = audio;
         this.options = options;
-        this.getLastJoinType = getLastJoinType;
         this.setIsConnecting = setIsConnecting;
         this.setHasJoinedGame = setHasJoinedGame;
         this.setLastState = setLastState;
@@ -29,10 +27,6 @@ export class MultiplayerMessageEffectsController {
         this.uiController.setStatus('Waiting for second player to join…');
     }
 
-    handleWaitingForSitNGo(msg) {
-        this.uiController.setStatus(`Sit-n-Go queue: ${msg.queued}/${msg.minPlayers} players. Waiting…`);
-    }
-
     handlePrivatePairCreated(msg) {
         const code = msg.code || '';
         const rawJoinUrl = msg?.joinUrl || `/?room=${encodeURIComponent(code)}`;
@@ -40,7 +34,6 @@ export class MultiplayerMessageEffectsController {
         const shareText = `Join my Wizard of Wor game! ${absoluteUrl}`;
         const twitterUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
 
-        // Build prominent share panel
         let panel = document.getElementById('mp-share-panel');
         if (panel) panel.remove();
         panel = document.createElement('div');
@@ -69,10 +62,9 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleJoinError(msg) {
-        this.uiController.setStatus(msg.message || 'Unable to join this mode.');
+        this.uiController.setStatus(msg.message || 'Unable to join.');
         this.uiController.setStatusError(true);
         this.uiController.setButtonState(false);
-        this.uiController.toggleRetry(!!this.getLastJoinType());
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
     }
 
@@ -80,16 +72,15 @@ export class MultiplayerMessageEffectsController {
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
         if (typeof this.setHasJoinedGame === 'function') this.setHasJoinedGame(true);
         this.uiController.setButtonState(false);
-        this.uiController.toggleRetry(false);
         this.session.playerId = msg.playerId;
         this.session.playerNum = msg.playerNum;
         this.session.dungeonId = msg.dungeonId;
-        this.session.homeDungeonId = msg.homeDungeonId;
         this.uiController.hideOverlay();
         this.uiController.showGameSurface();
         this.uiController.setStatus('');
         this.uiController.setStatusError(false);
-        this.uiController.setHudDungeonText(this._buildHudText(msg));
+        const playerColor = this.session.playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
+        this.uiController.setHudDungeonText(`You: ${playerColor}`);
         this.audio.resumeContext();
     }
 
@@ -97,12 +88,5 @@ export class MultiplayerMessageEffectsController {
         this.setLastState(msg.state);
         this.session.dungeonId = msg.state.dungeonId;
         this.audio.processSounds(msg.state.sounds, this.options.sound === 'on');
-    }
-
-    _buildHudText(msg) {
-        const teamText = msg.team ? ` | Team: ${msg.team.toUpperCase()}` : '';
-        const modeText = msg.mode ? ` | Mode: ${msg.mode.replaceAll('_', ' ').toUpperCase()}` : '';
-        const playerColor = this.session.playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
-        return `Dungeon ${this.session.dungeonId} | You: ${playerColor}${teamText}${modeText}`;
     }
 }
