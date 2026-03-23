@@ -88,5 +88,28 @@ export class MultiplayerMessageEffectsController {
         this.setLastState(msg.state);
         this.session.dungeonId = msg.state.dungeonId;
         this.audio.processSounds(msg.state.sounds, this.options.sound === 'on');
+
+        // Detect game-over scene and dispatch event (once per game)
+        if (msg.state.scene === 'gameOver' && !this._gameOverDispatched) {
+            this._gameOverDispatched = true;
+            const players = msg.state.players || [];
+            const p0 = players[0] || { score: 0 };
+            const p1 = players[1] || { score: 0 };
+            const myNum = this.session.playerNum ?? 0;
+            setTimeout(() => {
+                document.dispatchEvent(new CustomEvent('swow:mp-game-over', {
+                    detail: {
+                        p1Score: p0.score,
+                        p2Score: p1.score,
+                        myPlayerNum: myNum,
+                        myScore: players[myNum]?.score ?? 0,
+                    }
+                }));
+            }, 2000);
+        }
+        // Reset flag when game restarts
+        if (msg.state.scene === 'getReady' || msg.state.scene === 'dungeon') {
+            this._gameOverDispatched = false;
+        }
     }
 }

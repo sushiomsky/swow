@@ -322,6 +322,26 @@ html, body {
     letter-spacing: 0.1em;
 }
 
+/* ─── MP post-match result text ──────────────────────────────────── */
+.go-result {
+    font-family: 'WizardOfWor', monospace;
+    font-size: 2rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+}
+.go-win {
+    color: #0f0;
+    text-shadow: 0 0 12px rgba(0,255,0,0.5), 0 0 30px rgba(0,255,0,0.2);
+}
+.go-lose {
+    color: #f44;
+    text-shadow: 0 0 12px rgba(255,68,68,0.5), 0 0 30px rgba(255,68,68,0.2);
+}
+.go-draw {
+    color: #ff0;
+    text-shadow: 0 0 12px rgba(255,255,0,0.5);
+}
+
 /* ─── Kill score popups ──────────────────────────────────────────── */
 .kill-popup {
     position: fixed;

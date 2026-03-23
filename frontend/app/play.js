@@ -26,6 +26,7 @@ let _spApp = null;
 let _engine = null;
 let _spCSSLink = null;
 let _mpCSSLinks = [];
+let _mpGameOverHandler = null;
 let _handlers = {};
 
 const overlay = document.getElementById('play-overlay');
@@ -264,6 +265,42 @@ function buildGameOverOverlay(detail) {
     el.querySelector('#go-replay')?.addEventListener('click', () => startGame(1));
 }
 
+// ─── Build MP post-match overlay ──────────────────────────────────
+function buildMPPostMatchOverlay(detail) {
+    const { p1Score, p2Score, myPlayerNum, myScore } = detail;
+    const opponentScore = myPlayerNum === 0 ? p2Score : p1Score;
+    const won = myScore > opponentScore;
+    const tied = myScore === opponentScore;
+
+    document.getElementById('play-gameover')?.remove();
+
+    const el = document.createElement('div');
+    el.id = 'play-gameover';
+
+    const resultText = tied ? 'DRAW' : (won ? 'YOU WIN!' : 'YOU LOSE');
+    const resultClass = tied ? 'go-draw' : (won ? 'go-win' : 'go-lose');
+
+    let html = '<div class="go-content">';
+    html += `<div class="go-result ${resultClass}">${resultText}</div>`;
+    html += `<div class="go-score">${myScore}</div>`;
+    html += '<div class="go-detail">';
+    html += `P1: ${p1Score} &nbsp;|&nbsp; P2: ${p2Score}`;
+    html += '</div>';
+    html += '<div class="go-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center;">';
+    html += '<button class="go-replay-btn" id="go-mp-newroom">⚔ NEW ROOM</button>';
+    html += '<button class="go-share-btn" id="go-mp-back" style="padding:8px 20px;">◀ BACK TO MENU</button>';
+    html += '</div>';
+    html += '</div>';
+    el.innerHTML = html;
+    gameRoot.appendChild(el);
+
+    el.querySelector('#go-mp-newroom')?.addEventListener('click', () => {
+        document.getElementById('play-gameover')?.remove();
+        startMP(); // Create a fresh room
+    });
+    el.querySelector('#go-mp-back')?.addEventListener('click', () => goToTitle());
+}
+
 // ─── Start game (instant — engine already running) ────────────────
 function startGame(numPlayers) {
     if (!_engine) return;
@@ -290,6 +327,11 @@ async function goToTitle() {
 // ─── Start Multiplayer ────────────────────────────────────────────
 async function startMP(roomCode) {
     await teardownSP();
+    // Remove any previous MP game-over handler
+    if (_mpGameOverHandler) {
+        document.removeEventListener('swow:mp-game-over', _mpGameOverHandler);
+    }
+    document.getElementById('play-gameover')?.remove();
     showOverlay(false);
     _activeMode = 'mp';
 
@@ -298,6 +340,10 @@ async function startMP(roomCode) {
 
     const backBtn = gameRoot.querySelector('#btnBackToMenu');
     if (backBtn) backBtn.addEventListener('click', () => goToTitle());
+
+    // MP post-match handler
+    _mpGameOverHandler = (e) => buildMPPostMatchOverlay(e.detail);
+    document.addEventListener('swow:mp-game-over', _mpGameOverHandler);
 
     if (roomCode) {
         const url = new URL(window.location);
@@ -316,6 +362,10 @@ async function startMP(roomCode) {
 }
 
 async function teardownMP() {
+    if (_mpGameOverHandler) {
+        document.removeEventListener('swow:mp-game-over', _mpGameOverHandler);
+        _mpGameOverHandler = null;
+    }
     if (_mpModule) {
         try { _mpModule.destroyMultiplayer(); } catch (_) { /* ok */ }
     }
