@@ -189,19 +189,23 @@ export class Platform {
 
     _bindMenuButtons() {
         const el = (id) => document.getElementById(id);
-        el('menu-sp-1p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER));
-        el('menu-sp-2p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER));
+        el('menu-sp-1p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }));
+        el('menu-sp-2p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }));
         el('menu-mp')?.addEventListener('click', () => this.switchMode(MODES.MULTIPLAYER));
         el('menu-handbook')?.addEventListener('click', () => {
             window.open('/public/handbook.html', '_blank');
         });
     }
 
-    async switchMode(mode) {
+    async switchMode(mode, options = {}) {
+        // Show loading overlay for game modes
+        if (mode !== MODES.MENU) this._showLoading(true);
+
         // Tear down current mode
         await this._teardown();
 
         this._mode = mode;
+        this._modeOptions = options;
 
         if (mode === MODES.MENU) {
             this._showMenu(true);
@@ -211,10 +215,12 @@ export class Platform {
         this._showMenu(false);
 
         if (mode === MODES.SINGLEPLAYER) {
-            await this._startSingleplayer();
+            await this._startSingleplayer(options);
         } else if (mode === MODES.MULTIPLAYER) {
             await this._startMultiplayer();
         }
+
+        this._showLoading(false);
     }
 
     async _teardown() {
@@ -226,6 +232,9 @@ export class Platform {
             mod.destroyMultiplayer();
         }
 
+        // Remove floating back button
+        document.getElementById('platform-back-float')?.remove();
+
         // Remove mode-specific DOM
         const existing = this._gameRoot?.firstChild;
         if (existing) existing.remove();
@@ -235,10 +244,31 @@ export class Platform {
         this._cssLinks = [];
 
         this._mode = null;
+        this._modeOptions = {};
     }
 
     _showMenu(visible) {
         if (this._menuEl) this._menuEl.classList.toggle('hide', !visible);
+    }
+
+    _showLoading(visible) {
+        let el = document.getElementById('platform-loading');
+        if (visible && !el) {
+            el = document.createElement('div');
+            el.id = 'platform-loading';
+            el.innerHTML = '<span class="spinner"></span> LOADING…';
+            document.body.appendChild(el);
+        } else if (!visible && el) {
+            el.remove();
+        }
+    }
+
+    _addFloatingBackButton() {
+        const btn = document.createElement('button');
+        btn.id = 'platform-back-float';
+        btn.textContent = '◀ MENU';
+        btn.addEventListener('click', () => this.goToMenu());
+        document.body.appendChild(btn);
     }
 
     _loadCSS(href) {
@@ -249,16 +279,29 @@ export class Platform {
         this._cssLinks.push(link);
     }
 
-    async _startSingleplayer() {
+    async _startSingleplayer(options = {}) {
         this._loadCSS('/src/styles/singleplayer.css');
         this._gameRoot.appendChild(createSingleplayerDOM());
 
-        // Wire platform-back button
+        // Wire platform-back button inside slide-out menu
         const backBtn = this._gameRoot.querySelector('.platform-back');
         if (backBtn) backBtn.addEventListener('click', () => this.goToMenu());
 
+        // Add floating back-to-menu button
+        this._addFloatingBackButton();
+
         const mod = await loadSingleplayer();
-        mod.initSingleplayer();
+        const app = mod.initSingleplayer();
+
+        // Auto-start 2-player game if requested
+        if (options.numPlayers === 2) {
+            const waitForEngine = setInterval(() => {
+                if (app.engine) {
+                    clearInterval(waitForEngine);
+                    app.engine.startNewGame(2);
+                }
+            }, 50);
+        }
     }
 
     async _startMultiplayer() {
