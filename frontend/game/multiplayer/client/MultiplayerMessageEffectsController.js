@@ -34,7 +34,37 @@ export class MultiplayerMessageEffectsController {
     }
 
     handlePrivatePairCreated(msg) {
-        this.uiController.setStatus(`Private room created. Share code: ${msg.code}`);
+        const code = msg.code || '';
+        const rawJoinUrl = msg?.joinUrl || `/?room=${encodeURIComponent(code)}`;
+        const absoluteUrl = rawJoinUrl.startsWith('http') ? rawJoinUrl : `${location.origin}${rawJoinUrl}`;
+        const shareText = `Join my Wizard of Wor game! ${absoluteUrl}`;
+        const twitterUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
+
+        // Build prominent share panel
+        let panel = document.getElementById('mp-share-panel');
+        if (panel) panel.remove();
+        panel = document.createElement('div');
+        panel.id = 'mp-share-panel';
+        panel.innerHTML = `
+            <div class="mp-share-code">${code}</div>
+            <div class="mp-share-label">Share this code or link with a friend</div>
+            <div class="mp-share-buttons">
+                <button class="share-btn share-copy" id="mp-copy-link">📋 COPY LINK</button>
+                <a class="share-btn share-twitter" href="${twitterUrl}" target="_blank" rel="noopener">𝕏 SHARE</a>
+            </div>
+            <div class="mp-share-waiting">Waiting for player 2…</div>
+        `;
+        const statusEl = document.getElementById('status');
+        if (statusEl) statusEl.after(panel);
+
+        document.getElementById('mp-copy-link')?.addEventListener('click', () => {
+            navigator.clipboard?.writeText(absoluteUrl).then(() => {
+                const btn = document.getElementById('mp-copy-link');
+                if (btn) btn.textContent = '✓ COPIED';
+            });
+        });
+
+        this.uiController.setStatus('');
         this.onCopyPrivateLink(msg);
     }
 

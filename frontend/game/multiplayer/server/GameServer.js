@@ -197,7 +197,7 @@ class GameServer {
 
         const code = this._generatePrivateCode();
         this.privatePairLobbies.set(code, { hostConn: conn, hostId: playerId, dungeon, createdAt: Date.now() });
-        const joinUrl = `/multiplayer.html?pair=${encodeURIComponent(code)}`;
+        const joinUrl = `/?room=${encodeURIComponent(code)}`;
         this._send(conn.ws, { type: 'private_pair_created', code, joinUrl });
         this._send(conn.ws, { type: 'waiting_for_partner' });
         console.log(`[GameServer] private pair host ${playerId} code=${code}`);

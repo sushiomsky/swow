@@ -8,7 +8,7 @@ export class MultiplayerShareController {
         const codeEl = document.getElementById('pairCode');
         if (codeEl && pairCode) codeEl.value = pairCode;
 
-        const rawJoinUrl = msg?.joinUrl || `/multiplayer.html?pair=${encodeURIComponent(pairCode)}`;
+        const rawJoinUrl = msg?.joinUrl || `/?room=${encodeURIComponent(pairCode)}`;
         const absoluteJoinUrl = rawJoinUrl.startsWith('http')
             ? rawJoinUrl
             : `${location.origin}${rawJoinUrl}`;

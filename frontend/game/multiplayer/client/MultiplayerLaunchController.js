@@ -48,12 +48,13 @@ export class MultiplayerLaunchController {
 
     applyAutoJoinFromUrl() {
         const params = new URLSearchParams(location.search);
-        const autoCode = params.get('pair');
+        const autoCode = params.get('room') || params.get('pair');
         if (autoCode) {
             const codeEl = document.getElementById('pairCode');
             if (codeEl) codeEl.value = autoCode;
-            this.uiController.setStatus(`Private code detected: ${autoCode.toUpperCase()}. Click JOIN PRIVATE.`);
-            this.uiController.setStatusError(false);
+            // Auto-join immediately with the detected code
+            this.onConnect(CLIENT_EVENTS.JOIN_PRIVATE_PAIR, { code: autoCode });
+            return;
         }
 
         const modeParam = params.get('mode');
@@ -62,12 +63,8 @@ export class MultiplayerLaunchController {
         if (!autoJoinType) return;
 
         if (autoJoinType === CLIENT_EVENTS.JOIN_PRIVATE_PAIR) {
-            if (!autoCode) {
-                this.uiController.setStatus('Private join mode selected. Enter a code to continue.');
-                this.uiController.setStatusError(false);
-                return;
-            }
-            this.onConnect(CLIENT_EVENTS.JOIN_PRIVATE_PAIR, { code: autoCode });
+            this.uiController.setStatus('Private join mode selected. Enter a code to continue.');
+            this.uiController.setStatusError(false);
             return;
         }
         this.onConnect(autoJoinType);

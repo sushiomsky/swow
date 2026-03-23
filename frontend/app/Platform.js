@@ -194,6 +194,14 @@ export class Platform {
         this._preloadPromise = loadSingleplayer();
         const img = new Image();
         img.src = '/images/v3.0/sprite.png';
+
+        // Auto-join multiplayer if ?room=CODE in URL
+        const params = new URLSearchParams(window.location.search);
+        const roomCode = params.get('room') || params.get('pair');
+        if (roomCode) {
+            this.switchMode(MODES.MULTIPLAYER, { roomCode });
+            return;
+        }
         this.switchMode(MODES.MENU);
     }
 
@@ -201,7 +209,7 @@ export class Platform {
         const el = (id) => document.getElementById(id);
         el('menu-sp-1p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }));
         el('menu-sp-2p')?.addEventListener('click', () => this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }));
-        el('menu-mp')?.addEventListener('click', () => this.switchMode(MODES.MULTIPLAYER));
+        el('menu-mp')?.addEventListener('click', () => this.switchMode(MODES.MULTIPLAYER, { autoJoin: 'solo' }));
         el('menu-handbook')?.addEventListener('click', () => {
             window.open('/public/handbook.html', '_blank');
         });
@@ -214,7 +222,7 @@ export class Platform {
                 case '1': case ' ': case 'Enter':
                     this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }); break;
                 case '2': this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }); break;
-                case 'm': case 'M': this.switchMode(MODES.MULTIPLAYER); break;
+                case 'm': case 'M': this.switchMode(MODES.MULTIPLAYER, { autoJoin: 'solo' }); break;
                 case 'h': case 'H': window.open('/public/handbook.html', '_blank'); break;
                 default: return;
             }
@@ -283,7 +291,7 @@ export class Platform {
         if (mode === MODES.SINGLEPLAYER) {
             await this._startSingleplayer(options);
         } else if (mode === MODES.MULTIPLAYER) {
-            await this._startMultiplayer();
+            await this._startMultiplayer(options);
         }
 
         this._showLoading(false);
@@ -476,7 +484,7 @@ export class Platform {
         this._pendingTimers.push(timerId);
     }
 
-    async _startMultiplayer() {
+    async _startMultiplayer(options = {}) {
         this._loadCSS('/frontend/styles/multiplayer.css');
         this._gameRoot.appendChild(createMultiplayerDOM());
 
@@ -484,8 +492,24 @@ export class Platform {
         const backBtn = this._gameRoot.querySelector('#btnBackToMenu');
         if (backBtn) backBtn.addEventListener('click', () => this.goToMenu());
 
+        // Set URL params so LaunchController auto-joins the right mode
+        if (options.autoJoin || options.roomCode) {
+            const url = new URL(window.location);
+            if (options.roomCode) {
+                url.searchParams.set('room', options.roomCode);
+            } else if (options.autoJoin) {
+                url.searchParams.set('mode', options.autoJoin === 'solo' ? 'endless' : options.autoJoin);
+            }
+            window.history.replaceState({}, '', url);
+        }
+
         const mod = await loadMultiplayer();
         mod.initMultiplayer();
+
+        // Clean URL params after init (LaunchController has already read them)
+        if (options.autoJoin || options.roomCode) {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
     }
 
     getMode() { return this._mode; }

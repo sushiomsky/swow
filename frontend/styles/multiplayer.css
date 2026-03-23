@@ -193,3 +193,45 @@
 #settingsPanel .control-grid button:hover {
     background: #202020;
 }
+
+/* Private room share panel */
+#mp-share-panel {
+    margin-top: 16px; text-align: center;
+    animation: mp-share-fadein 0.5s ease-out;
+}
+@keyframes mp-share-fadein {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.mp-share-code {
+    font-size: 2.2rem; font-weight: bold; color: #ff0;
+    letter-spacing: 0.3em; font-family: 'C64Pro', monospace;
+    text-shadow: 0 0 10px rgba(255,255,0,0.4);
+    margin-bottom: 6px;
+}
+.mp-share-label {
+    font-size: 0.75rem; color: #888; letter-spacing: 0.1em;
+    margin-bottom: 10px;
+}
+.mp-share-buttons {
+    display: flex; gap: 10px; justify-content: center;
+}
+.mp-share-buttons .share-btn {
+    display: inline-block; padding: 6px 14px;
+    font-family: 'C64Pro', monospace; font-size: 0.7rem;
+    color: #fff; border: 1px solid #555; background: #222;
+    cursor: pointer; text-decoration: none; letter-spacing: 0.1em;
+    transition: background 0.15s, border-color 0.15s;
+}
+.mp-share-buttons .share-btn:hover {
+    background: #444; border-color: #aaa;
+}
+.mp-share-buttons .share-twitter { border-color: #1da1f2; }
+.mp-share-buttons .share-twitter:hover { background: #1da1f2; }
+.mp-share-waiting {
+    margin-top: 12px; font-size: 0.7rem; color: #0f0;
+    animation: mp-blink 1.5s infinite alternate;
+}
+@keyframes mp-blink {
+    from { opacity: 0.4; } to { opacity: 1; }
+}
