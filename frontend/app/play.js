@@ -15,11 +15,16 @@
 // The engine controller auto-initializes and exposes window.engine
 // We subscribe to its events to coordinate UI updates
 
-// Wait for engine to be available
-const engine = window.engine;
-
-// Subscribe to engine events
-if (engine) {
+// Wait for engine to be available (async, not blocking)
+function subscribeToEngine() {
+    const engine = window.engine;
+    if (!engine) {
+        console.warn('[play.js] Engine not yet available, will retry...');
+        setTimeout(subscribeToEngine, 100);
+        return;
+    }
+    
+    // Subscribe to engine events
     engine.on('startSP', ({ numPlayers }) => {
         _startSPForEngine(numPlayers);
     });
@@ -35,7 +40,12 @@ if (engine) {
     engine.on('reset', () => {
         goToTitle();
     });
+    
+    console.log('[play.js] Engine subscriptions registered');
 }
+
+// Start subscription attempt
+subscribeToEngine();
 
 // ─── Module loaders (lazy, cached) ────────────────────────────────
 let _spModule = null;
@@ -592,5 +602,10 @@ if (_roomCode) {
 
     // Start attract mode engine, then show overlay on top
     showOverlay(true);
-    initAttract().then(() => { _state = 'title'; });
+    initAttract()
+        .then(() => { _state = 'title'; })
+        .catch(err => {
+            console.error('[play.js] Failed to init attract mode:', err);
+            _state = 'title'; // Show UI anyway
+        });
 }
