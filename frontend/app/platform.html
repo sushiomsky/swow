@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="/frontend/styles/shared.css">
     <link rel="stylesheet" href="/frontend/styles/platform.css">
     <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="preload" href="/images/v3.0/sprite.png" as="image">
+    <link rel="modulepreload" href="/frontend/game/singleplayer/App.js">
     <title>Wizard Of Wor</title>
     <meta property="og:title" content="Wizard Of Wor">
     <meta property="og:type" content="game">
@@ -24,26 +26,20 @@
     <!-- Main menu overlay — shown when no game mode is active -->
     <div id="main-menu">
         <h1>WIZARD OF WOR</h1>
-        <p class="subtitle">Browser Arcade Platform</p>
+        <p class="subtitle">Browser Arcade — Play Instantly</p>
 
-        <div class="menu-group">
-            <span class="menu-group-label">Singleplayer</span>
-            <button class="menu-btn" id="menu-sp-1p">&#9654; 1 PLAYER CLASSIC</button>
-            <button class="menu-btn green" id="menu-sp-2p">&#9654; 2 PLAYER CLASSIC</button>
-        </div>
+        <button class="menu-play" id="menu-sp-1p">▶ PLAY</button>
+        <p class="menu-play-hint">Press SPACE or ENTER</p>
 
-        <div class="menu-group">
-            <span class="menu-group-label">Multiplayer</span>
-            <button class="menu-btn blue" id="menu-mp">&#127760; MULTIPLAYER ARENA</button>
-        </div>
-
-        <div class="menu-group">
-            <button class="menu-btn dark" id="menu-handbook">&#128214; GAME HANDBOOK</button>
+        <div class="menu-secondary">
+            <button class="menu-btn-sm green" id="menu-sp-2p">2 PLAYER</button>
+            <button class="menu-btn-sm blue" id="menu-mp">🌐 ONLINE</button>
+            <button class="menu-btn-sm dark" id="menu-handbook">📖 HELP</button>
         </div>
 
         <div class="menu-footer">
             <a href="/community" target="_blank">Community</a>
-            <span class="menu-keys">1 &middot; 2 &middot; M &middot; H</span>
+            <span class="menu-keys">SPACE · 2 · M · H</span>
         </div>
     </div>
 

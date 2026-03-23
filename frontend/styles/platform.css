@@ -125,84 +125,109 @@
     justify-content: center;
     font-family: 'C64ProRegular', monospace;
     color: #fff;
+    overflow: hidden;
 }
+/* Animated scanline + grid background for attract feel */
+#main-menu::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background:
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(255,255,255,0.015) 2px,
+            rgba(255,255,255,0.015) 4px
+        ),
+        radial-gradient(ellipse at center, rgba(30,0,60,0.4) 0%, transparent 70%);
+    animation: attract-scan 8s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+@keyframes attract-scan {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 400px; }
+}
+#main-menu > * { position: relative; z-index: 1; }
 
 #main-menu h1 {
     font-family: 'WizardOfWor', monospace;
     font-size: 42px;
     color: #DFF60A;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     letter-spacing: 3px;
 }
 
 #main-menu .subtitle {
     font-size: 12px;
     color: #888;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
     letter-spacing: 1px;
 }
 
-#main-menu .menu-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    margin-bottom: 20px;
-}
-
-#main-menu .menu-group-label {
-    font-size: 11px;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 6px;
-}
-
-#main-menu .menu-btn {
+/* Giant primary PLAY button */
+.menu-play {
     display: block;
     width: 340px;
-    margin: 6px 0;
-    padding: 16px 24px;
+    padding: 22px 24px;
+    margin: 0 auto 6px;
+    font-family: 'WizardOfWor', monospace;
+    font-size: 28px;
+    font-weight: bold;
+    background: #c00;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-align: center;
+    transition: background 0.15s, transform 0.1s;
+    animation: play-pulse 2s ease-in-out infinite;
+}
+.menu-play:hover {
+    background: #e20;
+    transform: scale(1.03);
+}
+@keyframes play-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.4); }
+    50% { box-shadow: 0 0 20px 6px rgba(255,0,0,0.25); }
+}
+.menu-play-hint {
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Secondary button row */
+.menu-secondary {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.menu-btn-sm {
+    padding: 10px 18px;
     font-family: inherit;
-    font-size: 15px;
+    font-size: 12px;
     font-weight: bold;
     background: #a00;
     color: #fff;
     border: none;
     cursor: pointer;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    text-align: center;
     transition: background 0.15s;
 }
-
-#main-menu .menu-btn:hover {
-    background: #c00;
-}
-
-#main-menu .menu-btn.blue {
-    background: #15c;
-}
-
-#main-menu .menu-btn.blue:hover {
-    background: #27e;
-}
-
-#main-menu .menu-btn.green {
-    background: #1f8f1f;
-}
-
-#main-menu .menu-btn.green:hover {
-    background: #27b327;
-}
-
-#main-menu .menu-btn.dark {
-    background: #333;
-}
-
-#main-menu .menu-btn.dark:hover {
-    background: #555;
-}
+.menu-btn-sm:hover { background: #c00; }
+.menu-btn-sm.blue { background: #15c; }
+.menu-btn-sm.blue:hover { background: #27e; }
+.menu-btn-sm.green { background: #1f8f1f; }
+.menu-btn-sm.green:hover { background: #27b327; }
+.menu-btn-sm.dark { background: #333; }
+.menu-btn-sm.dark:hover { background: #555; }
 
 #main-menu .menu-footer {
     margin-top: 24px;

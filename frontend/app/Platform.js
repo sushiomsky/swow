@@ -190,6 +190,10 @@ export class Platform {
         this._bindKeyboardShortcuts();
         this._showChallengeBanner();
         this._fetchLivePlayerCount();
+        // Eagerly preload SP module + sprite while user reads menu
+        this._preloadPromise = loadSingleplayer();
+        const img = new Image();
+        img.src = '/images/v3.0/sprite.png';
         this.switchMode(MODES.MENU);
     }
 
@@ -207,7 +211,8 @@ export class Platform {
         this._keyHandler = (e) => {
             if (this._mode !== MODES.MENU) return;
             switch (e.key) {
-                case '1': this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }); break;
+                case '1': case ' ': case 'Enter':
+                    this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }); break;
                 case '2': this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }); break;
                 case 'm': case 'M': this.switchMode(MODES.MULTIPLAYER); break;
                 case 'h': case 'H': window.open('/public/handbook.html', '_blank'); break;
@@ -255,8 +260,12 @@ export class Platform {
     }
 
     async switchMode(mode, options = {}) {
-        // Show loading overlay for game modes
-        if (mode !== MODES.MENU) this._showLoading(true);
+        // Show loading overlay only if module isn't already cached
+        if (mode === MODES.SINGLEPLAYER && _spModule) {
+            // Already preloaded — skip spinner
+        } else if (mode !== MODES.MENU) {
+            this._showLoading(true);
+        }
 
         // Tear down current mode
         await this._teardown();
