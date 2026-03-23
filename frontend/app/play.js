@@ -235,7 +235,7 @@ function buildGameOverOverlay(detail) {
     const el = document.createElement('div');
     el.id = 'play-gameover';
 
-    const gameUrl = window.location.origin + '/play?challenge=' + topScore;
+    const gameUrl = window.location.origin + '/?challenge=' + topScore;
     const shareText = `I scored ${topScore} in Wizard of Wor (Wave ${wave}) — beat me! ${gameUrl}`;
     const twitterUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
 
