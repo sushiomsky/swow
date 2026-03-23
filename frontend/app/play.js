@@ -4,7 +4,38 @@
  * The SP engine runs continuously behind a semi-transparent overlay,
  * showing the game's title screen cycle as attract mode.
  * Clicking PLAY starts gameplay instantly (engine already loaded).
+ * 
+ * NOW INTEGRATED WITH EngineController FOR AUTOMATION:
+ * - window.engine provides global API
+ * - window.swowDebug provides debug commands
+ * - UI responds to engine events (passive UI)
  */
+
+// ─── Engine Integration ───────────────────────────────────────────────
+// The engine controller auto-initializes and exposes window.engine
+// We subscribe to its events to coordinate UI updates
+
+// Wait for engine to be available
+const engine = window.engine;
+
+// Subscribe to engine events
+if (engine) {
+    engine.on('startSP', ({ numPlayers }) => {
+        _startSPForEngine(numPlayers);
+    });
+    
+    engine.on('startMP', ({ roomCode }) => {
+        _startMPForEngine(roomCode);
+    });
+    
+    engine.on('teardown', () => {
+        _teardownForEngine();
+    });
+    
+    engine.on('reset', () => {
+        goToTitle();
+    });
+}
 
 // ─── Module loaders (lazy, cached) ────────────────────────────────
 let _spModule = null;
@@ -209,6 +240,11 @@ async function initAttract() {
         }, 50);
     });
 
+    // Notify engine controller
+    if (window.engine) {
+        window.engine._setSPApp(_spApp, _engine);
+    }
+
     registerHandlers();
 }
 
@@ -362,7 +398,15 @@ async function startMP(roomCode) {
         }
 
         const mod = await loadMP();
-        mod.initMultiplayer();
+        const mpApp = mod.initMultiplayer();
+
+        // Notify engine controller
+        if (window.engine) {
+            window.engine._setMPApp(mpApp);
+            if (roomCode) {
+                window.engine._setRoomCode(roomCode);
+            }
+        }
 
         _state = 'playing';
     } catch (err) {
@@ -392,10 +436,52 @@ async function teardownMP() {
     _mpCSSLinks = [];
 }
 
+// ─── Engine-driven initialization (for automation) ────────────────────
+
+async function _startSPForEngine(numPlayers) {
+    // Called by EngineController when automation requests SP game
+    // Create DOM and let existing startGame() logic handle it
+    if (!_spApp) {
+        await initAttract();
+    }
+    startGame(numPlayers);
+}
+
+async function _startMPForEngine(roomCode) {
+    // Called by EngineController when automation requests MP game
+    await startMP(roomCode);
+}
+
+function _teardownForEngine() {
+    // Called by EngineController when resetting
+    // Already handled by teardownSP/teardownMP
+}
+
 // ─── Bind UI ──────────────────────────────────────────────────────
-document.getElementById('btn-play').addEventListener('click', () => startGame(1));
-document.getElementById('btn-2p').addEventListener('click', () => startGame(2));
-document.getElementById('btn-multi').addEventListener('click', () => startMP());
+// UI buttons now trigger engine controller methods (can also use engine directly)
+document.getElementById('btn-play').addEventListener('click', () => {
+    if (window.engine && window.engine.state === 'menu') {
+        window.engine.startNewGame(1);
+    } else {
+        startGame(1);
+    }
+});
+
+document.getElementById('btn-2p').addEventListener('click', () => {
+    if (window.engine && window.engine.state === 'menu') {
+        window.engine.startNewGame(2);
+    } else {
+        startGame(2);
+    }
+});
+
+document.getElementById('btn-multi').addEventListener('click', () => {
+    if (window.engine && window.engine.state === 'menu') {
+        window.engine.createRoom();
+    } else {
+        startMP();
+    }
+});
 
 // Keyboard shortcuts (global)
 document.addEventListener('keydown', (e) => {
@@ -416,12 +502,34 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ─── URL params: auto-join room / challenge banner ────────────────
+// ─── URL params: auto-join room / challenge banner / autoplay ────────
 const _params = new URLSearchParams(window.location.search);
 const _roomCode = _params.get('room') || _params.get('pair');
+const _autoplay = _params.get('autoplay');
 
 if (_roomCode) {
     startMP(_roomCode);
+} else if (_autoplay) {
+    // Autoplay mode for automation/testing
+    (async () => {
+        // Wait for engine to be ready
+        if (window.engine) {
+            try {
+                await window.swowDebug.waitReady();
+                
+                if (_autoplay === 'create') {
+                    // Create MP room
+                    await window.engine.createRoom();
+                } else {
+                    // Start SP game
+                    const players = parseInt(_params.get('players')) || 1;
+                    await window.engine.startNewGame(players);
+                }
+            } catch (err) {
+                console.error('[Autoplay] Failed:', err);
+            }
+        }
+    })();
 } else {
     const challengeScore = parseInt(_params.get('challenge'));
     if (challengeScore && !isNaN(challengeScore)) {
