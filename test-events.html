@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Event System Test</title>
+    <script type="module">
+        import '/frontend/app/EngineController.js';
+        
+        window.addEventListener('DOMContentLoaded', async () => {
+            const log = document.getElementById('log');
+            const addLog = (msg) => {
+                log.textContent += `${new Date().toISOString().substr(11, 12)} ${msg}\n`;
+                console.log(msg);
+            };
+            
+            // Test 1: Engine exists
+            addLog(`✓ window.engine exists: ${!!window.engine}`);
+            addLog(`✓ window.swowDebug exists: ${!!window.swowDebug}`);
+            
+            // Test 2: Subscribe to events
+            window.swowDebug.on('ready', () => {
+                addLog('✓ EVENT: ready');
+            });
+            
+            window.swowDebug.on('gameStarting', (data) => {
+                addLog(`✓ EVENT: gameStarting ${JSON.stringify(data)}`);
+            });
+            
+            window.swowDebug.on('gameStart', (state) => {
+                addLog(`✓ EVENT: gameStart (state=${state.state}, ready=${state.ready})`);
+            });
+            
+            window.swowDebug.on('error', (err) => {
+                addLog(`✗ EVENT: error ${JSON.stringify(err)}`);
+            });
+            
+            // Test 3: Wait for ready
+            try {
+                addLog('⏳ Waiting for engine ready...');
+                await window.swowDebug.waitReady();
+                addLog('✓ Engine ready!');
+                
+                // Test 4: Check state
+                const state = window.swowDebug.getState();
+                addLog(`✓ State: ready=${state.ready}, state=${state.state}`);
+                
+                // Test 5: Use waitFor
+                addLog('⏳ Starting game with waitFor...');
+                
+                // Start game (don't await)
+                window.swowDebug.start();
+                
+                // Wait for gameStart event
+                const startState = await window.swowDebug.waitFor('gameStart', 5000);
+                addLog(`✓ Game started via event! state=${startState.state}`);
+                
+            } catch (err) {
+                addLog(`✗ Error: ${err.message}`);
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Event System Test</h1>
+    <pre id="log"></pre>
+</body>
+</html>
