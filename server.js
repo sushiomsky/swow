@@ -25,6 +25,7 @@ const server = http.createServer((req, res) => {
     let urlPath = req.url.split('?')[0]; // strip query params
     if (urlPath === '/') urlPath = '/frontend/app/platform.html';
     if (urlPath === '/platform') urlPath = '/frontend/app/platform.html';
+    if (urlPath === '/play') urlPath = '/frontend/app/play.html';
 
     const filePath = path.join(ROOT, urlPath);
 

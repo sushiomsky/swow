@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Wizard Of Wor — play instantly in your browser. No install, no signup.">
+    <link rel="stylesheet" href="/frontend/styles/shared.css">
+    <link rel="stylesheet" href="/frontend/app/play.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="preload" href="/images/v3.0/sprite.png" as="image">
+    <link rel="modulepreload" href="/frontend/game/singleplayer/App.js">
+    <title>Wizard Of Wor — PLAY</title>
+    <meta property="og:title" content="Wizard Of Wor — Play Now">
+    <meta property="og:type" content="game">
+    <meta property="og:url" content="https://wizardofwor.duckdns.org/play">
+    <meta property="og:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+    <meta property="og:description" content="Play the legendary 1983 arcade game in your browser — no install, no signup, just play!">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Wizard Of Wor — Play Now">
+    <meta name="twitter:description" content="Score big in this classic 1983 arcade game. Click and play instantly!">
+    <meta name="twitter:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+</head>
+<body>
+    <!-- Arcade title overlay — shown until player starts -->
+    <div id="play-overlay">
+        <h1 class="play-title">WIZARD<br>OF WOR</h1>
+        <div class="play-insert">INSERT COIN</div>
+        <button class="play-btn play-btn-primary" id="btn-play">▶ PLAY</button>
+        <button class="play-btn play-btn-secondary" id="btn-multi">⚔ MULTIPLAYER</button>
+        <div class="play-hint">PRESS SPACE TO START</div>
+        <div class="play-footer"><a href="/">← Full Site</a></div>
+    </div>
+
+    <!-- Game root — mode DOM injected here -->
+    <div id="game-root"></div>
+
+    <script>window.__SWOW_PLATFORM__ = true;</script>
+    <script type="module" src="/frontend/app/play.js"></script>
+</body>
+</html>
