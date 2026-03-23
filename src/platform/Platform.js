@@ -175,15 +175,19 @@ const MODES = { MENU: 'menu', SINGLEPLAYER: 'singleplayer', MULTIPLAYER: 'multip
 export class Platform {
     constructor() {
         this._mode = null;
+        this._modeOptions = {};
         this._gameRoot = null;      // container element where mode DOM is injected
         this._menuEl = null;        // main menu overlay element
         this._cssLinks = [];        // dynamically loaded CSS <link> refs
+        this._pendingTimers = [];   // intervals/timeouts to clear on teardown
+        this._keyHandler = null;    // main menu keyboard shortcut listener
     }
 
     init() {
         this._gameRoot = document.getElementById('game-root');
         this._menuEl = document.getElementById('main-menu');
         this._bindMenuButtons();
+        this._bindKeyboardShortcuts();
         this.switchMode(MODES.MENU);
     }
 
@@ -195,6 +199,21 @@ export class Platform {
         el('menu-handbook')?.addEventListener('click', () => {
             window.open('/public/handbook.html', '_blank');
         });
+    }
+
+    _bindKeyboardShortcuts() {
+        this._keyHandler = (e) => {
+            if (this._mode !== MODES.MENU) return;
+            switch (e.key) {
+                case '1': this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 1 }); break;
+                case '2': this.switchMode(MODES.SINGLEPLAYER, { numPlayers: 2 }); break;
+                case 'm': case 'M': this.switchMode(MODES.MULTIPLAYER); break;
+                case 'h': case 'H': window.open('/public/handbook.html', '_blank'); break;
+                default: return;
+            }
+            e.preventDefault();
+        };
+        document.addEventListener('keydown', this._keyHandler);
     }
 
     async switchMode(mode, options = {}) {
@@ -224,6 +243,10 @@ export class Platform {
     }
 
     async _teardown() {
+        // Clear any pending timers (e.g. 2P auto-start interval)
+        this._pendingTimers.forEach(id => clearInterval(id));
+        this._pendingTimers = [];
+
         if (this._mode === MODES.SINGLEPLAYER) {
             const mod = await loadSingleplayer();
             mod.destroySingleplayer();
@@ -295,12 +318,14 @@ export class Platform {
 
         // Auto-start 2-player game if requested
         if (options.numPlayers === 2) {
-            const waitForEngine = setInterval(() => {
+            const timerId = setInterval(() => {
                 if (app.engine) {
-                    clearInterval(waitForEngine);
+                    clearInterval(timerId);
+                    this._pendingTimers = this._pendingTimers.filter(id => id !== timerId);
                     app.engine.startNewGame(2);
                 }
             }, 50);
+            this._pendingTimers.push(timerId);
         }
     }
 
