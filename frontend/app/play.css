@@ -135,20 +135,31 @@ html, body {
 }
 
 /* Secondary (MULTIPLAYER) — outlined, blue accent */
-.play-btn-secondary {
-    font-size: 16px;
-    padding: 10px 0;
-    color: #aac;
-    border-color: #446;
-    background: transparent;
+.play-secondary-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
     margin-bottom: 28px;
 }
-.play-btn-secondary:hover {
-    background: #1a1a2e;
-    border-color: #669;
-    color: #ccf;
-    box-shadow: 0 0 14px rgba(68, 68, 136, 0.5);
+.play-btn-sm {
+    padding: 10px 24px;
+    font-family: 'WizardOfWor', monospace;
+    font-size: 14px;
+    color: #fff;
+    background: #c00;
+    border: 2px solid #c00;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    outline: none;
 }
+.play-btn-sm:hover {
+    transform: scale(1.04);
+}
+.play-btn-sm.green { background: #070; border-color: #070; }
+.play-btn-sm.green:hover { background: #090; border-color: #090; box-shadow: 0 0 12px rgba(0,153,0,0.5); }
+.play-btn-sm.blue { background: #15c; border-color: #15c; }
+.play-btn-sm.blue:hover { background: #27e; border-color: #27e; box-shadow: 0 0 12px rgba(34,119,238,0.5); }
 
 /* ─── Hint text ──────────────────────────────────────────────────── */
 .play-hint {

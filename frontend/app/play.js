@@ -294,14 +294,27 @@ async function goToTitle() {
 
 // ─── Bind UI ──────────────────────────────────────────────────────
 document.getElementById('btn-play').addEventListener('click', () => startSP(1));
+document.getElementById('btn-2p').addEventListener('click', () => startSP(2));
 document.getElementById('btn-multi').addEventListener('click', () => startMP());
 
-// Keyboard: Space/Enter → play
+// Keyboard shortcuts (global)
 document.addEventListener('keydown', (e) => {
-    if (_state !== 'title') return;
-    if (e.code === 'Space' || e.code === 'Enter') {
+    // Title screen shortcuts
+    if (_state === 'title') {
+        switch (e.code) {
+            case 'Space': case 'Enter': case 'Digit1':
+                e.preventDefault(); startSP(1); return;
+            case 'Digit2':
+                e.preventDefault(); startSP(2); return;
+        }
+        if (e.key === 'm' || e.key === 'M') {
+            e.preventDefault(); startMP(); return;
+        }
+    }
+    // ESC → back to title (from any game mode)
+    if (e.code === 'Escape' && (_state === 'playing' || _state === 'gameover')) {
         e.preventDefault();
-        startSP(1);
+        goToTitle();
     }
 });
 
