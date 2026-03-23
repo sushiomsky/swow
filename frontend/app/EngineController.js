@@ -14,8 +14,9 @@
 
 class EngineController {
     constructor() {
-        this.state = 'loading';  // loading | menu | playing | gameover
-        this.mode = null;        // 'sp' | 'mp' | null
+        this.initialized = false; // STRICT: true only when fully ready
+        this.state = 'loading';   // loading | menu | playing | gameover | error
+        this.mode = null;         // 'sp' | 'mp' | null
         this.roomCode = null;
         this.playerId = null;
         this.playerNum = null;
@@ -41,10 +42,13 @@ class EngineController {
                 // Pre-load SP module (lightweight, for attract mode)
                 this._spModule = await import('../game/singleplayer/App.js');
                 this.state = 'menu';
+                this.initialized = true; // CRITICAL: now ready for use
                 this._emit('ready');
             } catch (err) {
                 console.error('[EngineController] Failed to initialize:', err);
                 this.state = 'error';
+                this.initialized = false;
+                this._emit('error', { message: err.message });
             }
         })();
         
@@ -63,6 +67,7 @@ class EngineController {
             // Initialize SP mode
             this.mode = 'sp';
             this.state = 'loading';
+            this._emit('gameStarting', { numPlayers, mode: 'sp' });
             
             // Let UI create DOM (if play.js is loaded)
             this._emit('startSP', { numPlayers });
@@ -74,6 +79,7 @@ class EngineController {
             if (this._engine && this._engine.startNewGame) {
                 this._engine.startNewGame(numPlayers);
                 this.state = 'playing';
+                this._emit('gameStart', { numPlayers, mode: 'sp' });
                 this._emit('playing');
             }
             
@@ -81,6 +87,7 @@ class EngineController {
         } catch (err) {
             console.error('[EngineController] Failed to start game:', err);
             this.state = 'error';
+            this._emit('error', { action: 'startNewGame', message: err.message });
             return this.getState();
         }
     }
@@ -95,6 +102,7 @@ class EngineController {
             // Initialize MP mode
             this.mode = 'mp';
             this.state = 'loading';
+            this._emit('roomCreating');
             
             // Load MP module
             if (!this._mpModule) {
@@ -107,13 +115,17 @@ class EngineController {
             // Wait for room creation
             await this._waitForMPReady();
             
+            // Emit room created event (roomCode set by _setRoomCode)
             this.state = 'playing';
+            this._emit('roomCreated', { roomCode: this.roomCode });
+            this._emit('gameStart', { mode: 'mp', roomCode: this.roomCode });
             this._emit('playing');
             
             return this.getState();
         } catch (err) {
             console.error('[EngineController] Failed to create room:', err);
             this.state = 'error';
+            this._emit('error', { action: 'createRoom', message: err.message });
             return this.getState();
         }
     }
@@ -129,6 +141,7 @@ class EngineController {
             this.mode = 'mp';
             this.state = 'loading';
             this.roomCode = code;
+            this._emit('roomJoining', { roomCode: code });
             
             // Load MP module
             if (!this._mpModule) {
@@ -142,12 +155,15 @@ class EngineController {
             await this._waitForMPReady();
             
             this.state = 'playing';
+            this._emit('roomJoined', { roomCode: code });
+            this._emit('gameStart', { mode: 'mp', roomCode: code });
             this._emit('playing');
             
             return this.getState();
         } catch (err) {
             console.error('[EngineController] Failed to join room:', err);
             this.state = 'error';
+            this._emit('error', { action: 'joinRoom', roomCode: code, message: err.message });
             return this.getState();
         }
     }
@@ -166,13 +182,36 @@ class EngineController {
     // ─── State Introspection ──────────────────────────────────────────
     
     getState() {
+        // STRICT CONTRACT: Always return valid structure
+        // Never return undefined or partial state
+        
+        if (!this.initialized) {
+            return {
+                ready: false,
+                initialized: false,
+                state: this.state || 'loading',
+                mode: null,
+                isMultiplayer: false,
+                roomCode: null,
+                playerId: null,
+                playerNum: null,
+                tick: 0,
+                scene: null,
+                players: [],
+                startedAt: null,
+                gameOverAt: null,
+            };
+        }
+        
         const base = {
+            ready: true,
+            initialized: true,
             state: this.state,
             mode: this.mode,
             isMultiplayer: this.mode === 'mp',
-            roomCode: this.roomCode,
-            playerId: this.playerId,
-            playerNum: this.playerNum,
+            roomCode: this.roomCode || null,
+            playerId: this.playerId || null,
+            playerNum: this.playerNum !== null ? this.playerNum : null,
             tick: 0,
             scene: null,
             players: [],
@@ -368,13 +407,13 @@ if (typeof window !== 'undefined') {
                 return window.engine.getState();
             } catch (err) {
                 console.error('[swowDebug] getState() failed:', err);
-                return { state: 'error', error: err.message };
+                return { ready: false, state: 'error', error: err.message };
             }
         },
         
         isReady: () => {
             try {
-                return window.engine.state !== 'loading';
+                return window.engine && window.engine.initialized === true;
             } catch (err) {
                 return false;
             }
@@ -382,16 +421,53 @@ if (typeof window !== 'undefined') {
         
         waitReady: (timeout = 5000) => {
             return new Promise((resolve, reject) => {
-                const start = Date.now();
-                const check = setInterval(() => {
-                    if (window.swowDebug.isReady()) {
-                        clearInterval(check);
-                        resolve();
-                    } else if (Date.now() - start > timeout) {
-                        clearInterval(check);
-                        reject(new Error('Timeout waiting for engine ready'));
-                    }
-                }, 50);
+                // If already ready, resolve immediately
+                if (window.swowDebug.isReady()) {
+                    resolve();
+                    return;
+                }
+                
+                // Otherwise wait for 'ready' event
+                const timeoutId = setTimeout(() => {
+                    reject(new Error('Timeout waiting for engine ready'));
+                }, timeout);
+                
+                window.engine.on('ready', () => {
+                    clearTimeout(timeoutId);
+                    resolve();
+                });
+            });
+        },
+        
+        // EVENT SYSTEM: Allow automation to subscribe to events
+        on: (event, handler) => {
+            if (!window.engine) {
+                console.warn('[swowDebug] Engine not available yet');
+                return;
+            }
+            window.engine.on(event, handler);
+        },
+        
+        off: (event, handler) => {
+            if (!window.engine) return;
+            window.engine.off(event, handler);
+        },
+        
+        // Helper: Wait for specific event
+        waitFor: (event, timeout = 10000) => {
+            return new Promise((resolve, reject) => {
+                const timeoutId = setTimeout(() => {
+                    window.engine.off(event, handler);
+                    reject(new Error(`Timeout waiting for event: ${event}`));
+                }, timeout);
+                
+                const handler = (data) => {
+                    clearTimeout(timeoutId);
+                    window.engine.off(event, handler);
+                    resolve(data);
+                };
+                
+                window.engine.on(event, handler);
             });
         },
     };

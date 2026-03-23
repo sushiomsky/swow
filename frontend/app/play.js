@@ -510,24 +510,55 @@ const _autoplay = _params.get('autoplay');
 if (_roomCode) {
     startMP(_roomCode);
 } else if (_autoplay) {
-    // Autoplay mode for automation/testing
+    // DETERMINISTIC AUTOPLAY: Chain with events
     (async () => {
-        // Wait for engine to be ready
-        if (window.engine) {
-            try {
-                await window.swowDebug.waitReady();
+        if (!window.engine) {
+            console.error('[Autoplay] Engine not available');
+            return;
+        }
+        
+        try {
+            // Wait for engine initialization
+            await window.swowDebug.waitReady();
+            console.log('[Autoplay] Engine ready');
+            
+            if (_autoplay === 'create') {
+                // Create MP room and emit event when ready
+                console.log('[Autoplay] Creating room...');
+                const state = await window.engine.createRoom();
                 
-                if (_autoplay === 'create') {
-                    // Create MP room
-                    await window.engine.createRoom();
-                } else {
-                    // Start SP game
-                    const players = parseInt(_params.get('players')) || 1;
-                    await window.engine.startNewGame(players);
+                // Wait for room to be fully created
+                if (state.roomCode) {
+                    console.log('[Autoplay] Room created:', state.roomCode);
+                    
+                    // Emit custom event for automation
+                    window.dispatchEvent(new CustomEvent('autoplay:ready', {
+                        detail: { mode: 'create', roomCode: state.roomCode, state }
+                    }));
                 }
-            } catch (err) {
-                console.error('[Autoplay] Failed:', err);
+            } else {
+                // Start SP game
+                const players = parseInt(_params.get('players')) || 1;
+                console.log(`[Autoplay] Starting ${players}P game...`);
+                
+                const state = await window.engine.startNewGame(players);
+                
+                if (state.state === 'playing') {
+                    console.log('[Autoplay] Game started');
+                    
+                    // Emit custom event for automation
+                    window.dispatchEvent(new CustomEvent('autoplay:ready', {
+                        detail: { mode: 'sp', players, state }
+                    }));
+                }
             }
+        } catch (err) {
+            console.error('[Autoplay] Failed:', err);
+            
+            // Emit error event
+            window.dispatchEvent(new CustomEvent('autoplay:error', {
+                detail: { error: err.message }
+            }));
         }
     })();
 } else {
