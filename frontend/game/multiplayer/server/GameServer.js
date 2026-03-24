@@ -3,6 +3,8 @@
  *
  * NOW WITH CONNECTED DUNGEONS: Dungeons can be linked via tunnels
  * for battle royale mode. Players can travel between dungeons.
+ * 
+ * NOW WITH BR QUEUES: Matchmaking for Endless, Sit-n-Go, and Team modes.
  */
 'use strict';
 
@@ -11,6 +13,9 @@ const { DungeonInstance, STATE } = require('./DungeonInstance');
 const { ServerPlayer } = require('./ServerPlayer');
 const { DungeonGraph } = require('./DungeonGraph');
 const { BotPlayer } = require('./BotPlayer');
+const { EndlessBRQueue } = require('./EndlessBRQueue');
+const { SitNGoQueue } = require('./SitNGoQueue');
+const { TeamBRQueue } = require('./TeamBRQueue');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
@@ -37,11 +42,18 @@ class GameServer {
         
         // NEW: Spectator management
         this.spectators = new Map(); // playerId -> { dungeonId, ws }
+        
+        // NEW: BR Queue management
+        this.endlessBRQueue = new EndlessBRQueue(this);
+        this.sitNGoQueue = new SitNGoQueue(this);
+        this.teamEndlessQueue = new TeamBRQueue(this, 'team-endless');
+        this.teamSitNGoQueue = new TeamBRQueue(this, 'team-sitngo');
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
         console.log(`[GameServer] started at ${TICK_MS}ms/tick`);
         console.log(`[GameServer] Battle Royale mode: ${this.battleRoyaleMode ? 'ENABLED' : 'DISABLED'}`);
+        console.log('[GameServer] BR Queues initialized: Endless, Sit-n-Go, Team Endless, Team Sit-n-Go');
     }
 
     // ─── Connection Lifecycle ─────────────────────────────────────────────────
@@ -80,6 +92,12 @@ class GameServer {
             console.log(`[GameServer] spectator ${playerId} disconnected`);
         }
         
+        // Remove from BR queues if waiting
+        this.endlessBRQueue.removePlayer(playerId);
+        this.sitNGoQueue.removePlayer(playerId);
+        this.teamEndlessQueue.removePlayer(playerId);
+        this.teamSitNGoQueue.removePlayer(playerId);
+        
         if (conn.player) {
             const dungeon = this.dungeons.get(conn.dungeonId);
             if (dungeon) {
@@ -110,10 +128,44 @@ class GameServer {
             case 'spectate':
                 this._spectateGame(playerId, conn, msg.dungeonId);
                 break;
+            case 'join_endless_br':
+                this._joinEndlessBR(playerId, conn);
+                break;
+            case 'join_sitngo_br':
+                this._joinSitNGoBR(playerId, conn);
+                break;
+            case 'join_team_endless_br':
+                this._joinTeamEndlessBR(playerId, conn);
+                break;
+            case 'join_team_sitngo_br':
+                this._joinTeamSitNGoBR(playerId, conn);
+                break;
             case 'input':
                 conn.inputs = msg.keys || {};
                 break;
         }
+    }
+    
+    // ─── BR Queue Handlers ────────────────────────────────────────────────────
+    
+    _joinEndlessBR(playerId, conn) {
+        console.log('[GameServer] Player requesting endless BR:', playerId);
+        this.endlessBRQueue.addPlayer(playerId, conn);
+    }
+    
+    _joinSitNGoBR(playerId, conn) {
+        console.log('[GameServer] Player requesting sit-n-go BR:', playerId);
+        this.sitNGoQueue.addPlayer(playerId, conn);
+    }
+    
+    _joinTeamEndlessBR(playerId, conn) {
+        console.log('[GameServer] Player requesting team endless BR:', playerId);
+        this.teamEndlessQueue.addPlayer(playerId, conn);
+    }
+    
+    _joinTeamSitNGoBR(playerId, conn) {
+        console.log('[GameServer] Player requesting team sit-n-go BR:', playerId);
+        this.teamSitNGoQueue.addPlayer(playerId, conn);
     }
 
     // ─── Room Management ──────────────────────────────────────────────────────
