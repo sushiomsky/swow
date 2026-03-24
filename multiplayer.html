@@ -101,67 +101,44 @@
             console.log('[Auto-start] Mode from URL:', mode);
             
             if (mode) {
-                // Use longer delay and retry mechanism
-                let attempts = 0;
-                const maxAttempts = 10;
+                let buttonId = null;
+                switch(mode) {
+                    case 'endless':
+                        buttonId = 'btnSolo';
+                        break;
+                    case 'sitngo':
+                        buttonId = 'btnSitNGo';
+                        break;
+                    case 'team':
+                        buttonId = 'btnTeamBr';
+                        break;
+                }
+                
+                if (!buttonId) {
+                    console.warn('[Auto-start] Unknown mode:', mode);
+                    return;
+                }
                 
                 function tryAutoClick() {
-                    attempts++;
-                    console.log('[Auto-start] Attempt', attempts, 'for mode:', mode);
-                    
-                    let buttonId = null;
-                    switch(mode) {
-                        case 'endless':
-                            buttonId = 'btnSolo';
-                            break;
-                        case 'sitngo':
-                            buttonId = 'btnSitNGo';
-                            break;
-                        case 'team':
-                            buttonId = 'btnTeamBr';
-                            break;
-                    }
-                    
-                    if (!buttonId) {
-                        console.warn('[Auto-start] Unknown mode:', mode);
-                        return;
-                    }
-                    
                     const button = document.getElementById(buttonId);
                     
                     if (!button) {
                         console.warn('[Auto-start] Button not found:', buttonId);
-                        if (attempts < maxAttempts) {
-                            setTimeout(tryAutoClick, 500);
-                        }
                         return;
                     }
                     
-                    console.log('[Auto-start] Found button, checking if clickable...');
-                    
-                    // Check if button is actually clickable (has event listener or onclick)
-                    if (button.onclick || button._hasClickListener) {
-                        console.log('[Auto-start] Button is ready, clicking now!');
-                        button.click();
-                    } else {
-                        // Try clicking anyway after a short delay
-                        if (attempts < maxAttempts) {
-                            console.log('[Auto-start] Button exists but listeners may not be ready, retrying...');
-                            setTimeout(tryAutoClick, 500);
-                        } else {
-                            console.warn('[Auto-start] Max attempts reached, forcing click anyway');
-                            button.click();
-                        }
-                    }
+                    console.log('[Auto-start] Clicking button:', buttonId);
+                    button.click();
                 }
                 
-                // Start after page load
+                // Wait for module to load and attach listeners
+                // 1.5s should be enough for module initialization
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => {
-                        setTimeout(tryAutoClick, 1000); // Initial 1s delay
+                        setTimeout(tryAutoClick, 1500);
                     });
                 } else {
-                    setTimeout(tryAutoClick, 1000);
+                    setTimeout(tryAutoClick, 1500);
                 }
             }
         })();
