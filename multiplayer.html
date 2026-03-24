@@ -91,5 +91,40 @@
     </section>
 
     <script type="module" src="/frontend/game/multiplayer/client/MultiplayerApp.js"></script>
+    
+    <!-- Auto-start mode from URL parameter -->
+    <script>
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            
+            if (mode) {
+                // Wait for DOM to be ready
+                window.addEventListener('DOMContentLoaded', () => {
+                    // Small delay to ensure button event listeners are attached
+                    setTimeout(() => {
+                        let button = null;
+                        
+                        switch(mode) {
+                            case 'endless':
+                                button = document.getElementById('btnSolo');
+                                break;
+                            case 'sitngo':
+                                button = document.getElementById('btnSitNGo');
+                                break;
+                            case 'team':
+                                button = document.getElementById('btnTeamBr');
+                                break;
+                        }
+                        
+                        if (button) {
+                            console.log('[Auto-start] Clicking', mode, 'button');
+                            button.click();
+                        }
+                    }, 500); // 500ms delay to ensure MultiplayerApp is initialized
+                });
+            }
+        })();
+    </script>
 </body>
 </html>
