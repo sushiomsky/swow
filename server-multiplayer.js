@@ -62,11 +62,23 @@ const httpServer = http.createServer((req, res) => {
     if (urlPath === '/minimap') urlPath = '/minimap.html';
 
     const filePath = path.join(ROOT, urlPath);
-    if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }
+    console.log(`[HTTP] ${req.method} ${urlPath} -> ${filePath}`);
+    if (!filePath.startsWith(ROOT)) { 
+        console.log('[HTTP] Forbidden - path outside ROOT');
+        res.writeHead(403); 
+        res.end('Forbidden'); 
+        return; 
+    }
 
     fs.readFile(filePath, (err, data) => {
-        if (err) { res.writeHead(404); res.end('Not found'); return; }
+        if (err) { 
+            console.log(`[HTTP] 404 - ${filePath}: ${err.message}`);
+            res.writeHead(404); 
+            res.end('Not found'); 
+            return; 
+        }
         const ext = path.extname(filePath).toLowerCase();
+        console.log(`[HTTP] 200 - ${filePath} (${data.length} bytes, ${MIME[ext] || 'application/octet-stream'})`);
         res.writeHead(200, {
             'Content-Type': MIME[ext] || 'application/octet-stream',
             'Access-Control-Allow-Origin': '*',
