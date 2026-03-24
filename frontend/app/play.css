@@ -400,6 +400,18 @@ html, body {
     margin-bottom: 8px;
 }
 
+/* Mode descriptions */
+.mode-desc {
+    font-family: 'C64ProRegular', monospace;
+    font-size: 10px;
+    color: #777;
+    text-align: center;
+    margin: 8px auto 16px;
+    max-width: 400px;
+    line-height: 1.4;
+    letter-spacing: 0.5px;
+}
+
 /* Battle Royale primary button */
 .play-btn-br {
     padding: 14px 48px;
@@ -414,12 +426,36 @@ html, body {
     outline: none;
     margin-bottom: 8px;
     box-shadow: 0 0 8px rgba(200, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
 }
 .play-btn-br:hover {
     background: linear-gradient(135deg, #e20 0%, #a00 100%);
     border-color: #e20;
     transform: scale(1.05);
     box-shadow: 0 0 24px rgba(220, 0, 0, 0.7);
+}
+
+/* Button internal structure */
+.btn-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+.btn-label {
+    font-family: 'WizardOfWor', monospace;
+    font-size: inherit;
+    letter-spacing: inherit;
+    line-height: 1;
+}
+.btn-hint {
+    font-family: 'C64ProRegular', monospace;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 1px;
+    line-height: 1;
+    margin-top: 2px;
 }
 
 /* Battle Royale secondary row */
@@ -439,7 +475,7 @@ html, body {
 }
 
 .play-btn-br-sm {
-    padding: 8px 20px;
+    padding: 10px 20px;
     font-family: 'WizardOfWor', monospace;
     font-size: 12px;
     color: #fff;
@@ -449,12 +485,23 @@ html, body {
     letter-spacing: 2px;
     transition: all 0.15s;
     outline: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
 }
 .play-btn-br-sm:hover {
     background: #850;
     border-color: #a60;
     transform: scale(1.04);
     box-shadow: 0 0 12px rgba(170, 85, 0, 0.5);
+}
+.play-btn-br-sm .btn-icon {
+    font-size: 16px;
+}
+.play-btn-br-sm .btn-hint {
+    font-size: 8px;
+    margin-top: 1px;
 }
 
 /* Purple variant for Team Endless */
