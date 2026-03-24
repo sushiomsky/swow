@@ -510,21 +510,18 @@ document.getElementById('btn-multi').addEventListener('click', () => {
 
 // Battle Royale mode buttons
 document.getElementById('btn-br-endless')?.addEventListener('click', () => {
-    // Redirect to multiplayer server (port 5001) for Endless BR
-    const mpUrl = `${window.location.protocol}//${window.location.hostname}:5001/?mode=endless`;
-    window.location.href = mpUrl;
+    // Redirect to multiplayer lobby via /mp proxy
+    window.location.href = '/mp?mode=endless';
 });
 
 document.getElementById('btn-br-sitngo')?.addEventListener('click', () => {
-    // Redirect to multiplayer server for Sit-n-Go BR
-    const mpUrl = `${window.location.protocol}//${window.location.hostname}:5001/?mode=sitngo`;
-    window.location.href = mpUrl;
+    // Redirect to multiplayer lobby for Sit-n-Go BR
+    window.location.href = '/mp?mode=sitngo';
 });
 
 document.getElementById('btn-br-team')?.addEventListener('click', () => {
-    // Redirect to multiplayer server for Team BR
-    const mpUrl = `${window.location.protocol}//${window.location.hostname}:5001/?mode=team`;
-    window.location.href = mpUrl;
+    // Redirect to multiplayer lobby for Team BR
+    window.location.href = '/mp?mode=team';
 });
 
 // Keyboard shortcuts (global)
@@ -541,8 +538,7 @@ document.addEventListener('keydown', (e) => {
         }
         if (e.key === 'b' || e.key === 'B') {
             e.preventDefault();
-            const mpUrl = `${window.location.protocol}//${window.location.hostname}:5001/?mode=endless`;
-            window.location.href = mpUrl;
+            window.location.href = '/mp?mode=endless';
             return;
         }
         if (e.key === 'p' || e.key === 'P') {
