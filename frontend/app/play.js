@@ -13,6 +13,7 @@
 
 // ─── Imports ─────────────────────────────────────────────────────────
 import { ActiveGamesList } from './ActiveGamesList.js';
+import { BackgroundGameView } from './BackgroundGameView.js';
 
 // ─── Engine Integration ───────────────────────────────────────────────
 // The engine controller auto-initializes and exposes window.engine
@@ -663,4 +664,15 @@ if (activeGamesContainer) {
     const activeGamesList = new ActiveGamesList(activeGamesContainer);
     activeGamesList.init();
     console.log('[play.js] Active games list initialized');
+}
+
+// ─── Initialize Background Game View ──────────────────────────────────
+const backgroundCanvas = document.getElementById('background-game-canvas');
+if (backgroundCanvas) {
+    const backgroundGameView = new BackgroundGameView('background-game-canvas');
+    backgroundGameView.init();
+    console.log('[play.js] Background game view initialized');
+    
+    // Make available for debugging
+    window.backgroundGameView = backgroundGameView;
 }
