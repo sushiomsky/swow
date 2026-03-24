@@ -98,31 +98,71 @@
             const params = new URLSearchParams(window.location.search);
             const mode = params.get('mode');
             
+            console.log('[Auto-start] Mode from URL:', mode);
+            
             if (mode) {
-                // Wait for DOM to be ready
-                window.addEventListener('DOMContentLoaded', () => {
-                    // Small delay to ensure button event listeners are attached
-                    setTimeout(() => {
-                        let button = null;
-                        
-                        switch(mode) {
-                            case 'endless':
-                                button = document.getElementById('btnSolo');
-                                break;
-                            case 'sitngo':
-                                button = document.getElementById('btnSitNGo');
-                                break;
-                            case 'team':
-                                button = document.getElementById('btnTeamBr');
-                                break;
+                // Use longer delay and retry mechanism
+                let attempts = 0;
+                const maxAttempts = 10;
+                
+                function tryAutoClick() {
+                    attempts++;
+                    console.log('[Auto-start] Attempt', attempts, 'for mode:', mode);
+                    
+                    let buttonId = null;
+                    switch(mode) {
+                        case 'endless':
+                            buttonId = 'btnSolo';
+                            break;
+                        case 'sitngo':
+                            buttonId = 'btnSitNGo';
+                            break;
+                        case 'team':
+                            buttonId = 'btnTeamBr';
+                            break;
+                    }
+                    
+                    if (!buttonId) {
+                        console.warn('[Auto-start] Unknown mode:', mode);
+                        return;
+                    }
+                    
+                    const button = document.getElementById(buttonId);
+                    
+                    if (!button) {
+                        console.warn('[Auto-start] Button not found:', buttonId);
+                        if (attempts < maxAttempts) {
+                            setTimeout(tryAutoClick, 500);
                         }
-                        
-                        if (button) {
-                            console.log('[Auto-start] Clicking', mode, 'button');
+                        return;
+                    }
+                    
+                    console.log('[Auto-start] Found button, checking if clickable...');
+                    
+                    // Check if button is actually clickable (has event listener or onclick)
+                    if (button.onclick || button._hasClickListener) {
+                        console.log('[Auto-start] Button is ready, clicking now!');
+                        button.click();
+                    } else {
+                        // Try clicking anyway after a short delay
+                        if (attempts < maxAttempts) {
+                            console.log('[Auto-start] Button exists but listeners may not be ready, retrying...');
+                            setTimeout(tryAutoClick, 500);
+                        } else {
+                            console.warn('[Auto-start] Max attempts reached, forcing click anyway');
                             button.click();
                         }
-                    }, 500); // 500ms delay to ensure MultiplayerApp is initialized
-                });
+                    }
+                }
+                
+                // Start after page load
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        setTimeout(tryAutoClick, 1000); // Initial 1s delay
+                    });
+                } else {
+                    setTimeout(tryAutoClick, 1000);
+                }
             }
         })();
     </script>
