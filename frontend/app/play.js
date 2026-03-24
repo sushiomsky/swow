@@ -11,6 +11,9 @@
  * - UI responds to engine events (passive UI)
  */
 
+// ─── Imports ─────────────────────────────────────────────────────────
+import { ActiveGamesList } from './ActiveGamesList.js';
+
 // ─── Engine Integration ───────────────────────────────────────────────
 // The engine controller auto-initializes and exposes window.engine
 // We subscribe to its events to coordinate UI updates
@@ -652,4 +655,12 @@ if (_roomCode) {
             console.error('[play.js] Failed to init attract mode:', err);
             _state = 'title'; // Show UI anyway
         });
+}
+
+// ─── Initialize Active Games List ─────────────────────────────────────
+const activeGamesContainer = document.getElementById('active-games-container');
+if (activeGamesContainer) {
+    const activeGamesList = new ActiveGamesList(activeGamesContainer);
+    activeGamesList.init();
+    console.log('[play.js] Active games list initialized');
 }
