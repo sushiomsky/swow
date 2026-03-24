@@ -41,9 +41,25 @@ const httpServer = http.createServer((req, res) => {
         res.end(JSON.stringify(snapshot));
         return;
     }
+    
+    if (req.method === 'GET' && urlPath === '/multiplayer/dungeon-topology') {
+        const topology = gameServer ? gameServer.getDungeonTopology() : {
+            dungeons: [],
+            total_dungeons: 0,
+            topology: 'independent'
+        };
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+            'Access-Control-Allow-Origin': '*',
+        });
+        res.end(JSON.stringify(topology));
+        return;
+    }
 
     if (urlPath === '/') urlPath = '/multiplayer.html';
     if (urlPath === '/spectate') urlPath = '/spectate.html';
+    if (urlPath === '/minimap') urlPath = '/minimap.html';
 
     const filePath = path.join(ROOT, urlPath);
     if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }

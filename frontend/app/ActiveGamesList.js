@@ -64,6 +64,7 @@ export class ActiveGamesList {
         html += '<div class="active-games-title">🎮 ACTIVE GAMES</div>';
         if (hasGames) {
             html += `<div class="active-games-count">${this.games.length} games • ${this.totalPlayers} players</div>`;
+            html += '<a href="/minimap" class="minimap-link" title="View all dungeons">🗺</a>';
         }
         html += '</div>';
         

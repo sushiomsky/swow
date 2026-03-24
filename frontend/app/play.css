@@ -505,13 +505,31 @@ html, body {
     margin-bottom: 12px;
     padding-bottom: 12px;
     border-bottom: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .active-games-title {
     font-size: 14px;
     color: #0ff;
     letter-spacing: 2px;
-    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.minimap-link {
+    font-size: 18px;
+    text-decoration: none;
+    opacity: 0.7;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.minimap-link:hover {
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 .active-games-count {
@@ -617,6 +635,202 @@ html, body {
     font-size: 13px;
     letter-spacing: 1px;
     margin-bottom: 6px;
+}
+
+/* ============================================================================
+   MINI-MAP VIEW
+   ============================================================================ */
+
+.minimap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border-bottom: 2px solid #333;
+}
+
+.minimap-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #8af;
+    letter-spacing: 1px;
+}
+
+.minimap-count {
+    font-size: 11px;
+    color: #666;
+}
+
+.minimap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.minimap-dungeon {
+    position: relative;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.minimap-dungeon:hover {
+    border-color: #66a;
+    box-shadow: 0 0 12px rgba(102, 170, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.minimap-dungeon.state-active {
+    border-color: #0a0;
+}
+
+.minimap-dungeon.state-collapsing {
+    border-color: #f60;
+    animation: pulse-collapse 1.5s infinite;
+}
+
+.minimap-dungeon.state-empty {
+    border-color: #444;
+    opacity: 0.6;
+}
+
+@keyframes pulse-collapse {
+    0%, 100% { border-color: #f60; }
+    50% { border-color: #fa0; }
+}
+
+.dungeon-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.dungeon-id {
+    font-size: 16px;
+    font-weight: bold;
+    color: #8af;
+}
+
+.dungeon-state {
+    font-size: 9px;
+    padding: 2px 6px;
+    background: #333;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    color: #888;
+}
+
+.state-active .dungeon-state {
+    background: #050;
+    color: #0f0;
+}
+
+.state-collapsing .dungeon-state {
+    background: #520;
+    color: #fa0;
+}
+
+.dungeon-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #aaa;
+}
+
+.stat-icon {
+    font-size: 12px;
+}
+
+.stat-value {
+    color: #fff;
+}
+
+.dungeon-players {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 6px 0;
+    border-top: 1px solid #333;
+}
+
+.player-mini {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 3px;
+    color: #8af;
+}
+
+.dungeon-connections {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #333;
+    font-size: 14px;
+}
+
+.conn-left, .conn-right {
+    color: #66a;
+    opacity: 0.7;
+}
+
+.minimap-spectate-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: #224;
+    border: 1px solid #446;
+    border-radius: 50%;
+    color: #aaf;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    z-index: 10;
+}
+
+.minimap-spectate-btn:hover {
+    background: #336;
+    border-color: #66a;
+    box-shadow: 0 0 8px rgba(102, 170, 255, 0.5);
+}
+
+.minimap-empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: #666;
+}
+
+.minimap-empty .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+}
+
+.minimap-empty .empty-text {
+    font-size: 14px;
+    letter-spacing: 1px;
 }
 
 .empty-hint {

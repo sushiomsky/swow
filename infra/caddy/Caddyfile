@@ -1,7 +1,7 @@
 {$DOMAIN} {
     encode gzip
 
-    @multiplayer_ws path /multiplayer /multiplayer/* /spectate /spectate/*
+    @multiplayer_ws path /multiplayer /multiplayer/* /spectate /spectate/* /minimap /minimap/*
     reverse_proxy @multiplayer_ws multiplayer:5001
 
     @community_api path /api/community* /socket.io*

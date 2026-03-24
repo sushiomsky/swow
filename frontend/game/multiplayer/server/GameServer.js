@@ -519,6 +519,41 @@ class GameServer {
             games,
         };
     }
+    
+    // Get dungeon topology for mini-map visualization
+    getDungeonTopology() {
+        const dungeons = [];
+        
+        for (const [dungeonId, dungeon] of this.dungeons.entries()) {
+            if (dungeon.lifecycleState === STATE.DESTROYED) continue;
+            
+            const players = dungeon.players.filter((player) => player.id !== null);
+            
+            dungeons.push({
+                id: dungeonId,
+                lifecycle_state: dungeon.lifecycleState,
+                player_count: players.length,
+                level: dungeon.level,
+                scene: dungeon.scene,
+                connections: {
+                    left: dungeon.leftTunnelTarget ? dungeon.leftTunnelTarget.dungeonId : null,
+                    right: dungeon.rightTunnelTarget ? dungeon.rightTunnelTarget.dungeonId : null
+                },
+                players: players.map(p => ({
+                    id: p.id,
+                    lives: p.lives,
+                    score: p.score,
+                    status: p.status
+                }))
+            });
+        }
+        
+        return {
+            dungeons,
+            total_dungeons: dungeons.length,
+            topology: this.battleRoyaleMode ? 'ring' : 'independent'
+        };
+    }
 
     _send(ws, data) {
         if (ws.readyState === WebSocket.OPEN) {
