@@ -2,6 +2,11 @@ export const CLIENT_EVENTS = Object.freeze({
     JOIN_PAIR: 'join_pair',
     JOIN_PRIVATE_PAIR: 'join_private_pair',
     INPUT: 'input',
+    // Battle Royale modes
+    JOIN_ENDLESS_BR: 'join_endless_br',
+    JOIN_SITNGO_BR: 'join_sitngo_br',
+    JOIN_TEAM_ENDLESS_BR: 'join_team_endless_br',
+    JOIN_TEAM_SITNGO_BR: 'join_team_sitngo_br',
 });
 
 export const SERVER_EVENTS = Object.freeze({
@@ -14,4 +19,7 @@ export const SERVER_EVENTS = Object.freeze({
     // Battle Royale: Cross-dungeon events
     PLAYER_LEFT_VIA_TUNNEL: 'player_left_via_tunnel',
     PLAYER_ARRIVED_VIA_TUNNEL: 'player_arrived_via_tunnel',
+    // Battle Royale: Queue status
+    SITNGO_QUEUE_STATUS: 'sitngo_queue_status',
+    TEAM_QUEUE_STATUS: 'team_queue_status',
 });

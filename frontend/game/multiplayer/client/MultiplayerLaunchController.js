@@ -29,9 +29,7 @@ export class MultiplayerLaunchController {
             btnSolo.onclick = () => {
                 console.log('[Launch] Starting Endless BR mode');
                 this.uiController.setStatus('Joining Endless Battle Royale...');
-                // For now, create a regular private pair
-                // TODO: Implement proper BR matchmaking
-                this.onConnect(CLIENT_EVENTS.JOIN_PAIR);
+                this.onConnect(CLIENT_EVENTS.JOIN_ENDLESS_BR);
             };
         }
 
@@ -40,18 +38,25 @@ export class MultiplayerLaunchController {
             btnSitNGo.onclick = () => {
                 console.log('[Launch] Starting Sit-n-Go BR mode');
                 this.uiController.setStatus('Joining Sit-n-Go BR queue...');
-                // TODO: Implement sit-n-go matchmaking
-                this.onConnect(CLIENT_EVENTS.JOIN_PAIR);
+                this.onConnect(CLIENT_EVENTS.JOIN_SITNGO_BR);
             };
         }
 
         const btnTeamBr = document.getElementById('btnTeamBr');
         if (btnTeamBr) {
             btnTeamBr.onclick = () => {
-                console.log('[Launch] Starting Team BR mode');
-                this.uiController.setStatus('Joining Team Battle Royale...');
-                // TODO: Implement team BR matchmaking
-                this.onConnect(CLIENT_EVENTS.JOIN_PAIR);
+                console.log('[Launch] Starting Team Endless BR mode');
+                this.uiController.setStatus('Joining Team Endless Battle Royale...');
+                this.onConnect(CLIENT_EVENTS.JOIN_TEAM_ENDLESS_BR);
+            };
+        }
+        
+        const btnTeamSitNGo = document.getElementById('btnTeamSitNGo');
+        if (btnTeamSitNGo) {
+            btnTeamSitNGo.onclick = () => {
+                console.log('[Launch] Starting Team Sit-n-Go BR mode');
+                this.uiController.setStatus('Joining Team Sit-n-Go BR queue...');
+                this.onConnect(CLIENT_EVENTS.JOIN_TEAM_SITNGO_BR);
             };
         }
     }
