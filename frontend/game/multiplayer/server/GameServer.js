@@ -10,6 +10,7 @@ const WebSocket = require('ws');
 const { DungeonInstance, STATE } = require('./DungeonInstance');
 const { ServerPlayer } = require('./ServerPlayer');
 const { DungeonGraph } = require('./DungeonGraph');
+const { BotPlayer } = require('./BotPlayer');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
@@ -30,6 +31,9 @@ class GameServer {
         // NEW: Dungeon graph for battle royale mode
         this.dungeonGraph = new DungeonGraph();
         this.battleRoyaleMode = process.env.BATTLE_ROYALE === 'true'; // Feature flag
+        
+        // NEW: Bot management
+        this.bots = new Map(); // botId -> BotPlayer instance
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
@@ -342,10 +346,17 @@ class GameServer {
     // ─── Game Loop ────────────────────────────────────────────────────────────
 
     _tick() {
-        // Build inputs map: playerId → controls
+        // Build inputs map: playerId → controls (including bots)
         const inputsMap = {};
+        
+        // Real player inputs
         for (const [playerId, conn] of this.connections) {
             if (conn.player) inputsMap[playerId] = conn.inputs;
+        }
+        
+        // Bot inputs
+        for (const [botId, bot] of this.bots) {
+            inputsMap[botId] = bot.generateInput();
         }
 
         // Tick all dungeons and serialize each dungeon state once.
@@ -457,6 +468,79 @@ class GameServer {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(rawData);
         }
+    }
+
+    // ─── Bot Management ───────────────────────────────────────────────────────
+
+    /**
+     * Spawn a bot in a dungeon
+     * @param {string} dungeonId - Target dungeon ID
+     * @param {number} playerSlot - Player slot (0 or 1)
+     * @returns {BotPlayer} The spawned bot
+     */
+    spawnBot(dungeonId, playerSlot) {
+        const dungeon = this.dungeons.get(dungeonId);
+        if (!dungeon) {
+            console.error('[Bot] Cannot spawn bot: dungeon not found:', dungeonId);
+            return null;
+        }
+
+        const bot = new BotPlayer(dungeonId, playerSlot);
+        this.bots.set(bot.id, bot);
+
+        // Add bot as a player in the dungeon
+        const serverPlayer = new ServerPlayer(bot.id, playerSlot);
+        dungeon.players[playerSlot] = serverPlayer;
+
+        console.log('[Bot] Spawned bot', bot.name, 'in dungeon', dungeonId, 'slot', playerSlot);
+        return bot;
+    }
+
+    /**
+     * Remove a bot
+     * @param {string} botId - Bot ID to remove
+     */
+    removeBot(botId) {
+        const bot = this.bots.get(botId);
+        if (!bot) return;
+
+        // Remove from dungeon
+        const dungeon = this.dungeons.get(bot.dungeonId);
+        if (dungeon && dungeon.players[bot.playerSlot]?.id === botId) {
+            dungeon.players[bot.playerSlot] = null;
+        }
+
+        this.bots.delete(botId);
+        console.log('[Bot] Removed bot', bot.name, 'from dungeon', bot.dungeonId);
+    }
+
+    /**
+     * Remove all bots from a dungeon
+     * @param {string} dungeonId - Dungeon ID
+     */
+    removeBotsFromDungeon(dungeonId) {
+        const botsToRemove = [];
+        for (const [botId, bot] of this.bots) {
+            if (bot.dungeonId === dungeonId) {
+                botsToRemove.push(botId);
+            }
+        }
+        botsToRemove.forEach(botId => this.removeBot(botId));
+    }
+
+    /**
+     * Check if a player slot is occupied by a bot
+     * @param {string} dungeonId
+     * @param {number} playerSlot
+     * @returns {boolean}
+     */
+    isBotInSlot(dungeonId, playerSlot) {
+        for (const bot of this.bots.values()) {
+            if (bot.dungeonId === dungeonId && bot.playerSlot === playerSlot) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Stops the game loop and closes the WebSocket server. */
