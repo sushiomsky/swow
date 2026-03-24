@@ -34,6 +34,9 @@ class GameServer {
         
         // NEW: Bot management
         this.bots = new Map(); // botId -> BotPlayer instance
+        
+        // NEW: Spectator management
+        this.spectators = new Map(); // playerId -> { dungeonId, ws }
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
@@ -70,6 +73,13 @@ class GameServer {
     _onDisconnect(playerId) {
         const conn = this.connections.get(playerId);
         if (!conn) return;
+        
+        // Remove spectator if exists
+        if (this.spectators.has(playerId)) {
+            this.spectators.delete(playerId);
+            console.log(`[GameServer] spectator ${playerId} disconnected`);
+        }
+        
         if (conn.player) {
             const dungeon = this.dungeons.get(conn.dungeonId);
             if (dungeon) {
@@ -96,6 +106,9 @@ class GameServer {
                 break;
             case 'join_private_pair':
                 this._joinPrivatePair(playerId, conn, msg.code);
+                break;
+            case 'spectate':
+                this._spectateGame(playerId, conn, msg.dungeonId);
                 break;
             case 'input':
                 conn.inputs = msg.keys || {};
@@ -156,6 +169,29 @@ class GameServer {
         this._sendInit(conn, sharedDungeon);
         this.privatePairLobbies.delete(code);
         console.log(`[GameServer] private pair joined ${lobby.hostId} + ${playerId} code=${code}`);
+    }
+    
+    // ─── Spectator Mode ───────────────────────────────────────────────────────
+    
+    _spectateGame(playerId, conn, dungeonId) {
+        const dungeon = this.dungeons.get(dungeonId);
+        if (!dungeon) {
+            this._send(conn.ws, { type: 'spectate_error', message: 'Game not found' });
+            return;
+        }
+        
+        // Register as spectator
+        this.spectators.set(playerId, { dungeonId, ws: conn.ws });
+        
+        // Send initial state
+        const state = dungeon.exportState();
+        this._send(conn.ws, {
+            type: 'spectate_init',
+            dungeonId,
+            state
+        });
+        
+        console.log(`[GameServer] player ${playerId} spectating dungeon ${dungeonId}`);
     }
 
     // ─── Dungeon Management ───────────────────────────────────────────────────
@@ -373,6 +409,12 @@ class GameServer {
             if (!serializedState) continue;
             this._sendSerializedState(conn, serializedState);
         }
+        
+        // Broadcast to spectators at reduced rate (2 FPS = every 10 ticks)
+        if (this._tickCount % 10 === 0) {
+            this._broadcastToSpectators(serializedByDungeon);
+        }
+        this._tickCount = (this._tickCount || 0) + 1;
     }
 
     _broadcastDungeonState(dungeon) {
@@ -380,6 +422,26 @@ class GameServer {
         for (const [, conn] of this.connections) {
             if (conn.dungeonId === dungeon.id) {
                 this._sendSerializedState(conn, serializedState);
+            }
+        }
+    }
+    
+    _broadcastToSpectators(serializedByDungeon) {
+        for (const [playerId, spectator] of this.spectators) {
+            const { dungeonId, ws } = spectator;
+            const serializedState = serializedByDungeon.get(dungeonId);
+            if (!serializedState) continue;
+            
+            // Send spectator-specific state (read-only)
+            try {
+                this._send(ws, {
+                    type: 'spectate_state',
+                    dungeonId,
+                    state: serializedState
+                });
+            } catch (err) {
+                console.error(`[GameServer] Failed to send to spectator ${playerId}:`, err);
+                this.spectators.delete(playerId);
             }
         }
     }

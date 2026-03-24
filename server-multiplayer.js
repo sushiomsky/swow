@@ -43,6 +43,7 @@ const httpServer = http.createServer((req, res) => {
     }
 
     if (urlPath === '/') urlPath = '/multiplayer.html';
+    if (urlPath === '/spectate') urlPath = '/spectate.html';
 
     const filePath = path.join(ROOT, urlPath);
     if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }

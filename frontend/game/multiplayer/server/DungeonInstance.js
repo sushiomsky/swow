@@ -692,6 +692,11 @@ class DungeonInstance {
             bullets: this._collectBullets(),
         };
     }
+    
+    // Export state for spectators (same as serialize but can be enhanced later)
+    exportState() {
+        return this.serialize();
+    }
 
     _collectBullets() {
         const bullets = [];

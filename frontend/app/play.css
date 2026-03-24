@@ -588,6 +588,18 @@ html, body {
     box-shadow: 0 0 8px rgba(0, 170, 0, 0.5);
 }
 
+.spectate-btn {
+    background: #224;
+    border-color: #446;
+    color: #aaf;
+}
+
+.spectate-btn:hover {
+    background: #336;
+    border-color: #66a;
+    box-shadow: 0 0 8px rgba(102, 170, 255, 0.4);
+}
+
 /* Empty State */
 .active-games-empty {
     text-align: center;

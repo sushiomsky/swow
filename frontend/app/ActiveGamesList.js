@@ -95,8 +95,8 @@ export class ActiveGamesList {
     renderGameCard(game) {
         const modeLabel = this.getModeLabel(game.mode);
         const modeIcon = this.getModeIcon(game.mode);
-        const playerCount = game.players?.length || 0;
-        const dungeonCount = game.dungeons || 0;
+        const playerCount = game.players?.length || game.player_count || 0;
+        const dungeonCount = game.dungeons || 1;
         const duration = this.formatDuration(game.created_at);
         
         let html = '<div class="game-card">';
@@ -105,17 +105,26 @@ export class ActiveGamesList {
         html += `<span class="stat">${playerCount} players</span>`;
         html += `<span class="stat-sep">•</span>`;
         html += `<span class="stat">${dungeonCount} dungeons</span>`;
-        html += `<span class="stat-sep">•</span>`;
-        html += `<span class="stat">${duration}</span>`;
+        if (duration) {
+            html += `<span class="stat-sep">•</span>`;
+            html += `<span class="stat">${duration}</span>`;
+        }
         html += '</div>';
         
         // Action buttons
         html += '<div class="game-actions">';
-        if (game.joinable !== false) {
+        
+        // SPECTATE button (always show for active games)
+        if (game.dungeon_id) {
+            html += `<button class="game-btn spectate-btn" data-dungeon-id="${game.dungeon_id}">👁 SPECTATE</button>`;
+        }
+        
+        // JOIN button (if joinable)
+        if (game.joinable !== false && game.mode) {
             html += `<button class="game-btn join-btn" data-mode="${game.mode}">JOIN</button>`;
         }
-        html += '</div>';
         
+        html += '</div>';
         html += '</div>';
         
         return html;
@@ -161,6 +170,7 @@ export class ActiveGamesList {
     }
     
     attachEventListeners() {
+        // Join buttons
         const joinButtons = this.container.querySelectorAll('.join-btn');
         joinButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -168,6 +178,20 @@ export class ActiveGamesList {
                 this.handleJoinGame(mode);
             });
         });
+        
+        // Spectate buttons
+        const spectateButtons = this.container.querySelectorAll('.spectate-btn');
+        spectateButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const dungeonId = e.target.getAttribute('data-dungeon-id');
+                this.handleSpectateGame(dungeonId);
+            });
+        });
+    }
+    
+    handleSpectateGame(dungeonId) {
+        console.log('[ActiveGamesList] Spectating dungeon:', dungeonId);
+        window.location.href = `/spectate?dungeon=${dungeonId}`;
     }
     
     handleJoinGame(mode) {
