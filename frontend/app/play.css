@@ -370,3 +370,87 @@ html, body {
     60%  { opacity: 1; }
     100% { opacity: 0; transform: translateY(-30px) scale(0.8); }
 }
+
+/* ─── Mode Sections (Battle Royale Layout) ──────────────────────────── */
+.play-mode-section {
+    margin-bottom: 24px;
+}
+
+.play-mode-label {
+    font-family: 'C64ProRegular', monospace;
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 3px;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+/* Battle Royale primary button */
+.play-btn-br {
+    padding: 14px 48px;
+    font-family: 'WizardOfWor', monospace;
+    font-size: 18px;
+    color: #fff;
+    background: linear-gradient(135deg, #c00 0%, #800 100%);
+    border: 2px solid #c00;
+    cursor: pointer;
+    letter-spacing: 3px;
+    transition: all 0.15s;
+    outline: none;
+    margin-bottom: 8px;
+    box-shadow: 0 0 8px rgba(200, 0, 0, 0.4);
+}
+.play-btn-br:hover {
+    background: linear-gradient(135deg, #e20 0%, #a00 100%);
+    border-color: #e20;
+    transform: scale(1.05);
+    box-shadow: 0 0 24px rgba(220, 0, 0, 0.7);
+}
+
+/* Battle Royale secondary row */
+.play-br-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.play-btn-br-sm {
+    padding: 8px 20px;
+    font-family: 'WizardOfWor', monospace;
+    font-size: 12px;
+    color: #fff;
+    background: #640;
+    border: 2px solid #840;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    outline: none;
+}
+.play-btn-br-sm:hover {
+    background: #850;
+    border-color: #a60;
+    transform: scale(1.04);
+    box-shadow: 0 0 12px rgba(170, 85, 0, 0.5);
+}
+
+/* Private room button */
+.play-btn-private {
+    padding: 12px 36px;
+    font-family: 'WizardOfWor', monospace;
+    font-size: 16px;
+    color: #fff;
+    background: #15c;
+    border: 2px solid #15c;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    outline: none;
+    box-shadow: 0 0 6px rgba(17, 85, 204, 0.4);
+}
+.play-btn-private:hover {
+    background: #27e;
+    border-color: #27e;
+    transform: scale(1.04);
+    box-shadow: 0 0 16px rgba(34, 119, 238, 0.6);
+}

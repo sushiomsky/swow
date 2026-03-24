@@ -26,12 +26,33 @@
     <div id="play-overlay">
         <h1 class="play-title">WIZARD<br>OF WOR</h1>
         <div class="play-insert">INSERT COIN</div>
-        <button class="play-btn play-btn-primary" id="btn-play">▶ PLAY</button>
-        <div class="play-secondary-row">
-            <button class="play-btn-sm green" id="btn-2p">2 PLAYER</button>
-            <button class="play-btn-sm blue" id="btn-multi">⚔ ONLINE</button>
+        
+        <!-- Classic Modes -->
+        <div class="play-mode-section">
+            <div class="play-mode-label">CLASSIC</div>
+            <button class="play-btn play-btn-primary" id="btn-play">▶ PLAY</button>
+            <div class="play-secondary-row">
+                <button class="play-btn-sm green" id="btn-2p">2 PLAYER</button>
+            </div>
         </div>
-        <div class="play-hint">SPACE · 2 · M</div>
+        
+        <!-- Battle Royale Modes -->
+        <div class="play-mode-section">
+            <div class="play-mode-label">BATTLE ROYALE</div>
+            <button class="play-btn-br" id="btn-br-endless">⚔ ENDLESS BR</button>
+            <div class="play-br-row">
+                <button class="play-btn-br-sm" id="btn-br-sitngo">⏱ SIT-N-GO</button>
+                <button class="play-btn-br-sm" id="btn-br-team">🛡 TEAM</button>
+            </div>
+        </div>
+        
+        <!-- Private Match -->
+        <div class="play-mode-section">
+            <div class="play-mode-label">PRIVATE</div>
+            <button class="play-btn-private" id="btn-multi">🔗 CREATE ROOM</button>
+        </div>
+        
+        <div class="play-hint">SPACE · 2 · M · B · P</div>
         <div class="play-footer"><a href="/platform">← Full Site</a></div>
     </div>
 
