@@ -519,9 +519,14 @@ document.getElementById('btn-br-sitngo')?.addEventListener('click', () => {
     window.location.href = '/mp?mode=sitngo';
 });
 
-document.getElementById('btn-br-team')?.addEventListener('click', () => {
-    // Redirect to multiplayer lobby for Team BR
-    window.location.href = '/mp?mode=team';
+document.getElementById('btn-team-endless')?.addEventListener('click', () => {
+    // Redirect to multiplayer lobby for Team BR (Endless)
+    window.location.href = '/mp?mode=team-endless';
+});
+
+document.getElementById('btn-team-sitngo')?.addEventListener('click', () => {
+    // Redirect to multiplayer lobby for Team BR (Sit-n-Go)
+    window.location.href = '/mp?mode=team-sitngo';
 });
 
 // Keyboard shortcuts (global)

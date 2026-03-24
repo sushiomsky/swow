@@ -412,6 +412,14 @@ html, body {
     display: flex;
     gap: 10px;
     justify-content: center;
+    margin-bottom: 8px;
+}
+
+/* Team BR row (separate styling) */
+.play-br-team-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
     margin-bottom: 12px;
 }
 
@@ -432,6 +440,28 @@ html, body {
     border-color: #a60;
     transform: scale(1.04);
     box-shadow: 0 0 12px rgba(170, 85, 0, 0.5);
+}
+
+/* Purple variant for Team Endless */
+.play-btn-br-sm.purple {
+    background: #606;
+    border-color: #808;
+}
+.play-btn-br-sm.purple:hover {
+    background: #808;
+    border-color: #a0a;
+    box-shadow: 0 0 12px rgba(136, 0, 136, 0.6);
+}
+
+/* Blue variant for Team Sit-n-Go */
+.play-btn-br-sm.blue {
+    background: #15c;
+    border-color: #27e;
+}
+.play-btn-br-sm.blue:hover {
+    background: #27e;
+    border-color: #3af;
+    box-shadow: 0 0 12px rgba(34, 119, 238, 0.6);
 }
 
 /* Private room button */
