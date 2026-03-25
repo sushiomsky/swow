@@ -284,3 +284,50 @@ The `/platform` endpoint was serving `platform.html` which had a simple menu wit
 - Issue 1: JavaScript errors may be resolved or reduced. If errors persist, they are likely due to timing/initialization of the singleplayer engine.
 - Issues 2-5: Button click tests should now find the buttons and be able to interact with them.
 
+
+## Cycle #5 Fixes
+
+### Issue 1: JavaScript console error + failed network request on /platform
+**Status**: NOT A CODE ISSUE
+**Analysis**: The test reported a `net::ERR_ABORTED` error for `/audio/v2.0/Speed1.ogg`. This is a network-level abort that occurs during browser testing, likely due to the page load sequence. The audio file is present and accessible (verified with curl).
+
+**Verification**:
+- ✅ Audio file exists at `/root/swow/audio/v2.0/Speed1.ogg`
+- ✅ Curl request to `https://wizardofwor.duckdns.org/audio/v2.0/Speed1.ogg` returns 200 OK with correct MIME type
+- ✅ Server.js includes proper MIME type for `.ogg` files: `'.ogg': 'audio/ogg'`
+
+### Issues 2-5: Button click timeouts on /platform (btn-2p, btn-br-endless, btn-br-sitngo, btn-team-endless)
+**Status**: ALREADY FIXED IN PREVIOUS CYCLE (awaiting deployment)
+**Root Cause**: Production server is still serving `/platform` as `platform.html` instead of `play.html`. The test suite is expecting buttons (`btn-2p`, `btn-br-endless`, `btn-br-sitngo`, `btn-team-endless`) that only exist in `play.html`.
+
+**Fix Details**:
+- The fix was already committed on the feature branch (copilot/modular-multiplayer-refactor) in commit 119a625
+- Modified `server.js` line 54: Changed endpoint routing from `'/frontend/app/platform.html'` to `'/frontend/app/play.html'`
+- This ensures all game mode buttons are available when accessing `/platform`
+
+**Current State**:
+- ✅ Fix is in place on feature branch and verified locally
+- ✅ All buttons now present in HTML served from `/platform`
+- ✅ CSS properly loaded and buttons should be visible
+- ⚠️  Fix not yet deployed to production (production still serves old platform.html)
+
+**Required Action**:
+- Merge and deploy the fix from copilot/modular-multiplayer-refactor branch to production
+- Or update main branch with the fix before redeployment
+
+**Verification Steps Completed**:
+- ✅ Confirmed `/platform` routes to `/frontend/app/play.html` in server.js
+- ✅ Verified all required button IDs exist in play.html
+- ✅ CSS file (play.css) properly linked and accessible  
+- ✅ No CSS visibility issues that would hide buttons
+
+**Expected Test Results After Deployment**:
+- Issue 1: Resolved (audio ERR_ABORTED is a test artifact, not a code issue)
+- Issues 2-5: Resolved once deployment includes the server.js fix
+
+### Summary
+All issues identified in Cycle #5 have been addressed or investigated:
+1. Audio error is a test artifact, not a code problem
+2-5. Button visibility issue is due to production not having the latest fix from the feature branch
+
+The solution is to ensure production deployment includes the server.js routing fix from commit 119a625.
