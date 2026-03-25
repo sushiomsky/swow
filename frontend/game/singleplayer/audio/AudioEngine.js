@@ -47,7 +47,7 @@ export class AudioEngine {
         var c = this.neededResources[a],
             f = c.split(".")[0],
             d = new XMLHttpRequest;
-        d.open("GET", "audio/v2.0/" + c, !0);
+        d.open("GET", "/audio/v2.0/" + c, !0);
         d.responseType = "arraybuffer";
         d.onload = () => {
             this.context.decodeAudioData(d.response, (g) => {

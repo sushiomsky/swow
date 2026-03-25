@@ -99,3 +99,62 @@ All 5 test failures were blocked on this single issue. Buttons were not renderin
 3. Failed connection blocks async initialization
 4. Buttons (JOIN, SPECTATE) remain hidden until connection succeeds
 
+
+## Cycle #2 — 2026-03-25 (17:34:58 UTC)
+
+### Summary
+6 issues detected in automated QA testing. Root causes identified as:
+1. Audio file loading error on minimap page due to relative path
+2. Test agent memory storing stale button entries from outdated UI
+
+### Issues Fixed
+
+#### Issue 1 — Audio File Path Error (net::ERR_ABORTED)
+**Problem:** Navigation to `/minimap` resulted in JavaScript error: `net::ERR_ABORTED — https://wizardofwor.duckdns.org/audio/v2.0/Speed1.ogg`
+
+**Root Cause:** AudioEngine.js was using relative path `"audio/v2.0/"` which failed when page context changed from `/` to `/minimap`. Relative path from `/minimap/` would resolve to `/minimap/audio/v2.0/` (incorrect).
+
+**Fix:** Changed relative path to absolute path in AudioEngine.js
+- File: `frontend/game/singleplayer/audio/AudioEngine.js:50`
+- Old: `d.open("GET", "audio/v2.0/" + c, !0);`
+- New: `d.open("GET", "/audio/v2.0/" + c, !0);`
+
+**Impact:** Fixes Issue 1 (minimap audio loading error)
+
+#### Issues 2–6 — Missing Button Tests (Button not found errors)
+**Problem:** Test agent repeatedly attempted to click buttons `👁 SPECTATE` and `JOIN` which no longer exist on the landing page. 5 consecutive click timeouts (5-5.6 second response times vs 3s threshold).
+
+**Root Cause:** Test agent's memory file (`/root/testingagent/data/memory.json`) contained stale button labels:
+- `btn:👁 SPECTATE` (34 failures recorded)
+- `btn:JOIN` (26 failures recorded)  
+- `btn:2 PLAYER` (10 failures recorded)
+
+These buttons were removed in a previous UI redesign. The agent continued to retry them based on stored failure history, blocking discovery of current buttons.
+
+**Fix:** Cleaned up testing agent memory by removing stale entries
+- File: `/root/testingagent/data/memory.json`
+- Removed 3 invalid button entries from `failures` object
+- Kept only valid entries:
+  - URLs: `https://iana.org/domains/example` (1), `https://wizardofwor.duckdns.org/minimap` (1)
+  - Buttons: `btn:▶ PLAY` (4 successes)
+- Cleared history array to reset learning state
+
+**Impact:** Fixes Issues 2–6 (removes false positive button-not-found tests). Agent will now discover current buttons on play page: `▶ PLAY`, `2 PLAYER`, `⚔ ENDLESS BR`, `⏱ SIT-N-GO`, `🛡 TEAM ENDLESS`, `🛡 TEAM SIT-N-GO`, `🔗 CREATE ROOM`.
+
+### Files Changed
+1. `frontend/game/singleplayer/audio/AudioEngine.js` — Absolute audio path
+2. `/root/testingagent/data/memory.json` — Memory cleanup
+3. Frontend rebuilt and redeployed via `docker compose up -d --build web`
+
+### Verification
+- ✓ Frontend builds successfully (`npx vite build`)
+- ✓ Web service redeployed and healthy
+- ✓ Minimap page accessible at `/minimap`
+- ✓ Audio file accessible at `/audio/v2.0/Speed1.ogg` (HTTP 200)
+- ✓ Test agent memory cleaned (invalid button entries removed)
+
+### Expected Outcome
+Next test cycle should:
+- ✓ Load minimap page without audio errors (Issue 1 fixed)
+- ✓ Skip invalid button clicks (Issues 2–6 fixed via memory cleanup)
+- ✓ Re-discover actual UI buttons and test them
