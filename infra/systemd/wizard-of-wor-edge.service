@@ -1,0 +1,27 @@
+[Unit]
+Description=Wizard of Wor - Edge Proxy
+After=network.target wizard-of-wor-single.service wizard-of-wor-multiplayer.service wizard-of-wor-community-api.service wizard-of-wor-community-web.service
+Wants=wizard-of-wor-single.service wizard-of-wor-multiplayer.service wizard-of-wor-community-api.service wizard-of-wor-community-web.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/swow
+Environment="DOMAIN=wizardofwor.duckdns.org"
+Environment="HTTP_PORT=80"
+Environment="HTTPS_PORT=443"
+Environment="SINGLE_PORT=35101"
+Environment="MULTIPLAYER_PORT=42735"
+Environment="COMMUNITY_API_PORT=43671"
+Environment="COMMUNITY_WEB_PORT=48611"
+Environment="TLS_CERT_PATH=/etc/letsencrypt/live/wizardofwor.duckdns.org/fullchain.pem"
+Environment="TLS_KEY_PATH=/etc/letsencrypt/live/wizardofwor.duckdns.org/privkey.pem"
+ExecStart=/usr/bin/node scripts/edge-proxy.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wow-edge
+
+[Install]
+WantedBy=multi-user.target

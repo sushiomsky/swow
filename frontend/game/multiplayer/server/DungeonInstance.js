@@ -29,6 +29,8 @@ class DungeonInstance {
     constructor(gameServer) {
         this.id = String(nextDungeonId++);
         this.gameServer = gameServer;
+        this.createdAt = new Date().toISOString();
+        this.matchMode = null;
 
         // Tunnel connections  { dungeonId, side: 'left'|'right' }
         this.leftTunnelTarget = null;   // what you reach by exiting the left wall
@@ -607,6 +609,9 @@ class DungeonInstance {
         const homePlayers = this.players.filter(p => p.id && p.homeDungeonId === this.id);
         if (homePlayers.length > 0 && homePlayers.every(p => p.status === 'out')) {
             if (this.lifecycleState === STATE.ACTIVE) {
+                // Notify eliminated players with their final stats
+                this.gameServer.notifyPlayersEliminated(homePlayers, this);
+
                 // Check if this is a solo battle royale dungeon (only 1 home player)
                 const isBattleRoyale = homePlayers.length === 1;
                 

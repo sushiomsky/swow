@@ -34,6 +34,7 @@ class EndlessBRQueue {
         
         // Create new dungeon
         const dungeon = this.gameServer._createDungeon();
+        dungeon.matchMode = 'endless_br';
         
         // Add real player in slot 0
         const ServerPlayer = require('./ServerPlayer').ServerPlayer;

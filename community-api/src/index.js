@@ -23,10 +23,21 @@ import { migrateUp } from './migrations.js';
 import { logError, logInfo, requestLogger } from './logger.js';
 import { startLeaderboardWorker } from './services/leaderboardService.js';
 
+const CORS_ALLOWED_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+  : ['http://localhost:3000', 'http://localhost:5001', 'https://wizardofwor.duckdns.org'];
+
 // Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (curl, server-to-server)
+    if (!origin || CORS_ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(null, false);
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 
@@ -83,7 +94,7 @@ app.use((err, req, res, _next) => {
 
 // Socket.IO shares the same HTTP server for chat/notification real-time events.
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { cors: { origin: CORS_ALLOWED_ORIGINS, credentials: true } });
 attachCommunitySocket(io, db, redis);
 setRealtimeIO(io);
 

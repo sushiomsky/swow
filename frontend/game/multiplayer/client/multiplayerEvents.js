@@ -22,4 +22,6 @@ export const SERVER_EVENTS = Object.freeze({
     // Battle Royale: Queue status
     SITNGO_QUEUE_STATUS: 'sitngo_queue_status',
     TEAM_QUEUE_STATUS: 'team_queue_status',
+    // Match lifecycle
+    MATCH_END: 'match_end',
 });

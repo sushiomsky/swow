@@ -1,0 +1,13 @@
+.git
+.github
+.env
+.env.*
+node_modules
+dist
+ci-logs
+wget-log
+wow_community.pg.sql.gz
+community-api/node_modules
+community-web/node_modules
+community-web/.next
+community-api/test

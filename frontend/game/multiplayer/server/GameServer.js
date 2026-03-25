@@ -316,6 +316,59 @@ class GameServer {
         
         console.log(`[GameServer] dungeon ${dungeonId} destroyed`);
     }
+
+    /**
+     * Send match_end message to eliminated players with their final stats.
+     * Called by DungeonInstance._checkLifecycle() when home players are eliminated.
+     */
+    notifyPlayersEliminated(players, dungeon) {
+        const duration = Date.now() - new Date(dungeon.createdAt).getTime();
+        for (const player of players) {
+            if (!player.id) continue;
+            // Skip bots
+            if (this.bots.has(player.id)) continue;
+            const conn = this.connections.get(player.id);
+            if (!conn) continue;
+            this._send(conn.ws, {
+                type: 'match_end',
+                stats: {
+                    score: player.score,
+                    level: dungeon.level,
+                    matchMode: dungeon.matchMode,
+                    dungeonId: dungeon.id,
+                    duration,
+                },
+            });
+        }
+    }
+
+    /**
+     * Transfer a visiting player back to their home dungeon after dying abroad.
+     * Called by DungeonInstance.respawnPlayer() for non-home players.
+     */
+    respawnPlayerInHome(player) {
+        const homeDungeon = this.dungeons.get(player.homeDungeonId);
+        if (!homeDungeon || homeDungeon.lifecycleState === STATE.DESTROYED) {
+            // Home dungeon already collapsed — player is eliminated
+            console.log(`[GameServer] player ${player.id} home dungeon gone — eliminated`);
+            return;
+        }
+        const slot = this._findAvailableSlot(homeDungeon);
+        if (slot === null) {
+            console.warn(`[GameServer] player ${player.id} home dungeon full`);
+            return;
+        }
+        player.num = slot;
+        homeDungeon.addPlayer(player);
+
+        // Update connection to point at home dungeon
+        const conn = this.connections.get(player.id);
+        if (conn) {
+            conn.dungeonId = homeDungeon.id;
+            this._sendInit(conn, homeDungeon);
+        }
+        player.goToStartPosition();
+    }
     
     // ─── Cross-Dungeon Transfer ───────────────────────────────────────────────
     

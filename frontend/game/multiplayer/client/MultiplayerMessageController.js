@@ -41,6 +41,10 @@ export class MultiplayerMessageController {
             case SERVER_EVENTS.PLAYER_ARRIVED_VIA_TUNNEL:
                 this.effectsController.handlePlayerArrivedViaTunnel(msg);
                 break;
+
+            case SERVER_EVENTS.MATCH_END:
+                this.effectsController.handleMatchEnd(msg);
+                break;
         }
     }
 }

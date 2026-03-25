@@ -78,6 +78,7 @@ class TeamBRQueue {
         
         // Create dungeon for this team
         const dungeon = this.gameServer._createDungeon();
+        dungeon.matchMode = 'team_endless_br';
         
         // Add real player in slot 0
         const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
@@ -182,6 +183,7 @@ class TeamBRQueue {
             
             // Create dungeon for this team
             const dungeon = this.gameServer._createDungeon();
+            dungeon.matchMode = 'team_sitngo_br';
             
             // Add player 1 (slot 0)
             const p1 = new ServerPlayer(0, dungeon, player1Id, dungeon.id);

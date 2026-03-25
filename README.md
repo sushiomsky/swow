@@ -27,15 +27,16 @@ This repo now ships a full Docker Compose stack (game web, authoritative multipl
 
 ```bash
 cp .env.example .env
-# edit .env and set DOMAIN + ACME_EMAIL
 make up
 ```
 
 That brings up:
 
-- `web` → single-player/static assets (port 8080 inside network)
-- `multiplayer` → authoritative server (port 5001 inside network)
-- `edge` (Caddy) → public HTTPS on `:443`, auto TLS from Let's Encrypt
+- `web` → single-player/static assets on `http://localhost:${WEB_PUBLIC_PORT:-18080}`
+- `multiplayer` → authoritative server on `http://localhost:${MULTIPLAYER_PUBLIC_PORT:-15001}`
+- `community-api` → community backend on `http://localhost:${COMMUNITY_API_PUBLIC_PORT:-17000}`
+- `community-web` → Next.js frontend on `http://localhost:${COMMUNITY_WEB_PUBLIC_PORT:-13000}`
+- `edge` (Caddy) is optional via `docker compose --profile edge up -d --build` and defaults to `http://localhost:${EDGE_HTTP_PORT:-10080}` / `https://localhost:${EDGE_HTTPS_PORT:-10443}`
 - Healthchecks are enabled for app/data services; `depends_on` waits for healthy upstreams before starting dependents.
 
 ### Optional auto-start on reboot (systemd, codified)
@@ -45,6 +46,20 @@ sudo scripts/install-systemd-service.sh /opt/wizard-of-wor
 ```
 
 Service definition is versioned in `infra/systemd/wizard-of-wor-compose.service`.
+
+### Native host fallback (no Docker)
+
+If the host is running the Node services directly instead of Docker Compose, the versioned systemd unit `infra/systemd/wizard-of-wor-edge.service` exposes the same public route map on `:80` and `:443` and proxies to:
+
+- classic platform on `127.0.0.1:3000`
+- multiplayer on `127.0.0.1:5001`
+- community API on `127.0.0.1:7000`
+- community web on `127.0.0.1:3001`
+
+For a trusted public certificate on the native-host path, issue a Let's Encrypt cert for `wizardofwor.duckdns.org` and keep the edge unit pointed at:
+
+- `/etc/letsencrypt/live/wizardofwor.duckdns.org/fullchain.pem`
+- `/etc/letsencrypt/live/wizardofwor.duckdns.org/privkey.pem`
 
 ### Remote deployment
 
