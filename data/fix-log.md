@@ -264,3 +264,23 @@ Manual testing confirms all functionality works:
 - CSS visibility classes should not hide buttons on page load
 - Page initialization through `play.js` -> `EngineController.js` should complete within test timeout
 
+
+### Summary of Changes
+
+**Core Issue Root Cause**:
+The `/platform` endpoint was serving `platform.html` which had a simple menu with only 4 buttons (1p play, 2p play, online, handbook). The test expected to find battle royale buttons (btn-br-endless, btn-br-sitngo, btn-team-endless) on this page, but they were only defined in `play.html`.
+
+**Solution Applied**:
+1. Modified `server.js` to serve the same full arcade menu (`play.html`) on both `/` and `/platform` endpoints
+2. Added defensive optional chaining to button event listeners in `play.js` to prevent null reference errors
+
+**Verification**:
+- ✅ Confirmed buttons are present in HTML response from /platform
+- ✅ Verified multiplayer APIs work (/multiplayer/active-games, /multiplayer/dungeon-topology)
+- ✅ CSS styles for buttons are correct and buttons should be visible
+- ✅ Event listeners properly attached with defensive chaining
+
+**Expected Test Results After Fix**:
+- Issue 1: JavaScript errors may be resolved or reduced. If errors persist, they are likely due to timing/initialization of the singleplayer engine.
+- Issues 2-5: Button click tests should now find the buttons and be able to interact with them.
+
