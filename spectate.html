@@ -20,8 +20,16 @@
         
         <div id="spectator-overlay" class="overlay">
             <div class="overlay-content">
-                <p id="overlay-message">Connecting to game...</p>
+                <p id="overlay-message">Loading live games…</p>
             </div>
+        </div>
+
+        <!-- Game browser (shown when no dungeon ID specified) -->
+        <div id="game-browser" class="hide">
+            <h2>LIVE GAMES</h2>
+            <p class="browser-subtitle">Select a game to spectate</p>
+            <div id="game-list"></div>
+            <p id="no-games" class="hide" style="color:#666; margin-top:20px;">No games running. Check back soon.</p>
         </div>
     </div>
     
@@ -29,16 +37,54 @@
     <script type="module">
         import { SpectatorClient } from '/frontend/app/SpectatorClient.js';
         
-        // Initialize spectator on page load
         const urlParams = new URLSearchParams(window.location.search);
         const dungeonId = urlParams.get('dungeon');
         
-        if (!dungeonId) {
-            document.getElementById('overlay-message').textContent = 'Error: No dungeon ID specified';
-        } else {
+        if (dungeonId) {
+            // Direct spectate
             const spectator = new SpectatorClient(dungeonId);
             window.spectator = spectator;
             spectator.connect();
+        } else {
+            // Show game browser
+            document.getElementById('spectator-overlay').classList.add('hide');
+            document.getElementById('game-browser').classList.remove('hide');
+            loadGameBrowser();
+        }
+
+        async function loadGameBrowser() {
+            const list = document.getElementById('game-list');
+            const noGames = document.getElementById('no-games');
+            try {
+                const res = await fetch('/multiplayer/active-games');
+                const data = await res.json();
+                const games = data.games || [];
+                if (!games.length) {
+                    noGames.classList.remove('hide');
+                    return;
+                }
+                const modeColors = {
+                    endless: '#0cf', sitngo: '#f80',
+                    'team-endless': '#0f0', 'team-sitngo': '#c6f',
+                    private: '#888',
+                };
+                list.innerHTML = games.map(g => {
+                    const color = modeColors[g.mode] || '#888';
+                    const humans = (g.players || []).filter(p => !p.is_bot).length;
+                    const bots = (g.players || []).filter(p => p.is_bot).length;
+                    return `
+                        <a class="game-card" href="/spectate.html?dungeon=${g.dungeon_id}">
+                            <span class="game-mode" style="color:${color}">${(g.mode || '').toUpperCase()}</span>
+                            <span class="game-level">Level ${g.level || 0}</span>
+                            <span class="game-players">${humans}👤 ${bots}🤖</span>
+                            <span class="game-watch">WATCH →</span>
+                        </a>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '<p style="color:#f55">Failed to load games.</p>';
+            }
+            // Auto-refresh every 10s
+            setTimeout(loadGameBrowser, 10000);
         }
     </script>
 </body>

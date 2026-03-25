@@ -12,30 +12,44 @@
     <div id="overlay">
         <h1>WIZARD OF WOR</h1>
         <p>Connected Dungeons — Multiplayer</p>
-        <p class="subtext">Choose a mode: endless BR, sit-n-go BR, team BR, or private 2-player classic with a shareable link.</p>
-        <div style="margin-top:20px;">
-            <button class="btn" id="btnSolo">▶ ENDLESS BR (join anytime)</button>
-            <button class="btn blue" id="btnSitNGo">⏱ SIT-N-GO BR (queued start)</button>
-            <button class="btn green" id="btnTeamBr">🛡 TEAM ENDLESS BR</button>
-            <button class="btn purple" id="btnTeamSitNGo">🛡 TEAM SIT-N-GO BR</button>
-            <button class="btn blue" id="btnPairCreate">🔗 CREATE PRIVATE CLASSIC</button>
-            <div style="margin-top: 12px;">
-                <input id="pairCode" type="text" maxlength="12" placeholder="Private code"
-                    style="padding: 10px 12px; font-family: inherit; width: 240px; text-transform: uppercase; letter-spacing: 2px;">
-                <button class="btn" id="btnPairJoin">JOIN PRIVATE</button>
+
+        <div class="lobby-modes">
+            <!-- Quick Play -->
+            <div class="mode-group">
+                <h3 class="mode-group-title">⚡ QUICK PLAY</h3>
+                <button class="btn" id="btnSolo">▶ ENDLESS BR</button>
+                <button class="btn green" id="btnTeamBr">🛡 TEAM ENDLESS</button>
+                <p class="mode-hint">Jump in instantly — join an active dungeon ring</p>
             </div>
-            <button class="btn green hide" id="btnRetry">↻ RETRY LAST MODE</button>
+
+            <!-- Competitive -->
+            <div class="mode-group">
+                <h3 class="mode-group-title">🏆 COMPETITIVE</h3>
+                <button class="btn blue" id="btnSitNGo">⏱ SIT-N-GO BR</button>
+                <button class="btn purple" id="btnTeamSitNGo">🛡 TEAM SIT-N-GO</button>
+                <p class="mode-hint">Queued start — fair fight from round one</p>
+            </div>
+
+            <!-- Private -->
+            <div class="mode-group">
+                <h3 class="mode-group-title">🔗 PRIVATE</h3>
+                <button class="btn dark" id="btnPairCreate">CREATE CLASSIC ROOM</button>
+                <div class="private-join">
+                    <input id="pairCode" type="text" maxlength="12" placeholder="Room code"
+                        class="code-input">
+                    <button class="btn dark" id="btnPairJoin">JOIN</button>
+                </div>
+            </div>
         </div>
+
+        <button class="btn green hide" id="btnRetry">↻ RETRY LAST MODE</button>
         <div id="status" role="status" aria-live="polite"></div>
-        <p style="margin-top:30px; font-size:11px; color:#555;">
-            <b>Endless BR:</b> join anytime, get your own dungeon and invade through tunnels.<br>
-            <b>Sit-n-Go BR:</b> waits for enough players, then starts a closed ring of linked dungeons.<br>
-            <b>Team BR:</b> players auto-balance between gold and blue teams.<br>
-            <b>Private Classic:</b> host creates a private code/link and shares it with one friend.
-        </p>
-        <p style="margin-top:16px; font-size:11px;">
-            <a href="/public/handbook.html" target="_blank" style="color:#6c5eb5; text-decoration:none;">📖 Game Handbook &amp; Reference</a>
-        </p>
+
+        <div class="lobby-footer">
+            <a href="/spectate.html">👁 Spectate</a>
+            <a href="/public/handbook.html" target="_blank">📖 Handbook</a>
+            <a href="/">🏠 Home</a>
+        </div>
     </div>
 
     <div id="body">

@@ -130,6 +130,7 @@ class SitNGoQueue {
         // Create dungeon for each player
         players.forEach(([playerId, { conn }], index) => {
             const dungeon = this.gameServer._createDungeon();
+            dungeon.matchMode = 'sitngo_br';
             
             // Add real player in slot 0
             const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
@@ -156,6 +157,13 @@ class SitNGoQueue {
         this.waitingPlayers.clear();
         
         console.log('[SitNGoQueue] Game launched successfully');
+    }
+
+    launchWithBots() {
+        if (this.waitingPlayers.size === 0) return false;
+        console.log('[SitNGoQueue] Launching queued players with bot fill');
+        this._launchGame();
+        return true;
     }
     
     /**
@@ -188,6 +196,10 @@ class SitNGoQueue {
             countdown_remaining: this.countdownTimer ? 
                 Math.max(0, COUNTDOWN_MS - (Date.now() - this.countdownStartedAt)) : null
         };
+    }
+
+    getWaitingCount() {
+        return this.waitingPlayers.size;
     }
 }
 
