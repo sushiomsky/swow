@@ -1,0 +1,161 @@
+/* multiplayer.css — Multiplayer overlay, lobby, settings, HUD */
+
+#overlay {
+    position: fixed;
+    z-index: 500;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'C64ProRegular', monospace;
+    color: #fff;
+}
+
+#overlay h1 {
+    font-size: 28px;
+    color: #DFF60A;
+    margin-bottom: 18px;
+    letter-spacing: 2px;
+}
+
+#overlay p {
+    font-size: 14px;
+    color: #aaa;
+    margin: 6px 0;
+}
+
+.subtext {
+    font-size: 11px;
+    color: #777;
+    max-width: 760px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.btn {
+    margin: 10px;
+    padding: 14px 32px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: bold;
+    background: #a00;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn:hover {
+    background: #c00;
+}
+
+.btn.blue {
+    background: #15c;
+}
+
+.btn.blue:hover {
+    background: #27e;
+}
+
+.btn.green {
+    background: #1f8f1f;
+}
+
+.btn.green:hover {
+    background: #27b327;
+}
+
+.btn.dark {
+    background: #333;
+}
+
+.btn.dark:hover {
+    background: #555;
+}
+
+#status {
+    font-size: 13px;
+    color: #59FE59;
+    margin-top: 18px;
+    min-height: 20px;
+}
+
+#status.error {
+    color: #ff7070;
+}
+
+#hud {
+    position: fixed;
+    z-index: 400;
+    top: 5px;
+    right: 10px;
+    font-family: 'C64ProRegular', monospace;
+    font-size: 12px;
+    color: #DFF60A;
+    pointer-events: none;
+}
+
+#controls-hint {
+    position: fixed;
+    z-index: 400;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'C64ProRegular', monospace;
+    font-size: 10px;
+    color: #555;
+    pointer-events: none;
+}
+
+/* Private room share panel */
+#mp-share-panel {
+    margin-top: 16px; text-align: center;
+    animation: mp-share-fadein 0.5s ease-out;
+}
+@keyframes mp-share-fadein {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.mp-share-code {
+    font-size: 2.2rem; font-weight: bold; color: #ff0;
+    letter-spacing: 0.3em; font-family: 'C64Pro', monospace;
+    text-shadow: 0 0 10px rgba(255,255,0,0.4);
+    margin-bottom: 6px;
+}
+.mp-share-label {
+    font-size: 0.75rem; color: #888; letter-spacing: 0.1em;
+    margin-bottom: 10px;
+}
+.mp-share-buttons {
+    display: flex; gap: 10px; justify-content: center;
+}
+.mp-share-buttons .share-btn {
+    display: inline-block; padding: 6px 14px;
+    font-family: 'C64Pro', monospace; font-size: 0.7rem;
+    color: #fff; border: 1px solid #555; background: #222;
+    cursor: pointer; text-decoration: none; letter-spacing: 0.1em;
+    transition: background 0.15s, border-color 0.15s;
+}
+.mp-share-buttons .share-btn:hover {
+    background: #444; border-color: #aaa;
+}
+.mp-share-buttons .share-twitter { border-color: #1da1f2; }
+.mp-share-buttons .share-twitter:hover { background: #1da1f2; }
+.mp-share-waiting {
+    margin-top: 12px; font-size: 0.7rem; color: #0f0;
+    animation: mp-blink 1.5s infinite alternate;
+}
+@keyframes mp-blink {
+    from { opacity: 0.4; } to { opacity: 1; }
+}

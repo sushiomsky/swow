@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Wizard Of Wor — browser-based arcade game platform with singleplayer and multiplayer modes.">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="index,follow">
+    <link rel="stylesheet" href="/frontend/styles/shared.css">
+    <link rel="stylesheet" href="/frontend/styles/platform.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="preload" href="/images/v3.0/sprite.png" as="image">
+    <link rel="modulepreload" href="/frontend/game/singleplayer/App.js">
+    <title>Wizard Of Wor</title>
+    <meta property="og:title" content="Wizard Of Wor">
+    <meta property="og:type" content="game">
+    <meta property="og:url" content="https://wizardofwor.duckdns.org/">
+    <meta property="og:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+    <meta property="og:site_name" content="Wizard Of Wor">
+    <meta property="og:description" content="Play the legendary 1983 arcade game in your browser — singleplayer or multiplayer. No install, no signup, just play!">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Wizard Of Wor — Free Browser Arcade">
+    <meta name="twitter:description" content="Score big in this classic 1983 arcade game. Challenge your friends!">
+    <meta name="twitter:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+</head>
+<body>
+    <!-- Main menu overlay — shown when no game mode is active -->
+    <div id="main-menu">
+        <h1>WIZARD OF WOR</h1>
+        <p class="subtitle">Browser Arcade — Play Instantly</p>
+
+        <button class="menu-play" id="menu-sp-1p">▶ PLAY</button>
+        <p class="menu-play-hint">Press SPACE or ENTER</p>
+
+        <div class="menu-secondary">
+            <button class="menu-btn-sm green" id="menu-sp-2p">2 PLAYER</button>
+            <button class="menu-btn-sm blue" id="menu-mp">🌐 ONLINE</button>
+            <button class="menu-btn-sm dark" id="menu-handbook">📖 HELP</button>
+        </div>
+
+        <div class="menu-footer">
+            <a href="/community" target="_blank">Community</a>
+            <span class="menu-keys">SPACE · 2 · M · H</span>
+        </div>
+    </div>
+
+    <!-- Game root — modes inject their DOM here -->
+    <div id="game-root"></div>
+
+    <script>
+        // Signal to mode modules that they should NOT auto-init
+        window.__SWOW_PLATFORM__ = true;
+    </script>
+    <script type="module">
+        import { Platform } from '/frontend/app/Platform.js';
+        const platform = new Platform();
+        platform.init();
+        window.__platform = platform;
+    </script>
+</body>
+</html>

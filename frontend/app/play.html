@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Wizard Of Wor — play instantly in your browser. No install, no signup.">
+    <link rel="stylesheet" href="/frontend/styles/shared.css">
+    <link rel="stylesheet" href="/frontend/app/play.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="preload" href="/images/v3.0/sprite.png" as="image">
+    <link rel="modulepreload" href="/frontend/game/singleplayer/App.js">
+    <link rel="modulepreload" href="/frontend/app/EngineController.js">
+    <title>Wizard Of Wor — PLAY</title>
+    <meta property="og:title" content="Wizard Of Wor — Play Now">
+    <meta property="og:type" content="game">
+    <meta property="og:url" content="https://wizardofwor.duckdns.org/">
+    <meta property="og:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+    <meta property="og:description" content="Play the legendary 1983 arcade game in your browser — no install, no signup, just play!">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Wizard Of Wor — Play Now">
+    <meta name="twitter:description" content="Score big in this classic 1983 arcade game. Click and play instantly!">
+    <meta name="twitter:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+</head>
+<body>
+    <!-- Live game background (spectator view) -->
+    <canvas id="background-game-canvas"></canvas>
+    
+    <!-- Active Games Panel (sidebar) -->
+    <div id="active-games-container"></div>
+    
+    <!-- Arcade title overlay — shown until player starts -->
+    <div id="play-overlay">
+        <h1 class="play-title">WIZARD<br>OF WOR</h1>
+        <div class="play-insert">INSERT COIN</div>
+        
+        <!-- Classic Modes -->
+        <div class="play-mode-section">
+            <div class="play-mode-label">CLASSIC</div>
+            <button class="play-btn play-btn-primary" id="btn-play">▶ PLAY</button>
+            <div class="play-secondary-row">
+                <button class="play-btn-sm green" id="btn-2p">2 PLAYER</button>
+            </div>
+        </div>
+        
+        <!-- Battle Royale Modes -->
+        <div class="play-mode-section">
+            <div class="play-mode-label">BATTLE ROYALE</div>
+            <p class="mode-desc">Connected dungeons. Invade through tunnels. Survive the longest.</p>
+            
+            <button class="play-btn-br" id="btn-br-endless">
+                <span class="btn-icon">⚔</span>
+                <span class="btn-label">ENDLESS BR</span>
+                <span class="btn-hint">Join anytime • Solo + Bot</span>
+            </button>
+            
+            <button class="play-btn-br-sm" id="btn-br-sitngo">
+                <span class="btn-icon">⏱</span>
+                <span class="btn-label">SIT-N-GO</span>
+                <span class="btn-hint">Queue start • 2-8 players</span>
+            </button>
+            
+            <div class="play-br-team-row">
+                <button class="play-btn-br-sm purple" id="btn-team-endless">
+                    <span class="btn-icon">🛡</span>
+                    <span class="btn-label">TEAM ENDLESS</span>
+                    <span class="btn-hint">2 players share dungeon</span>
+                </button>
+                <button class="play-btn-br-sm blue" id="btn-team-sitngo">
+                    <span class="btn-icon">🛡</span>
+                    <span class="btn-label">TEAM SIT-N-GO</span>
+                    <span class="btn-hint">Queued team start</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Private Match -->
+        <div class="play-mode-section">
+            <div class="play-mode-label">PRIVATE</div>
+            <p class="mode-desc">Classic 2-player co-op with shareable link.</p>
+            <button class="play-btn-private" id="btn-multi">
+                <span class="btn-icon">🔗</span>
+                <span class="btn-label">CREATE ROOM</span>
+            </button>
+        </div>
+        
+        <div class="play-hint">SPACE · 2 · M · B · P</div>
+        <div class="play-footer"><a href="/platform">← Full Site</a></div>
+    </div>
+
+    <!-- Game root — mode DOM injected here -->
+    <div id="game-root"></div>
+
+    <script>window.__SWOW_PLATFORM__ = true;</script>
+    <script type="module" src="/frontend/app/EngineController.js"></script>
+    <script type="module" src="/frontend/app/play.js"></script>
+</body>
+</html>

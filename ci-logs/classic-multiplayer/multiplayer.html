@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Wizard Of Wor — Multiplayer</title>
+    <link rel="stylesheet" href="/frontend/styles/shared.css">
+    <link rel="stylesheet" href="/frontend/styles/multiplayer.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+</head>
+<body>
+    <div id="overlay">
+        <h1>WIZARD OF WOR</h1>
+        <p>Connected Dungeons — Multiplayer</p>
+        <p class="subtext">Choose a mode: endless BR, sit-n-go BR, team BR, or private 2-player classic with a shareable link.</p>
+        <div style="margin-top:20px;">
+            <button class="btn" id="btnSolo">▶ ENDLESS BR (join anytime)</button>
+            <button class="btn blue" id="btnSitNGo">⏱ SIT-N-GO BR (queued start)</button>
+            <button class="btn green" id="btnTeamBr">🛡 TEAM BR (gold vs blue)</button>
+            <button class="btn blue" id="btnPairCreate">🔗 CREATE PRIVATE CLASSIC</button>
+            <div style="margin-top: 12px;">
+                <input id="pairCode" type="text" maxlength="12" placeholder="Private code"
+                    style="padding: 10px 12px; font-family: inherit; width: 240px; text-transform: uppercase; letter-spacing: 2px;">
+                <button class="btn" id="btnPairJoin">JOIN PRIVATE</button>
+            </div>
+            <button class="btn green hide" id="btnRetry">↻ RETRY LAST MODE</button>
+        </div>
+        <div id="status" role="status" aria-live="polite"></div>
+        <p style="margin-top:30px; font-size:11px; color:#555;">
+            <b>Endless BR:</b> join anytime, get your own dungeon and invade through tunnels.<br>
+            <b>Sit-n-Go BR:</b> waits for enough players, then starts a closed ring of linked dungeons.<br>
+            <b>Team BR:</b> players auto-balance between gold and blue teams.<br>
+            <b>Private Classic:</b> host creates a private code/link and shares it with one friend.
+        </p>
+        <p style="margin-top:16px; font-size:11px;">
+            <a href="/public/handbook.html" target="_blank" style="color:#6c5eb5; text-decoration:none;">📖 Game Handbook &amp; Reference</a>
+        </p>
+    </div>
+
+    <div id="body">
+        <div id="border">
+            <canvas id="screen" width="960" height="600" class="hide" moz-opaque></canvas>
+            <canvas id="visualFilterLayer" width="960" height="600"></canvas>
+        </div>
+    </div>
+    <img src="/images/v4.0/noise.png" id="crtNoise" class="hide">
+    <span style="font-family:WizardOfWor"></span>
+
+    <div id="hud" class="hide">
+        <span id="hud-dungeon"></span>
+    </div>
+    <div id="controls-hint">
+        ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu
+    </div>
+    <button id="settingsToggler" type="button">⚙ Settings</button>
+    <section id="settingsPanel" class="hide">
+        <h2>Gameplay Settings</h2>
+        <label>
+            Controls
+            <select id="settingControls">
+                <option value="keyboard">Keyboard</option>
+                <option value="gamepad0">Gamepad #1</option>
+                <option value="gamepad1">Gamepad #2</option>
+            </select>
+        </label>
+        <div class="control-grid">
+            <button type="button" id="settingControlUp">UP: -</button>
+            <button type="button" id="settingControlDown">DOWN: -</button>
+            <button type="button" id="settingControlLeft">LEFT: -</button>
+            <button type="button" id="settingControlRight">RIGHT: -</button>
+            <button type="button" id="settingControlFire">FIRE: -</button>
+        </div>
+        <label>
+            Visual filter
+            <select id="settingVisualFilter">
+                <option value="none">None</option>
+                <option value="scanlines">Scan lines</option>
+                <option value="bwTv">Black and white TV</option>
+                <option value="colorTv">Color TV</option>
+                <option value="greenC64monitor">Green C64 monitor</option>
+            </select>
+        </label>
+        <label>
+            Sound
+            <select id="settingSound">
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </label>
+        <p class="help">Settings apply immediately during gameplay and are saved for future sessions.</p>
+    </section>
+
+    <script type="module" src="/frontend/game/multiplayer/client/MultiplayerApp.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+
+> wow-community-api@1.0.0 check
+> node --check src/index.js
+

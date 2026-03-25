@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectate — Wizard of Wor</title>
+    <link rel="stylesheet" href="/frontend/styles/shared.css">
+    <link rel="stylesheet" href="/frontend/styles/spectator.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div id="spectator-container">
+        <div id="spectator-header">
+            <span class="spectator-label">👁 SPECTATING</span>
+            <span id="dungeon-info"></span>
+            <a href="/play" class="back-btn">← BACK TO LOBBY</a>
+        </div>
+        
+        <canvas id="spectator-canvas"></canvas>
+        
+        <div id="spectator-overlay" class="overlay">
+            <div class="overlay-content">
+                <p id="overlay-message">Connecting to game...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load game assets and spectator client -->
+    <script type="module">
+        import { SpectatorClient } from '/frontend/app/SpectatorClient.js';
+        
+        // Initialize spectator on page load
+        const urlParams = new URLSearchParams(window.location.search);
+        const dungeonId = urlParams.get('dungeon');
+        
+        if (!dungeonId) {
+            document.getElementById('overlay-message').textContent = 'Error: No dungeon ID specified';
+        } else {
+            const spectator = new SpectatorClient(dungeonId);
+            window.spectator = spectator;
+            spectator.connect();
+        }
+    </script>
+</body>
+</html>

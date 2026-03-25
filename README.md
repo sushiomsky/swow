@@ -14,6 +14,13 @@ npm start          # Plain Node.js static server — http://localhost:8080
 npm run multiplayer  # Authoritative multiplayer server — http://localhost:5001/multiplayer.html
 ```
 
+The root URL (`/`) serves the unified platform — a main menu with mode selection:
+- **1 Player Classic** / **2 Player Classic** — starts the original singleplayer game
+- **Multiplayer Arena** — opens the multiplayer lobby (endless BR, sit-n-go, team BR, private match)
+- **Game Handbook** — opens the reference guide
+
+Standalone entry points are still available at `/index.html` (singleplayer) and `/multiplayer.html` (multiplayer) for backward compatibility.
+
 ## One-command production deployment (IaC)
 
 This repo now ships a full Docker Compose stack (game web, authoritative multiplayer server, and TLS reverse proxy via Caddy).
@@ -62,7 +69,7 @@ Security defaults:
 
 ### Community routes
 
-- `/` — website landing with navigation, account auth panel, and global chat
+- `/` — unified platform menu (singleplayer/multiplayer mode selection)
 - `/community` — community UI
 - `/community/profile/:username` — player profile
 - `/community/leaderboards` — global/season leaderboard page
@@ -153,8 +160,10 @@ You can run reusable local "agents" to keep development and operations consisten
 - `npm run agent:quality` — community API check + integration tests + community web build
 - `npm run agent:smoke` — smoke checks for classic web, multiplayer, community API, and community web
 - `npm run agent:performance` — multiplayer load probe via `scripts/multiplayer-load-test.js`
+- `npm run agent:ux` — route and UX landmark checks (header/footer/main, landing sections, active-games contract)
+- `npm run agent:design` — design consistency checks (card density, hero presence, shared layout framing)
 - `npm run agent:ops` — runtime status + public endpoint diagnostics
-- `npm run agent:release` — full pipeline (`quality` + `smoke` + `performance` + `ops`)
+- `npm run agent:release` — full pipeline (`quality` + `smoke` + `ux` + `design` + `performance` + `ops`)
 
 Equivalent Make targets are available (`make agent-quality`, `make agent-release`, etc.).
 
@@ -163,6 +172,8 @@ Agent runner:
 - `scripts/agents/run-agent.sh`
 - logs are stored in `ci-logs/agents/<timestamp>-<agent>/`
 - `agent:smoke` requires `COMMUNITY_DATABASE_URL` and `COMMUNITY_REDIS_URL` in your environment
+- `agent:ux` / `agent:design` auto-start a temporary `community-web` server on `:13000` if not already running
+- `agent:ux` checks `/multiplayer/active-games` against `http://127.0.0.1:5001` by default (override with `UX_ACTIVE_GAMES_BASE_URL`)
 
 ---
 
@@ -366,24 +377,50 @@ Both players are controlled locally from the same browser tab. Open two tabs (or
 ## Project structure
 
 ```
-index.html          single-player entry point (all CSS inline, loads src/App.js)
-multiplayer.html    multiplayer entry point (loads src/client/MultiplayerApp.js)
-src/                ES module source (the active game code)
-  App.js            single-player bootstrap
-  constants.js      sprite atlas, dungeon layouts, palettes, keycodes
-  utils.js          shared drawing helpers and utilities
-  engine/           GameEngine — scene state machine, collision, scoring
-  entities/         Player, Monster, Bullet — game entity logic
-  audio/            AudioEngine — Web Audio API wrapper
-  ui/               UIManager — DOM menu wiring, fullscreen, options
-  server/           Authoritative multiplayer server modules (Node.js / CommonJS)
-  client/           Multiplayer client renderer (ES modules, browser)
-js/v5.0/w.js        original unpacked+patched source (reference only)
-patch.js            one-time unpack/patch script (already run — do not re-run)
-server.js           Node.js static file server (single-player)
-server-multiplayer.js  Node.js HTTP + WebSocket server (multiplayer)
-audio/v2.0/         .ogg sound effects (22 files)
-images/             sprite sheet, CRT noise texture, UI assets
-fonts/v2.0/         WizardOfWor and C64Pro web fonts
-public/             static assets served by Vite (handbook, etc.)
+/                        unified platform entry (platform.html — mode selection menu)
+frontend/
+  app/                   platform layer
+    Platform.js          central controller — mode state machine, DOM injection, CSS lifecycle
+    platform.html        unified HTML shell (main menu + game-root container)
+  game/
+    singleplayer/        classic singleplayer game
+      App.js             bootstrap — lifecycle-controlled via initSingleplayer/destroySingleplayer
+      engine/            GameEngine — scene state machine, collision, scoring
+      entities/          Player, Monster, Bullet — game entity logic
+      audio/             AudioEngine — Web Audio API wrapper
+      ui/                UIManager — DOM menu wiring, fullscreen, options
+    multiplayer/
+      client/            browser client — renderer, socket, input, settings, lobby UI
+      server/            authoritative server — game loop, dungeon lifecycle, WS handling
+    shared/              code shared between singleplayer and multiplayer
+      constants.js       sprite atlas, dungeon layouts, palettes, keycodes
+      utils.js           drawing helpers and utilities
+      input/             SharedControlsRuntime — keyboard/gamepad bindings, remapping
+  styles/                extracted CSS
+    shared.css           fonts, resets, canvas, visual filter (shared across all modes)
+    platform.css         main menu overlay, loading indicator, floating back button
+    singleplayer.css     singleplayer slide-out menu and chrome
+    multiplayer.css      multiplayer overlay, lobby, settings, HUD
+index.html               standalone singleplayer entry (backward compat)
+multiplayer.html         standalone multiplayer entry (backward compat)
+js/v5.0/w.js             original unpacked+patched source (reference only)
+patch.js                 one-time unpack/patch script (already run — do not re-run)
+server.js                Node.js static server + WS proxy (singleplayer + platform)
+server-multiplayer.js    Node.js HTTP + WebSocket server (multiplayer)
+audio/v2.0/              .ogg sound effects (22 files)
+images/                  sprite sheet, CRT noise texture, UI assets
+fonts/v2.0/              WizardOfWor and C64Pro web fonts
+public/                  static assets served by Vite (handbook, etc.)
+```
+
+### Platform architecture
+
+```
+/  →  platform.html  →  Platform.js (mode state machine)
+                          ├→ MENU          main menu overlay
+                          ├→ SINGLEPLAYER  injects SP DOM + lazy-loads App.js → initSingleplayer()
+                          └→ MULTIPLAYER   injects MP DOM + lazy-loads MultiplayerApp.js → initMultiplayer()
+
+Mode switching:  teardown current → remove DOM + CSS → inject new DOM + CSS → init module
+No page reload required between modes.
 ```
