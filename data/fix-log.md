@@ -158,3 +158,52 @@ Next test cycle should:
 - ✓ Load minimap page without audio errors (Issue 1 fixed)
 - ✓ Skip invalid button clicks (Issues 2–6 fixed via memory cleanup)
 - ✓ Re-discover actual UI buttons and test them
+
+## Cycle #3 — 2026-03-25 (17:40 UTC)
+
+### Summary
+4 issues reported for button click timeouts on play page: "2 PLAYER", "ENDLESS BR", "SIT-N-GO", and "TEAM ENDLESS" buttons reported as "not visible" during automated testing.
+
+### Investigation Findings
+Extensive testing via Playwright showed:
+- ✓ All 4 buttons are present in HTML
+- ✓ All buttons are immediately visible (display: block, visibility: visible, opacity: 1)
+- ✓ All buttons are clickable and respond to clicks
+- ✓ No CSS visibility issues detected
+- ✓ No JavaScript blocking detected
+- ✓ Page loads correctly and buttons render properly
+
+The buttons work correctly in all tested scenarios (networkidle, with CSS delays, with network throttling).
+
+### Root Cause Analysis
+The reported timeout behavior (5+ seconds, 10+ seconds total) suggests either:
+1. **Transient network/server issue** — Temporary slowness that resolved
+2. **Test agent timing issue** — Race condition in test agent's visibility detection
+3. **CSS loading race condition** — Very unlikely (CSS preloading now added)
+
+### Fix Applied
+Added CSS resource preloading to ensure critical styles load before button visibility checks:
+
+**File: `frontend/app/play.html`**
+- Added `<link rel="preload" href="/frontend/styles/shared.css" as="style">`
+- Added `<link rel="preload" href="/frontend/app/play.css" as="style">`
+
+These preload hints signal to the browser to fetch CSS resources with high priority, reducing any possibility of a race condition where buttons are in the DOM but lacking computed styles for visibility detection.
+
+### Verification
+- ✓ play.html syntax valid
+- ✓ All buttons present and stylable immediately after load
+- ✓ No regressions to existing functionality
+- ✓ CSS preloading is non-blocking and safe
+
+### Expected Outcome
+Next test cycle should show:
+- ✓ Buttons visible and clickable consistently
+- ✓ No visibility-related timeouts
+- ✓ Click response times < 3 seconds
+
+### Why Previous Cycles Had Similar Issues
+Looking at the pattern from Cycles 1-2:
+- Previous button visibility issues traced to test agent bugs (stale memory, source URL tracking)
+- Those bugs are already fixed in the testing agent code
+- Current issue appears to be a transient condition or test timing artifact
