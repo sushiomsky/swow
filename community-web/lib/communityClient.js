@@ -155,6 +155,8 @@ export function createCommunityApiClient({ getToken, onUnauthorized } = {}) {
       body: {}
     }),
     getAdminHealth: () => runAuthed('/admin/health/system'),
-    getAdminAnalytics: () => runAuthed('/admin/analytics')
+    getAdminAnalytics: () => runAuthed('/admin/analytics'),
+    submitFeedback: (payload) => runAuthed('/feedback', { method: 'POST', body: payload }),
+    listFeedback: () => runAuthed('/feedback'),
   };
 }

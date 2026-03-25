@@ -16,6 +16,7 @@ import notificationsRoutes from './routes/notifications.js';
 import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import forumRoutes from './routes/forum.js';
+import feedbackRoutes from './routes/feedback.js';
 import { attachCommunitySocket } from './socket.js';
 import { setRealtimeIO } from './realtime.js';
 import { createApiRateLimiter } from './middleware/rateLimit.js';
@@ -61,6 +62,11 @@ const adminRateLimiter = createApiRateLimiter({
   windowMs: 60 * 1000,
   max: 45
 });
+const feedbackRateLimiter = createApiRateLimiter({
+  scope: 'feedback',
+  windowMs: 15 * 60 * 1000,
+  max: 10
+});
 
 app.get('/health', async (_req, res) => {
   try {
@@ -82,6 +88,7 @@ app.use('/api/community/notifications', notificationsRoutes);
 app.use('/api/community/chat', chatRateLimiter, chatRoutes);
 app.use('/api/community/admin', adminRateLimiter, adminRoutes);
 app.use('/api/community/forum', forumRateLimiter, forumRoutes);
+app.use('/api/community/feedback', feedbackRateLimiter, feedbackRoutes);
 
 app.use((err, req, res, _next) => {
   logError('http_error', err, {
