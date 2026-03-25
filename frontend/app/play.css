@@ -34,11 +34,14 @@ html, body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: safe center;
     background: rgba(0, 0, 0, 0.82);
     font-family: 'C64ProRegular', monospace;
     color: #fff;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 20px 0;
+    box-sizing: border-box;
 }
 #play-overlay.hide { display: none; }
 

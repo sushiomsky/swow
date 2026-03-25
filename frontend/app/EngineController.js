@@ -33,8 +33,12 @@ class EngineController {
         this._initPromise = null;
         this._listeners = {};
         
-        // Auto-initialize
-        this._autoInit();
+        // Defer auto-initialization until the page is idle to avoid
+        // aborting in-flight module fetches during automated test page loads.
+        const defer = typeof requestIdleCallback === 'function'
+            ? cb => requestIdleCallback(cb, { timeout: 2000 })
+            : cb => setTimeout(cb, 100);
+        defer(() => this._autoInit());
     }
     
     async _autoInit() {

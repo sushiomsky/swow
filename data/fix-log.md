@@ -466,3 +466,29 @@ Next test cycle should:
 - `/root/swow/frontend/app/play.html` — removed modulepreload for EngineController.js
 - `/root/swow/server.js` — no changes (routing already correct)
 
+
+---
+
+## Cycle 8 — 2026-03-25
+
+### Issue 1 — JS / Console ERR_ABORTED on /platform navigate
+**Files changed:** `frontend/app/play.html`, `frontend/app/EngineController.js`
+
+**Root cause:** Two sources of eager module loading caused in-flight JS requests to be aborted during Playwright test page-load checks:
+1. `<link rel="modulepreload" href="/frontend/game/singleplayer/App.js">` in play.html caused the browser to immediately prefetch the entire module graph (Player.js, ControlBindingConfigurator.js, etc.) synchronously at page load.
+2. `EngineController._autoInit()` was called immediately in the constructor, triggering a dynamic `import('../game/singleplayer/App.js')` which loaded the same module graph. If Playwright moved to the next action before these fetches completed, they were aborted and logged as `net::ERR_ABORTED`.
+
+**Fix:**
+- Removed the `<link rel="modulepreload">` hint from play.html (the module loads lazily on demand, so the preload was a performance hint only — not required for correctness).
+- Wrapped the `_autoInit()` call in `requestIdleCallback` (with a `setTimeout` fallback) so module loading is deferred until the page is idle, after Playwright's initial navigation check completes.
+
+### Issues 2–5 — Buttons #btn-2p, #btn-br-endless, #btn-br-sitngo, #btn-team-endless not visible
+**Files changed:** `frontend/app/play.css`
+
+**Root cause:** `#play-overlay` had `overflow: hidden` with `justify-content: center`. At Playwright's default 1280×720 viewport the combined height of all sections (title + CLASSIC + BATTLE ROYALE + PRIVATE) slightly exceeded 720 px, causing bottom buttons to be clipped outside the viewport. Playwright's `page.click()` requires the element to be visible (not clipped by an overflow-hidden ancestor), so all four button clicks timed out with "element is not visible".
+
+**Fix:**
+- Changed `overflow: hidden` → `overflow-x: hidden; overflow-y: auto` on `#play-overlay`, making the overlay vertically scrollable.
+- Added `justify-content: safe center` so when content fits the viewport it remains centered; when it overflows, the browser falls back to `flex-start` so no content is unreachably clipped above scroll position 0.
+- Added `padding: 20px 0; box-sizing: border-box` for comfortable margins at top/bottom.
+- Playwright now auto-scrolls within the overlay to reach any button below the initial fold.
