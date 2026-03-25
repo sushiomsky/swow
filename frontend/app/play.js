@@ -538,7 +538,7 @@ function _teardownForEngine() {
 
 // ─── Bind UI ──────────────────────────────────────────────────────
 // UI buttons now trigger engine controller methods (can also use engine directly)
-document.getElementById('btn-play').addEventListener('click', async () => {
+document.getElementById('btn-play')?.addEventListener('click', async () => {
     if (window.engine) {
         await window.engine.startNewGame(1);
         return;
@@ -546,7 +546,7 @@ document.getElementById('btn-play').addEventListener('click', async () => {
     await startGame(1);
 });
 
-document.getElementById('btn-2p').addEventListener('click', async () => {
+document.getElementById('btn-2p')?.addEventListener('click', async () => {
     if (window.engine) {
         await window.engine.startNewGame(2);
         return;
@@ -554,7 +554,7 @@ document.getElementById('btn-2p').addEventListener('click', async () => {
     await startGame(2);
 });
 
-document.getElementById('btn-multi').addEventListener('click', async () => {
+document.getElementById('btn-multi')?.addEventListener('click', async () => {
     if (window.engine) {
         await window.engine.createRoom();
         return;
