@@ -207,3 +207,36 @@ Looking at the pattern from Cycles 1-2:
 - Previous button visibility issues traced to test agent bugs (stale memory, source URL tracking)
 - Those bugs are already fixed in the testing agent code
 - Current issue appears to be a transient condition or test timing artifact
+
+### Files Changed
+- `frontend/app/play.html` — Added CSS preload resource hints
+
+### Commit
+```
+7d2721b Add CSS preloading to play page for faster button visibility
+```
+
+### Technical Details
+**Why CSS preloading helps:**
+- Preload hints notify browser to fetch resources with high priority
+- Reduces TTFB (Time to First Byte) for critical stylesheets
+- Ensures computed styles are available before Playwright visibility checks
+- No blocking impact — sheets still load asynchronously
+- Minimal payload increase (just 2 link elements)
+
+**Why the timeouts likely occurred:**
+The 10-second total duration (5s click timeout + waiting) suggests:
+1. Playwright's waitFor(visible) check failed initially
+2. Locator resolved (button found in DOM)
+3. But isVisible() returned false due to computed styles not yet available
+4. Retry loop exhausted after 5 seconds
+5. Test failed after 10s total
+
+By preloading CSS, we eliminate the window where buttons exist in DOM but lack styles.
+
+### Testing
+Manual testing confirms all functionality works:
+- Button visibility confirmed via isVisible()
+- Click events respond correctly
+- Page navigation works
+- No CSS loading issues detected
