@@ -15,7 +15,13 @@ export class ActiveGamesList {
     }
     
     async init() {
+        // Render loading state immediately (shows placeholder buttons)
+        this.renderLoading();
+        
+        // Fetch games in the background
         await this.fetchGames();
+        
+        // Render actual games or empty state
         this.render();
         this.startPolling();
     }
@@ -50,6 +56,38 @@ export class ActiveGamesList {
     destroy() {
         this.stopPolling();
         this.container.innerHTML = '';
+    }
+    
+    renderLoading() {
+        if (!this.container) return;
+        
+        let html = '<div class="active-games-panel">';
+        html += '<div class="active-games-header">';
+        html += '<div class="active-games-title">🎮 ACTIVE GAMES</div>';
+        html += '<div class="active-games-count loading-pulse">Loading…</div>';
+        html += '</div>';
+        html += '<div class="active-games-list loading-state">';
+        
+        // Render 3 placeholder game cards with skeleton buttons
+        for (let i = 1; i <= 3; i++) {
+            html += '<div class="game-card loading-card">';
+            html += '<div class="game-mode loading-pulse">ENDLESS BR</div>';
+            html += '<div class="game-stats">';
+            html += '<span class="stat loading-pulse">2 players</span>';
+            html += '<span class="stat-sep">•</span>';
+            html += '<span class="stat loading-pulse">1 dungeon</span>';
+            html += '</div>';
+            html += '<div class="game-actions">';
+            html += `<button class="game-btn spectate-btn loading-pulse" data-dungeon-id="placeholder-${i}">👁 SPECTATE</button>`;
+            html += `<button class="game-btn join-btn loading-pulse" data-mode="endless">JOIN</button>`;
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        this.container.innerHTML = html;
     }
     
     render() {
