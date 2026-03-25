@@ -19,6 +19,9 @@ const { TeamBRQueue } = require('./TeamBRQueue');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
+const BOT_SEED_INITIAL_DELAY_MS = 15 * 1000;
+const BOT_SEED_INTERVAL_MS = 60 * 1000;
+const TARGET_DUNGEONS_PER_MODE = 4;
 
 let nextPlayerId = 1;
 
@@ -48,9 +51,11 @@ class GameServer {
         this.sitNGoQueue = new SitNGoQueue(this);
         this.teamEndlessQueue = new TeamBRQueue(this, 'team-endless');
         this.teamSitNGoQueue = new TeamBRQueue(this, 'team-sitngo');
+        this._backgroundTimers = [];
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
+        this._scheduleBackgroundBattleRoyaleBots();
         console.log(`[GameServer] started at ${TICK_MS}ms/tick`);
         console.log(`[GameServer] Battle Royale mode: ${this.battleRoyaleMode ? 'ENABLED' : 'DISABLED'}`);
         console.log('[GameServer] BR Queues initialized: Endless, Sit-n-Go, Team Endless, Team Sit-n-Go');
@@ -301,6 +306,7 @@ class GameServer {
     }
 
     onDungeonDestroyed(dungeonId) {
+        this.removeBotsFromDungeon(dungeonId);
         this.dungeons.delete(dungeonId);
         
         // NEW: Remove from graph if battle royale mode
@@ -558,18 +564,94 @@ class GameServer {
             const players = dungeon.players.filter((player) => player.id !== null);
             if (!players.length) continue;
             const waitingPrivateLobby = this._hasWaitingPrivateLobby(dungeonId);
+            const mode = this._toSnapshotMode(dungeon.matchMode);
             games.push({
                 dungeon_id: dungeonId,
+                mode,
                 status: waitingPrivateLobby ? 'waiting_for_partner' : 'in_progress',
                 player_count: players.length,
                 max_players: 2,
+                joinable: !waitingPrivateLobby && ['endless', 'sitngo', 'team-endless', 'team-sitngo'].includes(mode),
+                created_at: dungeon.createdAt,
+                players: players.map((player) => ({
+                    id: player.id,
+                    isBot: !!player.isBot,
+                })),
             });
         }
         return {
             total_games: games.length,
             total_players: games.reduce((sum, g) => sum + g.player_count, 0),
+            queued_sitngo_players: this.sitNGoQueue ? this.sitNGoQueue.getWaitingCount() : 0,
+            queued_team_sitngo_players: this.teamSitNGoQueue ? (this.teamSitNGoQueue.waitingPlayers ? this.teamSitNGoQueue.waitingPlayers.size : 0) : 0,
             games,
         };
+    }
+
+    _scheduleBackgroundBattleRoyaleBots() {
+        const schedule = (delayMs, intervalMs, callback) => {
+            const timeoutId = setTimeout(() => {
+                callback();
+                const intervalId = setInterval(callback, intervalMs);
+                this._backgroundTimers.push(intervalId);
+            }, delayMs);
+            this._backgroundTimers.push(timeoutId);
+        };
+
+        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedEndlessBattleRoyaleBots());
+        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedSitNGoBattleRoyaleBots());
+        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedTeamEndlessBots());
+        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedTeamSitNGoBots());
+    }
+
+    _seedEndlessBattleRoyaleBots() {
+        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('endless_br');
+        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('endless_br');
+    }
+
+    _seedSitNGoBattleRoyaleBots() {
+        if (this.sitNGoQueue.getWaitingCount() > 0) this.sitNGoQueue.launchWithBots();
+        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('sitngo_br');
+        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('sitngo_br');
+    }
+
+    _seedTeamEndlessBots() {
+        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_endless_br');
+        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_endless_br');
+    }
+
+    _seedTeamSitNGoBots() {
+        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_sitngo_br');
+        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_sitngo_br');
+    }
+
+    _seedBotOnlyMatch(matchMode) {
+        const dungeon = this._createDungeon();
+        dungeon.matchMode = matchMode;
+        this.spawnBot(dungeon.id, 0);
+        this.spawnBot(dungeon.id, 1);
+        dungeon.startGame();
+        console.log(`[GameServer] Seeded background ${matchMode} match in dungeon ${dungeon.id}`);
+    }
+
+    _countActiveMatchesByMode(matchMode) {
+        let count = 0;
+        for (const dungeon of this.dungeons.values()) {
+            if (dungeon.lifecycleState === STATE.DESTROYED) continue;
+            if (dungeon.matchMode === matchMode) count++;
+        }
+        return count;
+    }
+
+    _toSnapshotMode(matchMode) {
+        const modes = {
+            endless_br: 'endless',
+            sitngo_br: 'sitngo',
+            team_endless_br: 'team-endless',
+            team_sitngo_br: 'team-sitngo',
+            classic_private_pair: 'private',
+        };
+        return modes[matchMode] || 'private';
     }
     
     // Get dungeon topology for mini-map visualization
@@ -638,8 +720,10 @@ class GameServer {
         this.bots.set(bot.id, bot);
 
         // Add bot as a player in the dungeon
-        const serverPlayer = new ServerPlayer(bot.id, playerSlot);
-        dungeon.players[playerSlot] = serverPlayer;
+        const serverPlayer = new ServerPlayer(playerSlot, dungeon, bot.id, dungeon.id);
+        serverPlayer.isBot = true;
+        serverPlayer.homeSlot = playerSlot;
+        dungeon.addPlayer(serverPlayer);
 
         console.log('[Bot] Spawned bot', bot.name, 'in dungeon', dungeonId, 'slot', playerSlot);
         return bot;
@@ -695,6 +779,8 @@ class GameServer {
     /** Stops the game loop and closes the WebSocket server. */
     stop() {
         clearInterval(this._loop);
+        this._backgroundTimers.forEach((timerId) => clearTimeout(timerId));
+        this._backgroundTimers = [];
         this.wss.close();
     }
 }
