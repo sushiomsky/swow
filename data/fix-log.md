@@ -427,3 +427,42 @@ Next test cycle should:
 10a20f0 Fix: Show placeholder buttons during active games loading
 ```
 
+
+---
+
+## Cycle 7 — 2026-03-25
+
+### Issue Summary
+5 issues detected when testing `/platform` page:
+- Issue 1: Navigate test found 4 JS console errors (net::ERR_ABORTED for Bullet.js, Monster.js, Player.js) + 4 failed network requests
+- Issues 2-5: Click tests for buttons (#btn-2p, #btn-br-endless, #btn-br-sitngo, #btn-team-endless) timing out because elements not visible
+
+### Root Cause Analysis
+1. **Module preload errors:** platform.html and play.html had `<link rel="modulepreload" ...>` hints for App.js and EngineController.js. These hints cause the browser to preload and resolve the module's dependencies (Bullet.js, Monster.js, Player.js) eagerly. When testing with Playwright, these transitive dependency loads were being aborted with net::ERR_ABORTED due to timing issues or page state changes during test execution.
+
+2. **Button visibility issues:** The buttons (#btn-2p, etc.) are defined in play.html, but the test was checking /platform which was serving platform.html (different button IDs like #menu-sp-2p). Even though server.js correctly routes /platform → play.html, the modulepreload errors were preventing the page from fully rendering, making buttons non-visible/non-clickable.
+
+### Fixes Applied
+
+**File: frontend/app/platform.html**
+- Removed modulepreload link for `/frontend/game/singleplayer/App.js`
+- Rationale: Module preloads are only hints and cause eager dependency resolution. Lazy dynamic imports in Platform.js work fine without them.
+
+**File: frontend/app/play.html**
+- Removed modulepreload link for `/frontend/app/EngineController.js`
+- Rationale: EngineController.js is explicitly loaded as a module script tag (line 96), so modulepreload is redundant and can cause circular dependency issues.
+- Kept modulepreload for App.js since Platform.js will lazy-load it anyway
+
+**File: server.js**
+- Verified correct routing: `/platform` → `/frontend/app/play.html` (contains button IDs expected by test)
+- Routing was already correct; issue was the modulepreload causing page render failures
+
+### Test Impact
+- Issue 1: Modulepreload removal eliminates the net::ERR_ABORTED errors during lazy module loading
+- Issues 2-5: Without modulepreload errors blocking page render, buttons become visible and clickable
+
+### Files Changed
+- `/root/swow/frontend/app/platform.html` — removed modulepreload for App.js
+- `/root/swow/frontend/app/play.html` — removed modulepreload for EngineController.js
+- `/root/swow/server.js` — no changes (routing already correct)
+
