@@ -1,0 +1,38 @@
+timestamp_utc=2026-03-25T17:18:13Z
+
+== systemd services ==
+active
+active
+active
+active
+
+== public probes ==
+HTTP/1.1 200 OK
+content-type: application/json
+cache-control: no-store
+access-control-allow-origin: *
+date: Wed, 25 Mar 2026 17:18:15 GMT
+connection: keep-alive
+keep-alive: timeout=5
+transfer-encoding: chunked
+
+{"total_games":16,"total_players":32,"queued_sitngo_players":0,"queued_team_sitngo_players":0,"games":[{"dungeon_id":"1","mode":"endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.039Z","players":[{"id":"bot-1774454321040-3222","isBot":true},{"id":"bot-1774454321041-3487","isBot":true}]},{"dungeon_id":"2","mode":"endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.041Z","players":[{"id":"bot-1774454321041-9974","isBot":true},{"id":"bot-1774454321042-7318","isBot":true}]},{"dungeon_id":"3","mode":"endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.042Z","players":[{"id":"bot-1774454321042-1422","isBot":true},{"id":"bot-1774454321042-8021","isBot":true}]},{"dungeon_id":"4","mode":"endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.042Z","players":[{"id":"bot-1774454321042-4087","isBot":true},{"id":"bot-1774454321042-6180","isBot":true}]},{"dungeon_id":"5","mode":"sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.043Z","players":[{"id":"bot-1774454321043-5709","isBot":true},{"id":"bot-1774454321043-6175","isBot":true}]},{"dungeon_id":"6","mode":"sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.043Z","players":[{"id":"bot-1774454321043-700","isBot":true},{"id":"bot-1774454321043-8408","isBot":true}]},{"dungeon_id":"7","mode":"sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.043Z","players":[{"id":"bot-1774454321043-6865","isBot":true},{"id":"bot-1774454321043-6411","isBot":true}]},{"dungeon_id":"8","mode":"sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.044Z","players":[{"id":"bot-1774454321044-1564","isBot":true},{"id":"bot-1774454321044-2032","isBot":true}]},{"dungeon_id":"9","mode":"team-endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.044Z","players":[{"id":"bot-1774454321044-9290","isBot":true},{"id":"bot-1774454321044-3427","isBot":true}]},{"dungeon_id":"10","mode":"team-endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.044Z","players":[{"id":"bot-1774454321044-7808","isBot":true},{"id":"bot-1774454321044-7648","isBot":true}]},{"dungeon_id":"11","mode":"team-endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.044Z","players":[{"id":"bot-1774454321044-3239","isBot":true},{"id":"bot-1774454321044-9940","isBot":true}]},{"dungeon_id":"12","mode":"team-endless","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.044Z","players":[{"id":"bot-1774454321044-6302","isBot":true},{"id":"bot-1774454321044-2300","isBot":true}]},{"dungeon_id":"13","mode":"team-sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.044Z","players":[{"id":"bot-1774454321044-6575","isBot":true},{"id":"bot-1774454321044-7963","isBot":true}]},{"dungeon_id":"14","mode":"team-sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.045Z","players":[{"id":"bot-1774454321045-6444","isBot":true},{"id":"bot-1774454321045-6885","isBot":true}]},{"dungeon_id":"15","mode":"team-sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.045Z","players":[{"id":"bot-1774454321045-4174","isBot":true},{"id":"bot-1774454321045-1119","isBot":true}]},{"dungeon_id":"16","mode":"team-sitngo","status":"in_progress","player_count":2,"max_players":2,"joinable":true,"created_at":"2026-03-25T15:58:41.045Z","players":[{"id":"bot-1774454321045-1145","isBot":true},{"id":"bot-1774454321045-2390","isBot":true}]}]}HTTP/1.1 404 Not Found
+content-security-policy: default-src 'none'
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+vary: Origin
+access-control-allow-credentials: true
+x-request-id: c982985d-e38e-4cdd-baa5-94fe050c3530
+content-type: text/html; charset=utf-8
+content-length: 159
+date: Wed, 25 Mar 2026 17:18:16 GMT
+connection: keep-alive

@@ -68,3 +68,34 @@ Issues 1–7 were triggered by:
 
 ### Result
 ✅ **All 7 issues are resolved** — the testing agent code is correct, memory is cleaned, and future cycles will not report false positives from outdated button labels.
+
+## Cycle #1 - WebSocket Connection Failure
+
+**Issues Fixed:** All 5 issues (1-5) - WebSocket connection failure preventing UI button rendering
+
+**Root Cause:**
+The BackgroundGameView (landing page background spectator) was constructing an invalid WebSocket URL.
+- Bug location: `frontend/app/BackgroundGameView.js:91`
+- Old code: `const wsUrl = `${protocol}//${host}`;` created `wss://wizardofwor.duckdns.org/` (no path)
+- Multiplayer server only accepts connections on `/multiplayer` path
+- This caused "Connection closed before receiving a handshake response" errors
+
+**Fix Applied:**
+- File: `frontend/app/BackgroundGameView.js`
+- Line 91: Changed `const wsUrl = `${protocol}//${host}`;` to `const wsUrl = `${protocol}//${host}/multiplayer`;`
+- Rebuilt frontend with `npx vite build`
+- Redeployed web service with `docker compose up -d --build web`
+
+**Verification:**
+- ✓ Frontend builds successfully
+- ✓ Dungeon topology API responds with active games
+- ✓ Page loads with background-game-canvas element
+- ✓ WebSocket URL now correctly targets `/multiplayer` path
+
+**Impact:**
+All 5 test failures were blocked on this single issue. Buttons were not rendering because:
+1. BackgroundGameView tries to connect to WebSocket on page load
+2. Connection fails due to wrong URL
+3. Failed connection blocks async initialization
+4. Buttons (JOIN, SPECTATE) remain hidden until connection succeeds
+
