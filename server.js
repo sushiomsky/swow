@@ -51,7 +51,7 @@ const server = http.createServer((req, res) => {
         return;
     }
     if (urlPath === '/') urlPath = '/frontend/app/play.html';
-    if (urlPath === '/platform') urlPath = '/frontend/app/platform.html';
+    if (urlPath === '/platform') urlPath = '/frontend/app/play.html';
     if (urlPath === '/play') urlPath = '/frontend/app/play.html';
     if (urlPath === '/mp') urlPath = '/multiplayer.html';
     if (urlPath === '/spectate') urlPath = '/spectate.html';
