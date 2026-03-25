@@ -26,6 +26,9 @@ class EngineController {
         this._spApp = null;
         this._mpApp = null;
         this._engine = null;
+        this._lastMpState = null;
+        this._transitioning = null;
+        this._lastMultiplayerError = null;
         
         this._initPromise = null;
         this._listeners = {};
@@ -58,125 +61,136 @@ class EngineController {
     // ─── Lifecycle Methods ────────────────────────────────────────────
     
     async startNewGame(numPlayers = 1) {
-        await this._initPromise;
-        
-        try {
-            // Tear down existing mode
-            await this._teardown();
-            
-            // Initialize SP mode
-            this.mode = 'sp';
-            this.state = 'loading';
-            this._emit('gameStarting', { numPlayers, mode: 'sp' });
-            
-            // Let UI create DOM (if play.js is loaded)
-            this._emit('startSP', { numPlayers });
-            
-            // Wait for UI to be ready (or timeout after 2s)
-            await this._waitForSPReady();
-            
-            // Start game
-            if (this._engine && this._engine.startNewGame) {
+        return this._runTransition('startNewGame', async () => {
+            await this._initPromise;
+
+            try {
+                await this._teardown();
+
+                this.mode = 'sp';
+                this.state = 'loading';
+                this.roomCode = null;
+                this.playerId = null;
+                this.playerNum = null;
+                this._lastMpState = null;
+                this._emit('gameStarting', { numPlayers, mode: 'sp' });
+                this._emit('startSP', { numPlayers });
+
+                await this._waitForSPReady();
+
+                if (!this._engine?.startNewGame) {
+                    throw new Error('Singleplayer engine not ready');
+                }
+
                 this._engine.startNewGame(numPlayers);
                 this.state = 'playing';
                 this._emit('gameStart', { numPlayers, mode: 'sp' });
-                this._emit('playing');
+                this._emit('playing', this.getState());
+                return this.getState();
+            } catch (err) {
+                console.error('[EngineController] Failed to start game:', err);
+                this.state = 'error';
+                this._emit('error', { action: 'startNewGame', message: err.message });
+                return this.getState();
             }
-            
-            return this.getState();
-        } catch (err) {
-            console.error('[EngineController] Failed to start game:', err);
-            this.state = 'error';
-            this._emit('error', { action: 'startNewGame', message: err.message });
-            return this.getState();
-        }
+        });
     }
     
     async createRoom() {
-        await this._initPromise;
-        
-        try {
-            // Tear down existing mode
-            await this._teardown();
-            
-            // Initialize MP mode
-            this.mode = 'mp';
-            this.state = 'loading';
-            this._emit('roomCreating');
-            
-            // Load MP module
-            if (!this._mpModule) {
-                this._mpModule = await import('../game/multiplayer/client/MultiplayerApp.js');
+        return this._runTransition('createRoom', async () => {
+            await this._initPromise;
+
+            try {
+                await this._teardown();
+
+                this.mode = 'mp';
+                this.state = 'loading';
+                this.roomCode = null;
+                this.playerId = null;
+                this.playerNum = null;
+                this._lastMpState = null;
+                this._lastMultiplayerError = null;
+                this._emit('roomCreating');
+
+                if (!this._mpModule) {
+                    this._mpModule = await import('../game/multiplayer/client/MultiplayerApp.js');
+                }
+
+                this._emit('startMP', { roomCode: null, autoConnect: 'create' });
+
+                await this._waitForMPReady();
+                await this._waitForEvent(
+                    'roomCode',
+                    () => this.roomCode,
+                    10000,
+                    'private room code'
+                );
+
+                this._emit('roomCreated', { roomCode: this.roomCode });
+                return this.getState();
+            } catch (err) {
+                console.error('[EngineController] Failed to create room:', err);
+                this.state = 'error';
+                this._emit('error', { action: 'createRoom', message: err.message });
+                return this.getState();
             }
-            
-            // Let UI create DOM (if play.js is loaded)
-            this._emit('startMP', { roomCode: null });
-            
-            // Wait for room creation
-            await this._waitForMPReady();
-            
-            // Emit room created event (roomCode set by _setRoomCode)
-            this.state = 'playing';
-            this._emit('roomCreated', { roomCode: this.roomCode });
-            this._emit('gameStart', { mode: 'mp', roomCode: this.roomCode });
-            this._emit('playing');
-            
-            return this.getState();
-        } catch (err) {
-            console.error('[EngineController] Failed to create room:', err);
-            this.state = 'error';
-            this._emit('error', { action: 'createRoom', message: err.message });
-            return this.getState();
-        }
+        });
     }
     
     async joinRoom(code) {
-        await this._initPromise;
-        
-        try {
-            // Tear down existing mode
-            await this._teardown();
-            
-            // Initialize MP mode
-            this.mode = 'mp';
-            this.state = 'loading';
-            this.roomCode = code;
-            this._emit('roomJoining', { roomCode: code });
-            
-            // Load MP module
-            if (!this._mpModule) {
-                this._mpModule = await import('../game/multiplayer/client/MultiplayerApp.js');
+        return this._runTransition('joinRoom', async () => {
+            await this._initPromise;
+
+            try {
+                await this._teardown();
+
+                this.mode = 'mp';
+                this.state = 'loading';
+                this.roomCode = code;
+                this.playerId = null;
+                this.playerNum = null;
+                this._lastMpState = null;
+                this._lastMultiplayerError = null;
+                this._emit('roomJoining', { roomCode: code });
+
+                if (!this._mpModule) {
+                    this._mpModule = await import('../game/multiplayer/client/MultiplayerApp.js');
+                }
+
+                this._emit('startMP', { roomCode: code, autoConnect: 'join' });
+
+                await this._waitForMPReady();
+                await this._waitForEvent(
+                    'multiplayerReady',
+                    () => this.playerId !== null && this.playerNum !== null,
+                    10000,
+                    `multiplayer init for room ${code}`
+                );
+
+                this._emit('roomJoined', { roomCode: code });
+                return this.getState();
+            } catch (err) {
+                console.error('[EngineController] Failed to join room:', err);
+                this.state = 'error';
+                this._emit('error', { action: 'joinRoom', roomCode: code, message: err.message });
+                return this.getState();
             }
-            
-            // Let UI create DOM (if play.js is loaded)
-            this._emit('startMP', { roomCode: code });
-            
-            // Wait for connection
-            await this._waitForMPReady();
-            
-            this.state = 'playing';
-            this._emit('roomJoined', { roomCode: code });
-            this._emit('gameStart', { mode: 'mp', roomCode: code });
-            this._emit('playing');
-            
-            return this.getState();
-        } catch (err) {
-            console.error('[EngineController] Failed to join room:', err);
-            this.state = 'error';
-            this._emit('error', { action: 'joinRoom', roomCode: code, message: err.message });
-            return this.getState();
-        }
+        });
     }
     
     async reset() {
-        await this._teardown();
-        this.state = 'menu';
-        this.mode = null;
-        this.roomCode = null;
-        this.playerId = null;
-        this.playerNum = null;
-        this._emit('reset');
-        return this.getState();
+        return this._runTransition('reset', async () => {
+            await this._teardown();
+            this.state = 'menu';
+            this.mode = null;
+            this.roomCode = null;
+            this.playerId = null;
+            this.playerNum = null;
+            this._lastMpState = null;
+            this._lastMultiplayerError = null;
+            this._emit('reset');
+            return this.getState();
+        });
     }
     
     // ─── State Introspection ──────────────────────────────────────────
@@ -241,17 +255,16 @@ class EngineController {
         
         if (this.mode === 'mp' && this._mpApp) {
             try {
-                // Try to get MP state
                 if (this._mpApp.session) {
                     base.playerId = this._mpApp.session.playerId;
                     base.playerNum = this._mpApp.session.playerNum;
                 }
                 
-                // Try to get last state from message controller
-                if (this._mpApp.messageEffectsController?._lastState) {
-                    const mpState = this._mpApp.messageEffectsController._lastState;
+                const mpState = this._lastMpState || this._mpApp.lastState || null;
+                if (mpState) {
                     base.scene = mpState.scene;
                     base.players = mpState.players || [];
+                    base.tick = mpState.scanFrameCounter || 0;
                 }
             } catch (err) {
                 // Ignore errors
@@ -289,10 +302,9 @@ class EngineController {
                     return true;
                 }
             } else if (this.mode === 'mp' && this._mpApp) {
-                // For MP, just send the action directly
-                // The multiplayer input system will handle it
-                if (this._mpApp.input && this._mpApp.input.sendInput) {
-                    this._mpApp.input.sendInput({ action, pressed: true });
+                const binding = this._mpApp.options?.controlBinding;
+                if (binding && this._mpApp.controlsRuntime) {
+                    this._mpApp.controlsRuntime.setHold(binding, action);
                     return true;
                 }
             }
@@ -310,20 +322,11 @@ class EngineController {
         if (!this.initialized) return;
         
         try {
-            if (this.mode === 'sp' && this._spApp && this._spApp.controlsRuntime) {
-                // Release all keys by calling clearAll or resetting pressedKeys
-                if (this._spApp.controlsRuntime.clearAllHolds) {
-                    this._spApp.controlsRuntime.clearAllHolds();
-                } else {
-                    // Fallback: manually clear
-                    const actions = ['up', 'down', 'left', 'right', 'fire'];
-                    actions.forEach(action => {
-                        this._spApp.controlsRuntime.setHold(
-                            this._spApp.getControlBinding(1),
-                            action
-                        );
-                    });
-                }
+            if (this.mode === 'sp' && this._spApp?.controlsRuntime) {
+                this._clearControlsRuntime(this._spApp.controlsRuntime);
+            }
+            if (this.mode === 'mp' && this._mpApp?.controlsRuntime) {
+                this._clearControlsRuntime(this._mpApp.controlsRuntime);
             }
         } catch (err) {
             console.error('[Engine] releaseAll error:', err);
@@ -375,31 +378,86 @@ class EngineController {
     }
     
     async _waitForSPReady() {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(), 2000); // 2s timeout
-            
-            const check = setInterval(() => {
-                if (this._spApp && this._engine) {
-                    clearInterval(check);
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            }, 50);
-        });
+        return this._waitForEvent(
+            'spReady',
+            () => this._spApp && this._engine,
+            3000,
+            'singleplayer engine'
+        );
     }
     
     async _waitForMPReady() {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(), 5000); // 5s timeout for WebSocket
-            
-            const check = setInterval(() => {
-                if (this._mpApp) {
-                    clearInterval(check);
-                    clearTimeout(timeout);
-                    resolve();
+        return this._waitForEvent(
+            'mpAppReady',
+            () => this._mpApp,
+            5000,
+            'multiplayer app bootstrap'
+        );
+    }
+
+    _runTransition(name, callback) {
+        if (this._transitioning) {
+            return Promise.reject(new Error(`Cannot start ${name} while ${this._transitioning} is in progress`));
+        }
+
+        this._transitioning = name;
+        return Promise.resolve()
+            .then(callback)
+            .finally(() => {
+                this._transitioning = null;
+            });
+    }
+
+    _waitForEvent(event, predicate, timeout, label) {
+        return new Promise((resolve, reject) => {
+            if (typeof predicate === 'function') {
+                const currentValue = predicate();
+                if (currentValue) {
+                    resolve(currentValue);
+                    return;
                 }
-            }, 50);
+            }
+
+            const cleanup = () => {
+                clearTimeout(timeoutId);
+                this.off(event, onEvent);
+                this.off('error', onError);
+            };
+
+            const onEvent = (data) => {
+                if (typeof predicate === 'function') {
+                    const currentValue = predicate(data);
+                    if (!currentValue) return;
+                    cleanup();
+                    resolve(currentValue);
+                    return;
+                }
+
+                cleanup();
+                resolve(data);
+            };
+
+            const onError = (data) => {
+                cleanup();
+                reject(new Error(data?.message || `Failed while waiting for ${label}`));
+            };
+
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Timeout waiting for ${label}`));
+            }, timeout);
+
+            this.on(event, onEvent);
+            this.on('error', onError);
         });
+    }
+
+    _clearControlsRuntime(runtime) {
+        if (!runtime) return;
+        for (const key of Object.keys(runtime.pressedKeys || {})) {
+            runtime.pressedKeys[key] = false;
+        }
+        runtime.heldGamepadInputs?.clear?.();
     }
     
     // ─── Internal Setters (called by play.js) ────────────────────────
@@ -407,6 +465,7 @@ class EngineController {
     _setSPApp(app, engine) {
         this._spApp = app;
         this._engine = engine;
+        this._emit('spReady', { app, engine });
     }
     
     _setMPApp(app) {
@@ -415,10 +474,55 @@ class EngineController {
             this.playerId = app.session.playerId;
             this.playerNum = app.session.playerNum;
         }
+        this._emit('mpAppReady', { app });
     }
     
     _setRoomCode(code) {
         this.roomCode = code;
+        this._emit('roomCode', { roomCode: code });
+    }
+
+    _setMultiplayerSession(session) {
+        if (!session) return;
+        this._lastMultiplayerError = null;
+        this.playerId = session.playerId ?? this.playerId;
+        this.playerNum = session.playerNum ?? this.playerNum;
+
+        if (this.mode === 'mp' && this.playerId !== null && this.playerNum !== null) {
+            const wasPlaying = this.state === 'playing';
+            this.state = 'playing';
+            this._emit('multiplayerReady', this.getState());
+            if (!wasPlaying) {
+                this._emit('gameStart', {
+                    mode: 'mp',
+                    roomCode: this.roomCode,
+                    playerId: this.playerId,
+                    playerNum: this.playerNum,
+                });
+                this._emit('playing', this.getState());
+            }
+        }
+    }
+
+    _setMultiplayerState(state) {
+        this._lastMpState = state || null;
+
+        if (this.mode !== 'mp') return;
+
+        if (state?.scene === 'gameOver' && this.state !== 'gameover') {
+            this.state = 'gameover';
+            this._emit('gameOver', this.getState());
+            return;
+        }
+
+        if (state?.scene && state.scene !== 'gameOver' && this.playerId !== null && this.playerNum !== null) {
+            this.state = 'playing';
+        }
+    }
+
+    _setMultiplayerError(message) {
+        this._lastMultiplayerError = message || 'Unknown multiplayer error';
+        this._emit('error', { action: 'multiplayer', message: this._lastMultiplayerError });
     }
 }
 
@@ -542,14 +646,17 @@ if (typeof window !== 'undefined') {
                 }
                 
                 // Otherwise wait for 'ready' event
+                const handleReady = () => {
+                    clearTimeout(timeoutId);
+                    window.engine.off('ready', handleReady);
+                    resolve();
+                };
                 const timeoutId = setTimeout(() => {
+                    window.engine.off('ready', handleReady);
                     reject(new Error('Timeout waiting for engine ready'));
                 }, timeout);
                 
-                window.engine.on('ready', () => {
-                    clearTimeout(timeoutId);
-                    resolve();
-                });
+                window.engine.on('ready', handleReady);
             });
         },
         

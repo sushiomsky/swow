@@ -40,19 +40,6 @@ export class SimpleBot {
         console.log('[Bot] Starting...');
         this.isRunning = true;
         
-        // Subscribe to game events
-        if (window.swowDebug) {
-            window.swowDebug.on('gameOver', () => {
-                console.log('[Bot] Game over detected');
-                this.stop();
-            });
-            
-            window.swowDebug.on('reset', () => {
-                console.log('[Bot] Reset detected');
-                this.stop();
-            });
-        }
-        
         // Start bot loop
         this.intervalId = setInterval(() => this.tick(), this.tickRate);
         console.log('[Bot] Started with tick rate:', this.tickRate, 'ms');
@@ -93,7 +80,18 @@ export class SimpleBot {
         if (!state || !state.ready) {
             return; // Engine not ready
         }
-        
+
+        if (state.state === 'gameover' || state.scene === 'gameOver') {
+            console.log('[Bot] Game over detected');
+            this.stop();
+            return;
+        }
+
+        if (state.state === 'menu' || state.state === 'error') {
+            this.stop();
+            return;
+        }
+         
         if (state.state !== 'playing') {
             return; // Not in gameplay
         }

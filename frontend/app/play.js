@@ -14,6 +14,7 @@
 // ─── Imports ─────────────────────────────────────────────────────────
 import { ActiveGamesList } from './ActiveGamesList.js';
 import { BackgroundGameView } from './BackgroundGameView.js';
+import { CLIENT_EVENTS } from '../game/multiplayer/client/multiplayerEvents.js';
 
 // ─── Engine Integration ───────────────────────────────────────────────
 // The engine controller auto-initializes and exposes window.engine
@@ -33,8 +34,8 @@ function subscribeToEngine() {
         _startSPForEngine(numPlayers);
     });
     
-    engine.on('startMP', ({ roomCode }) => {
-        _startMPForEngine(roomCode);
+    engine.on('startMP', ({ roomCode, autoConnect }) => {
+        _startMPForEngine(roomCode, autoConnect);
     });
     
     engine.on('teardown', () => {
@@ -73,9 +74,15 @@ let _spCSSLink = null;
 let _mpCSSLinks = [];
 let _mpGameOverHandler = null;
 let _handlers = {};
+const ATTRACT_INIT_TIMEOUT_MS = 5000;
 
 const overlay = document.getElementById('play-overlay');
 const gameRoot = document.getElementById('game-root');
+
+function setAmbientUiVisible(visible) {
+    document.getElementById('background-game-canvas')?.classList.toggle('hide', !visible);
+    document.getElementById('active-games-container')?.classList.toggle('hide', !visible);
+}
 
 // ─── Overlay ──────────────────────────────────────────────────────
 function showOverlay(show) {
@@ -244,11 +251,17 @@ async function initAttract() {
     _activeMode = 'sp';
 
     // Wait for engine to initialize
-    await new Promise(resolve => {
+    await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            clearInterval(check);
+            reject(new Error('Timed out waiting for singleplayer attract engine'));
+        }, ATTRACT_INIT_TIMEOUT_MS);
+
         const check = setInterval(() => {
-            if (_spApp.engine) {
+            if (_spApp?.engine) {
                 _engine = _spApp.engine;
                 clearInterval(check);
+                clearTimeout(timeout);
                 resolve();
             }
         }, 50);
@@ -312,7 +325,13 @@ function buildGameOverOverlay(detail) {
             ev.currentTarget.textContent = '✓ COPIED';
         });
     });
-    el.querySelector('#go-replay')?.addEventListener('click', () => startGame(1));
+    el.querySelector('#go-replay')?.addEventListener('click', () => {
+        if (window.engine) {
+            void window.engine.startNewGame(1);
+            return;
+        }
+        void startGame(1);
+    });
 }
 
 // ─── Build MP post-match overlay ──────────────────────────────────
@@ -346,7 +365,11 @@ function buildMPPostMatchOverlay(detail) {
 
     el.querySelector('#go-mp-newroom')?.addEventListener('click', () => {
         document.getElementById('play-gameover')?.remove();
-        startMP(); // Create a fresh room
+        if (window.engine) {
+            void window.engine.createRoom();
+            return;
+        }
+        void startMP(null, { autoConnect: 'create' });
     });
     el.querySelector('#go-mp-back')?.addEventListener('click', () => goToTitle());
 }
@@ -369,6 +392,7 @@ async function startGame(numPlayers) {
         return;
     }
     
+    setAmbientUiVisible(false);
     showOverlay(false);
     document.getElementById('play-gameover')?.remove();
     _engine.startNewGame(numPlayers);
@@ -385,12 +409,15 @@ async function goToTitle() {
         await initAttract();
     }
 
+    setAmbientUiVisible(true);
     showOverlay(true);
     _state = 'title';
 }
 
 // ─── Start Multiplayer ────────────────────────────────────────────
-async function startMP(roomCode) {
+async function startMP(roomCode, options = {}) {
+    const { autoConnect = null } = options;
+
     try {
         // Show loading if auto-joining from URL
         if (roomCode && _state === 'loading') {
@@ -406,6 +433,7 @@ async function startMP(roomCode) {
         }
         
         document.getElementById('play-gameover')?.remove();
+        setAmbientUiVisible(false);
         showOverlay(false);
         _activeMode = 'mp';
 
@@ -435,6 +463,10 @@ async function startMP(roomCode) {
             if (roomCode) {
                 window.engine._setRoomCode(roomCode);
             }
+        }
+
+        if (autoConnect === 'create' && mpApp?._connect) {
+            mpApp._connect(CLIENT_EVENTS.JOIN_PAIR);
         }
 
         _state = 'playing';
@@ -469,47 +501,65 @@ async function teardownMP() {
 
 async function _startSPForEngine(numPlayers) {
     // Called by EngineController when automation requests SP game
-    // Create DOM and let existing startGame() logic handle it
     if (!_spApp) {
         await initAttract();
     }
-    startGame(numPlayers);
+    setAmbientUiVisible(false);
+    showOverlay(false);
+    document.getElementById('play-gameover')?.remove();
+    _state = 'playing';
 }
 
-async function _startMPForEngine(roomCode) {
+async function _startMPForEngine(roomCode, autoConnect = null) {
     // Called by EngineController when automation requests MP game
-    await startMP(roomCode);
+    await startMP(roomCode, { autoConnect });
 }
 
 function _teardownForEngine() {
-    // Called by EngineController when resetting
-    // Already handled by teardownSP/teardownMP
+    unregisterHandlers();
+    _spApp = null;
+    _engine = null;
+    _activeMode = null;
+    document.getElementById('sp-root')?.remove();
+    document.getElementById('mp-root')?.remove();
+    document.getElementById('play-gameover')?.remove();
+    document.querySelectorAll('.kill-popup').forEach(el => el.remove());
+    if (_mpGameOverHandler) {
+        document.removeEventListener('swow:mp-game-over', _mpGameOverHandler);
+        _mpGameOverHandler = null;
+    }
+    if (_spCSSLink) {
+        _spCSSLink.remove();
+        _spCSSLink = null;
+    }
+    _mpCSSLinks.forEach(link => link.remove());
+    _mpCSSLinks = [];
 }
 
 // ─── Bind UI ──────────────────────────────────────────────────────
 // UI buttons now trigger engine controller methods (can also use engine directly)
 document.getElementById('btn-play').addEventListener('click', async () => {
-    if (window.engine && window.engine.state === 'menu') {
-        window.engine.startNewGame(1);
-    } else {
-        await startGame(1);
+    if (window.engine) {
+        await window.engine.startNewGame(1);
+        return;
     }
+    await startGame(1);
 });
 
 document.getElementById('btn-2p').addEventListener('click', async () => {
-    if (window.engine && window.engine.state === 'menu') {
-        window.engine.startNewGame(2);
-    } else {
-        await startGame(2);
+    if (window.engine) {
+        await window.engine.startNewGame(2);
+        return;
     }
+    await startGame(2);
 });
 
-document.getElementById('btn-multi').addEventListener('click', () => {
-    if (window.engine && window.engine.state === 'menu') {
-        window.engine.createRoom();
-    } else {
-        startMP();
+document.getElementById('btn-multi').addEventListener('click', async () => {
+    if (window.engine) {
+        await window.engine.createRoom();
+        return;
     }
+    await startMP(null, { autoConnect: 'create' });
 });
 
 // Battle Royale mode buttons
@@ -538,12 +588,30 @@ document.addEventListener('keydown', (e) => {
     if (_state === 'title') {
         switch (e.code) {
             case 'Space': case 'Enter': case 'Digit1':
-                e.preventDefault(); startGame(1); return;
+                e.preventDefault();
+                if (window.engine) {
+                    void window.engine.startNewGame(1);
+                } else {
+                    void startGame(1);
+                }
+                return;
             case 'Digit2':
-                e.preventDefault(); startGame(2); return;
+                e.preventDefault();
+                if (window.engine) {
+                    void window.engine.startNewGame(2);
+                } else {
+                    void startGame(2);
+                }
+                return;
         }
         if (e.key === 'm' || e.key === 'M') {
-            e.preventDefault(); startMP(); return;
+            e.preventDefault();
+            if (window.engine) {
+                void window.engine.createRoom();
+            } else {
+                void startMP(null, { autoConnect: 'create' });
+            }
+            return;
         }
         if (e.key === 'b' || e.key === 'B') {
             e.preventDefault();
@@ -551,7 +619,13 @@ document.addEventListener('keydown', (e) => {
             return;
         }
         if (e.key === 'p' || e.key === 'P') {
-            e.preventDefault(); startMP(); return;
+            e.preventDefault();
+            if (window.engine) {
+                void window.engine.createRoom();
+            } else {
+                void startMP(null, { autoConnect: 'create' });
+            }
+            return;
         }
     }
     if (e.code === 'Escape' && (_state === 'playing' || _state === 'gameover')) {
@@ -565,9 +639,7 @@ const _params = new URLSearchParams(window.location.search);
 const _roomCode = _params.get('room') || _params.get('pair');
 const _autoplay = _params.get('autoplay');
 
-if (_roomCode) {
-    startMP(_roomCode);
-} else if (_autoplay) {
+if (_autoplay) {
     // DETERMINISTIC AUTOPLAY: Chain with events
     (async () => {
         if (!window.engine) {
@@ -594,6 +666,30 @@ if (_roomCode) {
                         detail: { mode: 'create', roomCode: state.roomCode, state }
                     }));
                 }
+            } else if (_roomCode) {
+                console.log('[Autoplay] Joining room...');
+                const state = await window.engine.joinRoom(_roomCode);
+
+                if (_autoplay === 'bot') {
+                    console.log('[Autoplay] Bot mode detected, loading bot...');
+
+                    try {
+                        const { SimpleBot } = await import('/frontend/app/SimpleBot.js');
+                        window.bot = new SimpleBot();
+                        window.bot.start();
+                        console.log('[Autoplay] Bot started!');
+                    } catch (err) {
+                        console.error('[Autoplay] Failed to start bot:', err);
+                    }
+                }
+
+                window.dispatchEvent(new CustomEvent('autoplay:ready', {
+                    detail: {
+                        mode: _autoplay === 'bot' ? 'bot' : 'mp',
+                        roomCode: _roomCode,
+                        state,
+                    }
+                }));
             } else {
                 // Start SP game
                 const players = parseInt(_params.get('players')) || 1;
@@ -638,6 +734,8 @@ if (_roomCode) {
             }));
         }
     })();
+} else if (_roomCode) {
+    startMP(_roomCode);
 } else {
     const challengeScore = parseInt(_params.get('challenge'));
     if (challengeScore && !isNaN(challengeScore)) {
@@ -648,6 +746,7 @@ if (_roomCode) {
         window.history.replaceState({}, '', window.location.pathname);
     }
 
+    setAmbientUiVisible(true);
     // Start attract mode engine, then show overlay on top
     showOverlay(true);
     initAttract()

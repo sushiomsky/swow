@@ -58,6 +58,9 @@ export class MultiplayerMessageEffectsController {
         });
 
         this.uiController.setStatus('');
+        if (window.engine?._setRoomCode) {
+            window.engine._setRoomCode(code);
+        }
         this.onCopyPrivateLink(msg);
     }
 
@@ -66,6 +69,9 @@ export class MultiplayerMessageEffectsController {
         this.uiController.setStatusError(true);
         this.uiController.setButtonState(false);
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
+        if (window.engine?._setMultiplayerError) {
+            window.engine._setMultiplayerError(msg.message || 'Unable to join.');
+        }
     }
 
     handleInit(msg) {
@@ -82,12 +88,22 @@ export class MultiplayerMessageEffectsController {
         const playerColor = this.session.playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
         this.uiController.setHudDungeonText(`You: ${playerColor}`);
         this.audio.resumeContext();
+        if (window.engine?._setMultiplayerSession) {
+            window.engine._setMultiplayerSession({
+                playerId: this.session.playerId,
+                playerNum: this.session.playerNum,
+                dungeonId: this.session.dungeonId,
+            });
+        }
     }
 
     handleState(msg) {
         this.setLastState(msg.state);
         this.session.dungeonId = msg.state.dungeonId;
         this.audio.processSounds(msg.state.sounds, this.options.sound === 'on');
+        if (window.engine?._setMultiplayerState) {
+            window.engine._setMultiplayerState(msg.state);
+        }
 
         // Detect game-over scene and dispatch event (once per game)
         if (msg.state.scene === 'gameOver' && !this._gameOverDispatched) {

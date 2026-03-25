@@ -60,19 +60,29 @@ async function createHost(browser) {
     
     const roomCode = await page.evaluate(() => {
         return new Promise((resolve, reject) => {
+            const cleanup = () => {
+                window.removeEventListener('autoplay:ready', handleReady);
+                window.removeEventListener('autoplay:error', handleError);
+            };
             const timeout = setTimeout(() => {
+                cleanup();
                 reject(new Error('Timeout waiting for room creation'));
             }, 10000);
-            
-            window.addEventListener('autoplay:ready', (e) => {
+
+            const handleReady = (e) => {
                 clearTimeout(timeout);
+                cleanup();
                 resolve(e.detail.roomCode);
-            });
-            
-            window.addEventListener('autoplay:error', (e) => {
+            };
+
+            const handleError = (e) => {
                 clearTimeout(timeout);
+                cleanup();
                 reject(new Error(e.detail.error));
-            });
+            };
+
+            window.addEventListener('autoplay:ready', handleReady);
+            window.addEventListener('autoplay:error', handleError);
         });
     });
     
@@ -104,22 +114,32 @@ async function createBot(browser, botId, roomCode) {
     // Wait for bot to start
     const botStarted = await page.evaluate(() => {
         return new Promise((resolve, reject) => {
+            const cleanup = () => {
+                window.removeEventListener('autoplay:ready', handleReady);
+                window.removeEventListener('autoplay:error', handleError);
+            };
             const timeout = setTimeout(() => {
+                cleanup();
                 reject(new Error('Timeout waiting for bot to start'));
             }, 10000);
-            
-            window.addEventListener('autoplay:ready', (e) => {
+
+            const handleReady = () => {
                 clearTimeout(timeout);
-                
+                cleanup();
+
                 // Check if bot is running
                 const running = window.bot && window.bot.isRunning;
                 resolve(running);
-            });
-            
-            window.addEventListener('autoplay:error', (e) => {
+            };
+
+            const handleError = (e) => {
                 clearTimeout(timeout);
+                cleanup();
                 reject(new Error(e.detail.error));
-            });
+            };
+
+            window.addEventListener('autoplay:ready', handleReady);
+            window.addEventListener('autoplay:error', handleError);
         });
     });
     

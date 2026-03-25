@@ -21,11 +21,41 @@ const MIME_TYPES = {
     '.json': 'application/json',
 };
 
+function proxyMultiplayerRequest(req, res) {
+    const upstreamReq = http.request({
+        host: MP_HOST,
+        port: MP_PORT,
+        path: req.url,
+        method: req.method,
+        headers: req.headers,
+    }, (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
+        upstreamRes.pipe(res);
+    });
+
+    upstreamReq.on('error', (err) => {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            error: 'multiplayer_proxy_error',
+            message: err.message,
+        }));
+    });
+
+    req.pipe(upstreamReq);
+}
+
 const server = http.createServer((req, res) => {
     let urlPath = req.url.split('?')[0]; // strip query params
+    if (urlPath === '/multiplayer/active-games' || urlPath === '/multiplayer/dungeon-topology') {
+        proxyMultiplayerRequest(req, res);
+        return;
+    }
     if (urlPath === '/') urlPath = '/frontend/app/play.html';
     if (urlPath === '/platform') urlPath = '/frontend/app/platform.html';
     if (urlPath === '/play') urlPath = '/frontend/app/play.html';
+    if (urlPath === '/mp') urlPath = '/multiplayer.html';
+    if (urlPath === '/spectate') urlPath = '/spectate.html';
+    if (urlPath === '/minimap') urlPath = '/minimap.html';
 
     const filePath = path.join(ROOT, urlPath);
 
