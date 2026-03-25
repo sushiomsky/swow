@@ -15,13 +15,34 @@ log() {
 list_agents() {
   cat <<'EOF'
 Available project agents:
+
+── Automated (CI/CD) ───────────────────────────────────────────────────────
   quality      - API check + API integration tests + community-web build
   smoke        - Surface smoke checks (classic-web, classic-multiplayer, community-api, community-web)
   performance  - Multiplayer throughput load test (scripts/multiplayer-load-test.js)
   ux           - Route and UX landmark checks against running community web
   design       - Visual consistency checks (cards/hero/layout framing)
   ops          - Runtime service status and public health diagnostics
-  release      - Composite pipeline: quality + smoke + ux + design + performance + ops
+  gameplay     - Bot seeding validation + active game mode coverage check
+  netcode      - WebSocket handshake + HTTP latency probes for multiplayer server
+  analytics    - Live snapshot report: mode distribution, bot/human ratio, anomaly detection
+  release      - Composite pipeline: quality + smoke + ux + design + performance + ops + gameplay + analytics
+
+── AI Prompt Agents (open with an AI assistant) ────────────────────────────
+  01-game-systems       - Core gameplay loop, balancing, win conditions
+  02-retro-feel         - Movement physics, input latency, enemy AI patterns
+  03-netcode            - WebSocket sync, lag compensation, disconnect handling
+  04-performance        - Canvas rendering, bundle size, server tick efficiency
+  05-ux-design          - Lobby UX, HUD, spectator flow, post-death screen
+  06-community-architect- Player profiles, match history, replay, clans
+  07-frontend-engineering- React/Next.js components, state management, real-time
+  08-growth-hacker      - Viral loops, referrals, community targeting
+  09-community-engagement- Events, Discord, dev logs, challenge design
+  10-analytics          - Retention metrics, funnel, event schema design
+  11-monetization       - Cosmetics, battle pass, supporter perks
+  12-experimentation    - A/B testing, feature flags, mechanic tuning
+
+  View prompt: cat scripts/agents/prompts/<name>.md
 
 Usage:
   bash scripts/agents/run-agent.sh <agent-name>
@@ -167,7 +188,32 @@ run_design_agent() {
   log "Design checks passed"
 }
 
-run_ops_agent() {
+run_gameplay_agent() {
+  log "Running gameplay checks"
+  local mp_port="${NETCODE_MP_PORT:-42735}"
+  GAMEPLAY_CHECK_BASE_URL="${GAMEPLAY_CHECK_BASE_URL:-http://127.0.0.1:${mp_port}}" \
+    node "$root_dir/scripts/agents/gameplay-check.mjs" | tee "$run_dir/gameplay-check.log"
+  log "Gameplay checks completed"
+}
+
+run_netcode_agent() {
+  log "Running netcode checks"
+  local mp_port="${NETCODE_MP_PORT:-42735}"
+  NETCODE_CHECK_HTTP_BASE="${NETCODE_CHECK_HTTP_BASE:-http://127.0.0.1:${mp_port}}" \
+  NETCODE_CHECK_WS_URL="${NETCODE_CHECK_WS_URL:-ws://127.0.0.1:${mp_port}/multiplayer}" \
+    node "$root_dir/scripts/agents/netcode-check.mjs" | tee "$run_dir/netcode-check.log"
+  log "Netcode checks completed"
+}
+
+run_analytics_agent() {
+  log "Running analytics report"
+  local mp_port="${NETCODE_MP_PORT:-42735}"
+  local api_port="${COMMUNITY_API_PUBLIC_PORT:-43671}"
+  ANALYTICS_CHECK_BASE_URL="${ANALYTICS_CHECK_BASE_URL:-http://127.0.0.1:${mp_port}}" \
+  ANALYTICS_API_BASE_URL="${ANALYTICS_API_BASE_URL:-http://127.0.0.1:${api_port}}" \
+    node "$root_dir/scripts/agents/analytics-check.mjs" | tee "$run_dir/analytics-check.log"
+  log "Analytics report completed"
+}
   log "Collecting ops diagnostics"
   {
     echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -192,6 +238,8 @@ run_release_agent() {
   run_design_agent
   run_performance_agent
   run_ops_agent
+  run_gameplay_agent
+  run_analytics_agent
   log "Release agent completed"
 }
 
@@ -213,6 +261,15 @@ case "$agent" in
     ;;
   design)
     run_design_agent
+    ;;
+  gameplay)
+    run_gameplay_agent
+    ;;
+  netcode)
+    run_netcode_agent
+    ;;
+  analytics)
+    run_analytics_agent
     ;;
   ops)
     run_ops_agent

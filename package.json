@@ -13,6 +13,9 @@
     "agent:ux": "bash scripts/agents/run-agent.sh ux",
     "agent:design": "bash scripts/agents/run-agent.sh design",
     "agent:ops": "bash scripts/agents/run-agent.sh ops",
+    "agent:gameplay": "bash scripts/agents/run-agent.sh gameplay",
+    "agent:netcode": "bash scripts/agents/run-agent.sh netcode",
+    "agent:analytics": "bash scripts/agents/run-agent.sh analytics",
     "agent:release": "bash scripts/agents/run-agent.sh release"
   },
   "keywords": [],

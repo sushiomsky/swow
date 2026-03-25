@@ -49,8 +49,8 @@ async function run() {
       failures.push(`/ : expected 200, got ${status}`);
     } else {
       try {
-        assertIncludes(body, 'All Game Modes', '/: missing "All Game Modes" section');
-        assertIncludes(body, 'Active Multiplayer Games', '/: missing active games panel');
+        assertIncludes(body, 'Multiplayer Modes', '/: missing "Multiplayer Modes" section');
+        assertIncludes(body, 'Live Games', '/: missing live games panel');
       } catch (error) {
         failures.push(String(error.message || error));
       }
