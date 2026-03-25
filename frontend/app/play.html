@@ -26,7 +26,9 @@
     <canvas id="background-game-canvas"></canvas>
     
     <!-- Active Games Panel (sidebar) -->
-    <div id="active-games-container"></div>
+    <div id="active-games-container" aria-label="Live Games" role="region">
+        <h2 class="sr-only">Live Games</h2>
+    </div>
     
     <!-- Arcade title overlay — shown until player starts -->
     <div id="play-overlay">
@@ -42,8 +44,8 @@
             </div>
         </div>
         
-        <!-- Battle Royale Modes -->
-        <div class="play-mode-section">
+        <!-- Battle Royale Modes — Multiplayer Modes -->
+        <div class="play-mode-section" aria-label="Multiplayer Modes">
             <div class="play-mode-label">BATTLE ROYALE</div>
             <p class="mode-desc">Connected dungeons. Invade through tunnels. Survive the longest.</p>
             

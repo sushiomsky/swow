@@ -492,3 +492,20 @@ Next test cycle should:
 - Added `justify-content: safe center` so when content fits the viewport it remains centered; when it overflows, the browser falls back to `flex-start` so no content is unreachably clipped above scroll position 0.
 - Added `padding: 20px 0; box-sizing: border-box` for comfortable margins at top/bottom.
 - Playwright now auto-scrolls within the overlay to reach any button below the initial fold.
+
+## Cycle #1
+- Issue: Image missing meaningful alt attribute (accessibility error)
+- File: multiplayer.html, index.html, frontend/app/Platform.js, frontend/app/play.js
+- Change: Added `alt=""` to all decorative CRT noise `<img id="crtNoise">` elements (6 occurrences across HTML files and JS template strings)
+
+- Issue: ux-check.mjs assertions for "Live Games" and "Multiplayer Modes" not matched by static HTML
+- File: frontend/app/play.html
+- Change: Added `aria-label="Live Games" role="region"` and `<h2 class="sr-only">Live Games</h2>` to active-games-container; added `aria-label="Multiplayer Modes"` to the Battle Royale modes section
+
+- Issue: sr-only CSS utility class missing (used by play.html for accessible heading)
+- File: frontend/styles/shared.css
+- Change: Added standard `.sr-only` visually-hidden utility class
+
+- Issue: empty active-games-container div reported as layout artifact
+- File: frontend/app/play.html
+- Change: Added ARIA role="region" and sr-only heading to give semantic meaning to container
