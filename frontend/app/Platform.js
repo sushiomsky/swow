@@ -82,7 +82,7 @@ function createSingleplayerDOM() {
                 </div>
             </div>
         </div>
-        <img src="/images/v4.0/noise.png" id="crtNoise" class="hide">
+        <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
     `;
     return root;
@@ -112,7 +112,7 @@ function createMultiplayerDOM() {
                 <canvas id="visualFilterLayer" width="960" height="600"></canvas>
             </div>
         </div>
-        <img src="/images/v4.0/noise.png" id="crtNoise" class="hide">
+        <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
         <div id="controls-hint">ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu</div>

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CommunitySessionProvider } from '../providers/CommunitySessionProvider';
 import { RealtimeProvider } from '../providers/RealtimeProvider';
 import SessionNotice from '../components/SessionNotice';
+import FeedbackButton from '../components/FeedbackButton';
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://wizardofwor.duckdns.org'),
@@ -59,6 +60,7 @@ export default function RootLayout({ children }) {
                 </div>
               </div>
             </footer>
+            <FeedbackButton />
           </RealtimeProvider>
         </CommunitySessionProvider>
       </body>

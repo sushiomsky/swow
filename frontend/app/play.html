@@ -8,8 +8,6 @@
     <link rel="stylesheet" href="/frontend/app/play.css">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preload" href="/images/v3.0/sprite.png" as="image">
-    <link rel="modulepreload" href="/frontend/game/singleplayer/App.js">
-    <link rel="modulepreload" href="/frontend/app/EngineController.js">
     <title>Wizard Of Wor — PLAY</title>
     <meta property="og:title" content="Wizard Of Wor — Play Now">
     <meta property="og:type" content="game">
@@ -20,13 +18,17 @@
     <meta name="twitter:title" content="Wizard Of Wor — Play Now">
     <meta name="twitter:description" content="Score big in this classic 1983 arcade game. Click and play instantly!">
     <meta name="twitter:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
+    <link rel="preload" href="/frontend/styles/shared.css" as="style">
+    <link rel="preload" href="/frontend/app/play.css" as="style">
 </head>
 <body>
     <!-- Live game background (spectator view) -->
     <canvas id="background-game-canvas"></canvas>
     
     <!-- Active Games Panel (sidebar) -->
-    <div id="active-games-container"></div>
+    <div id="active-games-container" aria-label="Live Games" role="region">
+        <h2 class="sr-only">Live Games</h2>
+    </div>
     
     <!-- Arcade title overlay — shown until player starts -->
     <div id="play-overlay">
@@ -42,8 +44,8 @@
             </div>
         </div>
         
-        <!-- Battle Royale Modes -->
-        <div class="play-mode-section">
+        <!-- Battle Royale Modes — Multiplayer Modes -->
+        <div class="play-mode-section" aria-label="Multiplayer Modes">
             <div class="play-mode-label">BATTLE ROYALE</div>
             <p class="mode-desc">Connected dungeons. Invade through tunnels. Survive the longest.</p>
             

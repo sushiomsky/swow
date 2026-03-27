@@ -88,7 +88,7 @@ export class BackgroundGameView {
         
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
-        const wsUrl = `${protocol}//${host}`;
+        const wsUrl = `${protocol}//${host}/multiplayer`;
         
         this.ws = new WebSocket(wsUrl);
         
