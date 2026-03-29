@@ -17,6 +17,7 @@
 
 const MIN_TEAMS_SITNGO = 2;
 const COUNTDOWN_MS = 20000;  // 20 seconds for team mode
+const MATCH_STARTING_EVENT = 'match_starting';
 
 class TeamBRQueue {
     constructor(gameServer, mode = 'team-endless') {
@@ -95,6 +96,8 @@ class TeamBRQueue {
         // Start game
         dungeon.startGame();
         
+        this._sendMatchStarting(conn);
+
         // Send init
         this.gameServer._sendInit(conn, dungeon);
         
@@ -175,6 +178,7 @@ class TeamBRQueue {
         }
         
         const ServerPlayer = require('./ServerPlayer').ServerPlayer;
+        this._notifyMatchStarting();
         
         // Form teams of 2
         for (let i = 0; i < players.length; i += 2) {
@@ -226,6 +230,26 @@ class TeamBRQueue {
         this.waitingPlayers.clear();
         
         console.log('[TeamBRQueue] Team game launched');
+    }
+
+    _notifyMatchStarting() {
+        const payload = {
+            type: MATCH_STARTING_EVENT,
+            message: 'Match found, launching…',
+            expires_ms: 4000,
+        };
+
+        for (const { conn } of this.waitingPlayers.values()) {
+            this.gameServer._send(conn.ws, payload);
+        }
+    }
+
+    _sendMatchStarting(conn) {
+        this.gameServer._send(conn.ws, {
+            type: MATCH_STARTING_EVENT,
+            message: 'Match found, launching…',
+            expires_ms: 4000,
+        });
     }
     
     /**

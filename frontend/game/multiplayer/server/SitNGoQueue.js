@@ -16,6 +16,7 @@
 const MIN_PLAYERS = 2;  // Minimum to start countdown
 const MAX_PLAYERS = 8;  // Maximum before instant start
 const COUNTDOWN_MS = 15000;  // 15 seconds after MIN_PLAYERS
+const MATCH_STARTING_EVENT = 'match_starting';
 
 class SitNGoQueue {
     constructor(gameServer) {
@@ -126,6 +127,8 @@ class SitNGoQueue {
         
         const ServerPlayer = require('./ServerPlayer').ServerPlayer;
         const players = Array.from(this.waitingPlayers.entries());
+
+        this._notifyMatchStarting();
         
         // Create dungeon for each player
         players.forEach(([playerId, { conn }], index) => {
@@ -157,6 +160,18 @@ class SitNGoQueue {
         this.waitingPlayers.clear();
         
         console.log('[SitNGoQueue] Game launched successfully');
+    }
+
+    _notifyMatchStarting() {
+        const payload = {
+            type: MATCH_STARTING_EVENT,
+            message: 'Match found, launching…',
+            expires_ms: 4000,
+        };
+
+        for (const { conn } of this.waitingPlayers.values()) {
+            this.gameServer._send(conn.ws, payload);
+        }
     }
 
     launchWithBots() {
