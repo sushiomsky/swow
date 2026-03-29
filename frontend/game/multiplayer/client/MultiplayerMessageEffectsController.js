@@ -75,6 +75,7 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleInit(msg) {
+        this._clearMatchStartingStatus();
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
         if (typeof this.setHasJoinedGame === 'function') this.setHasJoinedGame(true);
         this.uiController.setButtonState(false);
@@ -95,6 +96,19 @@ export class MultiplayerMessageEffectsController {
                 dungeonId: this.session.dungeonId,
             });
         }
+    }
+
+    handleMatchStarting(msg) {
+        const message = msg?.message || 'Match found, launching…';
+        this.uiController.setStatus(message);
+        this.uiController.setStatusError(false);
+
+        const ttl = Number(msg?.expires_ms) || 4000;
+        this._clearMatchStartingStatusTimer();
+        this._matchStartingStatusTimer = setTimeout(() => {
+            this.uiController.setStatus('');
+            this._matchStartingStatusTimer = null;
+        }, ttl);
     }
 
     handleState(msg) {
@@ -313,5 +327,17 @@ export class MultiplayerMessageEffectsController {
                 body: JSON.stringify({ user_id: userId, score }),
             }).catch(() => { /* best-effort */ });
         } catch (_) { /* ignore */ }
+    }
+
+    _clearMatchStartingStatus() {
+        this._clearMatchStartingStatusTimer();
+        this.uiController.setStatus('');
+    }
+
+    _clearMatchStartingStatusTimer() {
+        if (this._matchStartingStatusTimer) {
+            clearTimeout(this._matchStartingStatusTimer);
+            this._matchStartingStatusTimer = null;
+        }
     }
 }
