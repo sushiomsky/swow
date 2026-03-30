@@ -12,7 +12,14 @@ export class MultiplayerUiController {
     }
 
     setButtonState(disabled) {
-        const ids = ['btnPairCreate', 'btnPairJoin'];
+        const ids = [
+            'btnSolo',
+            'btnSitNGo',
+            'btnTeamBr',
+            'btnTeamSitNGo',
+            'btnPairCreate',
+            'btnPairJoin',
+        ];
         for (const id of ids) {
             const el = document.getElementById(id);
             if (el) el.disabled = !!disabled;
