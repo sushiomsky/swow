@@ -16,6 +16,21 @@
 const MIN_PLAYERS = 2;  // Minimum to start countdown
 const MAX_PLAYERS = 8;  // Maximum before instant start
 const COUNTDOWN_MS = 15000;  // 15 seconds after MIN_PLAYERS
+const MATCH_STARTING_EVENT = 'match_starting';
+
+function readIntEnv(name, fallback) {
+    const raw = process?.env?.[name];
+    if (!raw) return fallback;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const CONFIG = (() => {
+    const minPlayers = Math.max(2, readIntEnv('SITNGO_MIN_PLAYERS', MIN_PLAYERS));
+    const maxPlayers = Math.max(minPlayers, readIntEnv('SITNGO_MAX_PLAYERS', MAX_PLAYERS));
+    const countdownMs = Math.max(2000, readIntEnv('SITNGO_COUNTDOWN_MS', COUNTDOWN_MS));
+    return { minPlayers, maxPlayers, countdownMs };
+})();
 
 class SitNGoQueue {
     constructor(gameServer) {
@@ -23,6 +38,12 @@ class SitNGoQueue {
         this.waitingPlayers = new Map(); // playerId → { conn, joinedAt }
         this.countdownTimer = null;
         this.countdownStartedAt = null;
+        this.metrics = {
+            launches: 0,
+            launch_failures: 0,
+            players_launched: 0,
+            total_wait_ms: 0,
+        };
         console.log('[SitNGoQueue] Initialized');
     }
     
@@ -46,12 +67,12 @@ class SitNGoQueue {
         this._broadcastQueueStatus();
         
         // Check if we should start countdown
-        if (this.waitingPlayers.size >= MIN_PLAYERS && !this.countdownTimer) {
+        if (this.waitingPlayers.size >= CONFIG.minPlayers && !this.countdownTimer) {
             this._startCountdown();
         }
         
         // Check if we hit max players (instant start)
-        if (this.waitingPlayers.size >= MAX_PLAYERS) {
+        if (this.waitingPlayers.size >= CONFIG.maxPlayers) {
             console.log('[SitNGoQueue] Max players reached, starting immediately');
             this._launchGame();
         }
@@ -69,7 +90,7 @@ class SitNGoQueue {
         this.waitingPlayers.delete(playerId);
         
         // Cancel countdown if we drop below minimum
-        if (this.waitingPlayers.size < MIN_PLAYERS && this.countdownTimer) {
+        if (this.waitingPlayers.size < CONFIG.minPlayers && this.countdownTimer) {
             this._cancelCountdown();
         }
         
@@ -82,12 +103,12 @@ class SitNGoQueue {
     _startCountdown() {
         if (this.countdownTimer) return;
         
-        console.log(`[SitNGoQueue] Starting countdown: ${COUNTDOWN_MS}ms`);
+        console.log(`[SitNGoQueue] Starting countdown: ${CONFIG.countdownMs}ms`);
         this.countdownStartedAt = Date.now();
         
         this.countdownTimer = setTimeout(() => {
             this._launchGame();
-        }, COUNTDOWN_MS);
+        }, CONFIG.countdownMs);
         
         this._broadcastQueueStatus();
     }
@@ -112,6 +133,7 @@ class SitNGoQueue {
     _launchGame() {
         if (this.waitingPlayers.size === 0) {
             console.warn('[SitNGoQueue] Cannot launch game: no players');
+            this.metrics.launch_failures += 1;
             return;
         }
         
@@ -128,7 +150,11 @@ class SitNGoQueue {
         const players = Array.from(this.waitingPlayers.entries());
         
         // Create dungeon for each player
-        players.forEach(([playerId, { conn }], index) => {
+        players.forEach(([playerId, { conn }]) => {
+            if (!this._isConnectionOpen(conn)) {
+                console.log(`[SitNGoQueue] Skipping disconnected player before init: ${playerId}`);
+                return;
+            }
             const dungeon = this.gameServer._createDungeon();
             dungeon.matchMode = 'sitngo_br';
             
@@ -146,6 +172,12 @@ class SitNGoQueue {
             
             // Start game
             dungeon.startGame();
+
+            this._sendMatchStarting(conn);
+            if (!this._isConnectionOpen(conn)) {
+                console.log(`[SitNGoQueue] Player disconnected after match_starting: ${playerId}`);
+                return;
+            }
             
             // Send init
             this.gameServer._sendInit(conn, dungeon);
@@ -153,10 +185,32 @@ class SitNGoQueue {
             console.log(`[SitNGoQueue] Player ${playerId} → dungeon ${dungeon.id}`);
         });
         
+        const now = Date.now();
+        for (const [, { joinedAt }] of players) {
+            this.metrics.total_wait_ms += Math.max(0, now - joinedAt);
+        }
+        this.metrics.launches += 1;
+        this.metrics.players_launched += players.length;
+
         // Clear queue
         this.waitingPlayers.clear();
         
         console.log('[SitNGoQueue] Game launched successfully');
+    }
+
+    _sendMatchStarting(conn) {
+        if (!this._isConnectionOpen(conn)) return;
+        this.gameServer._send(conn.ws, {
+            type: MATCH_STARTING_EVENT,
+            message: 'Match found, launching…',
+            expires_ms: 4000,
+        });
+    }
+
+    _isConnectionOpen(conn) {
+        if (!conn?.ws) return false;
+        if (typeof conn.ws.readyState !== 'number') return true;
+        return conn.ws.readyState === 1;
     }
 
     launchWithBots() {
@@ -173,11 +227,11 @@ class SitNGoQueue {
         const status = {
             type: 'sitngo_queue_status',
             players_waiting: this.waitingPlayers.size,
-            min_players: MIN_PLAYERS,
-            max_players: MAX_PLAYERS,
+            min_players: CONFIG.minPlayers,
+            max_players: CONFIG.maxPlayers,
             countdown_active: !!this.countdownTimer,
             countdown_remaining: this.countdownTimer ? 
-                Math.max(0, COUNTDOWN_MS - (Date.now() - this.countdownStartedAt)) : null
+                Math.max(0, CONFIG.countdownMs - (Date.now() - this.countdownStartedAt)) : null
         };
         
         for (const { conn } of this.waitingPlayers.values()) {
@@ -189,12 +243,26 @@ class SitNGoQueue {
      * Get queue snapshot for API
      */
     getSnapshot() {
+        const avgWaitMs = this.metrics.players_launched > 0
+            ? Math.round(this.metrics.total_wait_ms / this.metrics.players_launched)
+            : 0;
+        const successRate = (this.metrics.launches + this.metrics.launch_failures) > 0
+            ? Math.round((this.metrics.launches / (this.metrics.launches + this.metrics.launch_failures)) * 100)
+            : 0;
         return {
             mode: 'sitngo',
             players_waiting: this.waitingPlayers.size,
             countdown_active: !!this.countdownTimer,
             countdown_remaining: this.countdownTimer ? 
-                Math.max(0, COUNTDOWN_MS - (Date.now() - this.countdownStartedAt)) : null
+                Math.max(0, CONFIG.countdownMs - (Date.now() - this.countdownStartedAt)) : null,
+            metrics: {
+                launches: this.metrics.launches,
+                launch_failures: this.metrics.launch_failures,
+                players_launched: this.metrics.players_launched,
+                total_wait_ms: this.metrics.total_wait_ms,
+                avg_wait_ms: avgWaitMs,
+                launch_success_rate_pct: successRate,
+            },
         };
     }
 

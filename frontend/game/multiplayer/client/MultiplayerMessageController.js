@@ -32,6 +32,18 @@ export class MultiplayerMessageController {
             case SERVER_EVENTS.STATE:
                 this.effectsController.handleState(msg);
                 break;
+
+            case SERVER_EVENTS.MATCH_STARTING:
+                this.effectsController.handleMatchStarting(msg);
+                break;
+
+            case SERVER_EVENTS.SITNGO_QUEUE_STATUS:
+                this.effectsController.handleSitNGoQueueStatus(msg);
+                break;
+
+            case SERVER_EVENTS.TEAM_QUEUE_STATUS:
+                this.effectsController.handleTeamQueueStatus(msg);
+                break;
             
             // Battle Royale: Cross-dungeon events
             case SERVER_EVENTS.PLAYER_LEFT_VIA_TUNNEL:

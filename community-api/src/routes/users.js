@@ -99,8 +99,14 @@ router.post('/match-result', requireAuth, async (req, res, next) => {
       level: result.profile.level,
       achievements: result.profile.achievements
     });
+    emitToUser(req.user.sub, 'post_match_rewards', result.rewardsEvent);
 
-    return res.status(201).json({ ok: true, profile: result.profile, xpGain: result.xpGain });
+    return res.status(201).json({
+      ok: true,
+      profile: result.profile,
+      xpGain: result.xpGain,
+      rewardsEvent: result.rewardsEvent
+    });
   } catch (e) {
     if (e?.issues) return res.status(400).json({ error: e.issues });
     return next(e);

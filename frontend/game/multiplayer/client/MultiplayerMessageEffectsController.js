@@ -24,10 +24,12 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleWaitingForPartner() {
+        this._dismissMatchStartingStatus({ clearText: false });
         this.uiController.setStatus('Waiting for second player to join…');
     }
 
     handlePrivatePairCreated(msg) {
+        this._dismissMatchStartingStatus({ clearText: false });
         const code = msg.code || '';
         const rawJoinUrl = msg?.joinUrl || `/?room=${encodeURIComponent(code)}`;
         const absoluteUrl = rawJoinUrl.startsWith('http') ? rawJoinUrl : `${location.origin}${rawJoinUrl}`;
@@ -65,6 +67,7 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleJoinError(msg) {
+        this._dismissMatchStartingStatus({ clearText: false });
         this.uiController.setStatus(msg.message || 'Unable to join.');
         this.uiController.setStatusError(true);
         this.uiController.setButtonState(false);
@@ -75,18 +78,28 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleInit(msg) {
+        this._dismissMatchStartingStatus();
+        this._hideMatchResultsOverlay();
+        this._setMatchResultsBusy(false);
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
         if (typeof this.setHasJoinedGame === 'function') this.setHasJoinedGame(true);
         this.uiController.setButtonState(false);
         this.session.playerId = msg.playerId;
         this.session.playerNum = msg.playerNum;
         this.session.dungeonId = msg.dungeonId;
+        this.session.matchMode = msg.matchMode || this.session.matchMode || null;
         this.uiController.hideOverlay();
         this.uiController.showGameSurface();
         this.uiController.setStatus('');
         this.uiController.setStatusError(false);
         const playerColor = this.session.playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
-        this.uiController.setHudDungeonText(`You: ${playerColor}`);
+        const isTeamMode = typeof this.session.matchMode === 'string' && this.session.matchMode.startsWith('team_');
+        if (isTeamMode) {
+            const teammateColor = this.session.playerNum === 0 ? '🔵 Blue' : '🟡 Yellow';
+            this.uiController.setHudDungeonText(`Team BR • You: ${playerColor} • Teammate: ${teammateColor}`);
+        } else {
+            this.uiController.setHudDungeonText(`You: ${playerColor}`);
+        }
         this.audio.resumeContext();
         if (window.engine?._setMultiplayerSession) {
             window.engine._setMultiplayerSession({
@@ -95,6 +108,61 @@ export class MultiplayerMessageEffectsController {
                 dungeonId: this.session.dungeonId,
             });
         }
+    }
+
+    handleMatchStarting(msg) {
+        const message = msg?.message || 'Match found, launching…';
+        this.uiController.setStatus(message);
+        this.uiController.setStatusError(false);
+
+        const ttl = Number(msg?.expires_ms) || 4000;
+        this._clearMatchStartingStatusTimer();
+        this._matchStartingStatusTimer = setTimeout(() => {
+            this._dismissMatchStartingStatus();
+        }, ttl);
+    }
+
+    handleSitNGoQueueStatus(msg) {
+        this._dismissMatchStartingStatus({ clearText: false });
+        this.uiController.setStatusError(false);
+        const waiting = Number(msg?.players_waiting || 0);
+        const minPlayers = Number(msg?.min_players || 2);
+        const hasCountdown = !!msg?.countdown_active;
+        const remainingSec = this._toSeconds(msg?.countdown_remaining);
+
+        if (hasCountdown && remainingSec !== null) {
+            this.uiController.setStatus(`Queue ready: ${waiting} player${waiting === 1 ? '' : 's'} — match starts in ${remainingSec}s…`);
+            return;
+        }
+
+        if (waiting < minPlayers) {
+            this.uiController.setStatus(`Queue: ${waiting}/${minPlayers} players. Waiting for more…`);
+            return;
+        }
+
+        this.uiController.setStatus(`Queue ready: ${waiting} players. Launching soon…`);
+    }
+
+    handleTeamQueueStatus(msg) {
+        this._dismissMatchStartingStatus({ clearText: false });
+        this.uiController.setStatusError(false);
+        const waiting = Number(msg?.players_waiting || 0);
+        const teams = Number(msg?.teams_possible || 0);
+        const hasCountdown = !!msg?.countdown_active;
+        const remainingSec = this._toSeconds(msg?.countdown_remaining);
+        const minPlayers = 4;
+
+        if (hasCountdown && remainingSec !== null) {
+            this.uiController.setStatus(`Team queue ready: ${teams} team${teams === 1 ? '' : 's'} — starts in ${remainingSec}s…`);
+            return;
+        }
+
+        if (waiting < minPlayers) {
+            this.uiController.setStatus(`Team queue: ${waiting}/${minPlayers} players (${teams} team${teams === 1 ? '' : 's'}). Waiting…`);
+            return;
+        }
+
+        this.uiController.setStatus(`Team queue ready: ${teams} team${teams === 1 ? '' : 's'}. Launching soon…`);
     }
 
     handleState(msg) {
@@ -211,9 +279,21 @@ export class MultiplayerMessageEffectsController {
             classic_private_pair: 'Classic 2-Player',
         };
         const modeLabel = modeLabels[mode] || mode;
+        const modeToJoinType = {
+            endless_br: 'join_endless_br',
+            sitngo_br: 'join_sitngo_br',
+            team_endless_br: 'join_team_endless_br',
+            team_sitngo_br: 'join_team_sitngo_br',
+        };
+        const joinType = modeToJoinType[mode] || null;
+        const playAgainLabel = joinType ? '▶ PLAY AGAIN' : '↩ RETURN TO MENU';
+        const shortcutHints = joinType
+            ? 'Keys: Enter = Play Again · M or Esc = Menu'
+            : 'Keys: Enter/M/Esc = Menu';
 
         // Submit score to leaderboard API if user is logged in
         this._submitScore(score);
+        this.audio.stopAll();
 
         // Build results overlay
         let overlay = document.getElementById('match-results-overlay');
@@ -222,10 +302,20 @@ export class MultiplayerMessageEffectsController {
             overlay.id = 'match-results-overlay';
             document.body.appendChild(overlay);
         }
+        const titleId = 'match-results-title';
+        const hintsId = 'match-results-hints';
+        this._lastFocusedElement = (typeof document !== 'undefined')
+            ? document.activeElement
+            : null;
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Match results');
+        overlay.setAttribute('aria-labelledby', titleId);
+        overlay.setAttribute('aria-describedby', hintsId);
 
         overlay.innerHTML = `
-            <div class="match-results-card">
-                <h2>GAME OVER</h2>
+            <div class="match-results-card" tabindex="-1">
+                <h2 id="${titleId}">GAME OVER</h2>
                 <div class="match-results-mode">${modeLabel}</div>
                 <div class="match-results-stats">
                     <div class="stat"><span class="stat-value">${score.toLocaleString()}</span><span class="stat-label">SCORE</span></div>
@@ -233,37 +323,73 @@ export class MultiplayerMessageEffectsController {
                     <div class="stat"><span class="stat-value">${timeStr}</span><span class="stat-label">TIME</span></div>
                 </div>
                 <div class="match-results-actions">
-                    <button class="btn match-btn-play-again" id="match-play-again">▶ PLAY AGAIN</button>
-                    <button class="btn match-btn-menu" id="match-back-menu">☰ BACK TO MENU</button>
+                    <button class="btn match-btn-play-again" id="match-play-again" aria-keyshortcuts="Enter">${playAgainLabel}</button>
+                    <button class="btn match-btn-menu" id="match-back-menu" aria-keyshortcuts="M Escape">☰ BACK TO MENU</button>
                 </div>
+                <div class="match-results-hints" id="${hintsId}">${shortcutHints}</div>
             </div>
         `;
         overlay.classList.add('visible');
+        document.body.classList.add('match-results-open');
+        this._isMatchResultsBusy = false;
 
         // Wire up buttons
-        document.getElementById('match-play-again')?.addEventListener('click', () => {
-            overlay.classList.remove('visible');
-            // Re-queue for same mode
-            const modeToJoinType = {
-                endless_br: 'join_endless_br',
-                sitngo_br: 'join_sitngo_br',
-                team_endless_br: 'join_team_endless_br',
-                team_sitngo_br: 'join_team_sitngo_br',
-            };
-            const joinType = modeToJoinType[mode];
+        const playAgainBtn = document.getElementById('match-play-again');
+        const backToMenuBtn = document.getElementById('match-back-menu');
+        playAgainBtn?.addEventListener('click', () => {
+            this._setMatchResultsBusy(true);
+            this._hideMatchResultsOverlay();
             if (joinType) {
+                this.uiController.setStatus('Re-queueing…');
+                this.uiController.setStatusError(false);
                 // Disconnect current socket and reconnect with same mode
                 this._requeue(joinType);
             } else {
-                // Classic mode — go back to menu
+                // Non-requeue mode — go back to menu
                 this._backToMenu();
             }
         });
 
-        document.getElementById('match-back-menu')?.addEventListener('click', () => {
-            overlay.classList.remove('visible');
+        backToMenuBtn?.addEventListener('click', () => {
+            this._setMatchResultsBusy(true);
+            this._hideMatchResultsOverlay();
             this._backToMenu();
         });
+
+        // Accessibility: focus first action and support Escape to menu
+        playAgainBtn?.focus();
+        overlay.onkeydown = (event) => {
+            if (this._isMatchResultsBusy) {
+                event.preventDefault();
+                return;
+            }
+            if (event.key === 'Escape') {
+                this._hideMatchResultsOverlay();
+                this._backToMenu();
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                playAgainBtn?.click();
+            } else if (event.key?.toLowerCase() === 'm') {
+                event.preventDefault();
+                backToMenuBtn?.click();
+            } else if (event.key === 'Tab' && playAgainBtn && backToMenuBtn) {
+                event.preventDefault();
+                const current = document.activeElement;
+                if (event.shiftKey) {
+                    (current === playAgainBtn ? backToMenuBtn : playAgainBtn).focus();
+                } else {
+                    (current === backToMenuBtn ? playAgainBtn : backToMenuBtn).focus();
+                }
+            }
+        };
+        overlay.onclick = (event) => {
+            if (this._isMatchResultsBusy) return;
+            if (event.target === overlay) {
+                this._setMatchResultsBusy(true);
+                this._hideMatchResultsOverlay();
+                this._backToMenu();
+            }
+        };
 
         // Dispatch DOM event for automation/debug hooks
         document.dispatchEvent(new CustomEvent('swow:match-end', { detail: msg.stats }));
@@ -289,12 +415,36 @@ export class MultiplayerMessageEffectsController {
     }
 
     _backToMenu() {
+        this._hideMatchResultsOverlay();
         this.uiController.showOverlay();
         this.uiController.hideGameSurface();
         this.audio.stopAll();
         this.uiController.setStatus('Select a mode to join.');
         this.uiController.setStatusError(false);
         this.uiController.setButtonState(false);
+    }
+
+    _hideMatchResultsOverlay() {
+        const overlay = document.getElementById('match-results-overlay');
+        if (overlay) {
+            overlay.classList.remove('visible');
+            overlay.onkeydown = null;
+            overlay.onclick = null;
+        }
+        document.body.classList.remove('match-results-open');
+        if (typeof HTMLElement !== 'undefined' && this._lastFocusedElement instanceof HTMLElement) {
+            this._lastFocusedElement.focus?.();
+        }
+        this._lastFocusedElement = null;
+        this._isMatchResultsBusy = false;
+    }
+
+    _setMatchResultsBusy(isBusy) {
+        this._isMatchResultsBusy = !!isBusy;
+        const playAgainBtn = document.getElementById('match-play-again');
+        const backToMenuBtn = document.getElementById('match-back-menu');
+        if (playAgainBtn) playAgainBtn.disabled = !!isBusy;
+        if (backToMenuBtn) backToMenuBtn.disabled = !!isBusy;
     }
 
     _submitScore(score) {
@@ -313,5 +463,25 @@ export class MultiplayerMessageEffectsController {
                 body: JSON.stringify({ user_id: userId, score }),
             }).catch(() => { /* best-effort */ });
         } catch (_) { /* ignore */ }
+    }
+
+    _dismissMatchStartingStatus({ clearText = true } = {}) {
+        this._clearMatchStartingStatusTimer();
+        if (clearText) {
+            this.uiController.setStatus('');
+        }
+    }
+
+    _clearMatchStartingStatusTimer() {
+        if (this._matchStartingStatusTimer) {
+            clearTimeout(this._matchStartingStatusTimer);
+            this._matchStartingStatusTimer = null;
+        }
+    }
+
+    _toSeconds(ms) {
+        const value = Number(ms);
+        if (Number.isNaN(value)) return null;
+        return Math.max(0, Math.ceil(value / 1000));
     }
 }
