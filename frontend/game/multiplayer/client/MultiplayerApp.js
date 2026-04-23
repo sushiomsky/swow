@@ -87,6 +87,7 @@ class MultiplayerApp {
     _initSocketClient() {
         this.socketClient = new MultiplayerSocketClient({
             onOpen: () => {
+                this.sessionController?.handleSocketOpen();
                 this.uiController.setStatus('Connected — create or join a room.');
                 this.uiController.setStatusError(false);
             },

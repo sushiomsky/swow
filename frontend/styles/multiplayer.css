@@ -178,6 +178,9 @@
     opacity: 1;
     pointer-events: auto;
 }
+body.match-results-open {
+    overflow: hidden;
+}
 .match-results-card {
     text-align: center;
     font-family: 'C64ProRegular', monospace;
@@ -245,6 +248,12 @@
 }
 .match-btn-menu:hover {
     background: #555 !important;
+}
+.match-results-hints {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #b8b8b8;
+    letter-spacing: 1px;
 }
 
 .btn.purple {

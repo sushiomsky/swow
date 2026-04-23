@@ -580,6 +580,7 @@ class GameServer {
             playerId: conn.player.id,
             playerNum: conn.player.num,
             dungeonId: dungeon.id,
+            matchMode: dungeon.matchMode || null,
         });
     }
 

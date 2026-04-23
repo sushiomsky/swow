@@ -4,16 +4,22 @@ export class MultiplayerSessionController {
         audio,
         getSocketClient,
         onResetState,
+        reconnectBaseDelayMs = 800,
+        reconnectMaxAttempts = 4,
     }) {
         this.uiController = uiController;
         this.audio = audio;
         this.getSocketClient = getSocketClient;
         this.onResetState = onResetState;
+        this.reconnectBaseDelayMs = reconnectBaseDelayMs;
+        this.reconnectMaxAttempts = reconnectMaxAttempts;
 
         this._lastJoinType = null;
         this._lastJoinPayload = null;
         this._isConnecting = false;
         this._hasJoinedGame = false;
+        this._reconnectAttempt = 0;
+        this._reconnectTimer = null;
     }
 
     getLastJoinType() {
@@ -40,8 +46,12 @@ export class MultiplayerSessionController {
         this._hasJoinedGame = !!value;
     }
 
-    connect(joinType, payload = null) {
+    connect(joinType, payload = null, { isReconnect = false } = {}) {
         if (this._isConnecting) return;
+        if (!isReconnect) {
+            this._clearReconnectTimer();
+            this._reconnectAttempt = 0;
+        }
         const socketClient = this.getSocketClient();
         if (!socketClient) return;
         if (socketClient.isOpenOrConnecting()) return;
@@ -65,11 +75,19 @@ export class MultiplayerSessionController {
         this._isConnecting = false;
         this.uiController.setButtonState(false);
         this.uiController.toggleRetry(!!this._lastJoinType);
-        this.uiController.setStatus(this._hasJoinedGame
-            ? 'Disconnected from server. Retry to reconnect.'
-            : 'Connection closed before game start. Retry to connect.');
-        this.uiController.setStatusError(true);
+        const shouldAutoReconnect = this._hasJoinedGame && !!this._lastJoinType;
+        if (shouldAutoReconnect) {
+            this._scheduleReconnect();
+        } else {
+            this.uiController.setStatus('Connection closed before game start. Retry to connect.');
+            this.uiController.setStatusError(true);
+        }
         this.uiController.showOverlay();
+    }
+
+    handleSocketOpen() {
+        this._clearReconnectTimer();
+        this._reconnectAttempt = 0;
     }
 
     handleSocketError() {
@@ -78,6 +96,8 @@ export class MultiplayerSessionController {
     }
 
     exitToMenu() {
+        this._clearReconnectTimer();
+        this._reconnectAttempt = 0;
         const socketClient = this.getSocketClient();
         if (socketClient) socketClient.disconnect();
         if (typeof this.onResetState === 'function') this.onResetState();
@@ -89,5 +109,31 @@ export class MultiplayerSessionController {
         this.uiController.setButtonState(false);
         this.uiController.setStatus('Select a mode to join.');
         this.uiController.setStatusError(false);
+    }
+
+    _scheduleReconnect() {
+        if (this._reconnectAttempt >= this.reconnectMaxAttempts) {
+            this.uiController.setStatus('Disconnected from server. Auto-reconnect failed, please reconnect.');
+            this.uiController.setStatusError(true);
+            return;
+        }
+        const attempt = this._reconnectAttempt + 1;
+        const delayMs = this.reconnectBaseDelayMs * (2 ** this._reconnectAttempt);
+        const sec = (delayMs / 1000).toFixed(delayMs >= 1000 ? 1 : 0);
+        this.uiController.setStatus(`Disconnected. Reconnecting in ${sec}s… (attempt ${attempt}/${this.reconnectMaxAttempts})`);
+        this.uiController.setStatusError(false);
+
+        this._clearReconnectTimer();
+        this._reconnectTimer = setTimeout(() => {
+            this._reconnectTimer = null;
+            this._reconnectAttempt += 1;
+            this.connect(this._lastJoinType, this._lastJoinPayload, { isReconnect: true });
+        }, delayMs);
+    }
+
+    _clearReconnectTimer() {
+        if (!this._reconnectTimer) return;
+        clearTimeout(this._reconnectTimer);
+        this._reconnectTimer = null;
     }
 }

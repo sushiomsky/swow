@@ -1,10 +1,18 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { enqueueSeasonRecompute } from '../services/leaderboardService.js';
 import { emitToAll } from '../realtime.js';
 
 const router = Router();
+const MAX_LEADERBOARD_SCORE = 100000000;
+const MAX_SCORE_JUMP_PER_SUBMISSION = 250000;
+const scoreSubmitSchema = z.object({
+  user_id: z.string().min(1).max(120).optional(),
+  score: z.number().int().min(0).max(MAX_LEADERBOARD_SCORE),
+  season: z.string().trim().min(1).max(40).regex(/^[a-zA-Z0-9_-]+$/).default('current')
+});
 
 router.get('/', async (req, res, next) => {
   const season = (req.query.season || 'current').toString();
@@ -65,20 +73,40 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/score', async (req, res, next) => {
-  const { user_id, score, season = 'current' } = req.body || {};
-  if (!user_id || typeof score !== 'number') return res.status(400).json({ error: 'user_id and score required' });
+router.post('/score', requireAuth, async (req, res, next) => {
   try {
+    const payload = scoreSubmitSchema.parse(req.body || {});
+    const authedUserId = req.user?.sub;
+    if (!authedUserId) return res.status(401).json({ error: 'Missing authenticated user' });
+    if (payload.user_id && payload.user_id !== authedUserId) {
+      return res.status(403).json({ error: 'Cannot submit score for another user' });
+    }
+    const userId = authedUserId;
+    const season = payload.season;
+    const score = payload.score;
+
+    const current = await db.query(
+      `SELECT score FROM leaderboards WHERE user_id = $1 AND season = $2 LIMIT 1`,
+      [userId, season]
+    );
+    const existingScore = Number(current.rows?.[0]?.score || 0);
+    if (score > existingScore + MAX_SCORE_JUMP_PER_SUBMISSION) {
+      return res.status(422).json({
+        error: 'Score jump too large; submit score via verified match flow'
+      });
+    }
+
     await db.query(
       `INSERT INTO leaderboards (user_id, score, season, rank)
        VALUES ($1, $2, $3, 0)
        ON CONFLICT (user_id, season)
        DO UPDATE SET score = GREATEST(leaderboards.score, EXCLUDED.score), updated_at = NOW()`,
-      [user_id, score, season]
+      [userId, score, season]
     );
     await enqueueSeasonRecompute(season);
     return res.status(201).json({ ok: true });
   } catch (e) {
+    if (e?.issues) return res.status(400).json({ error: e.issues });
     return next(e);
   }
 });

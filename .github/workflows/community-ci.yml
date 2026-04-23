@@ -127,6 +127,56 @@ jobs:
           path: ci-logs/${{ matrix.surface }}
           if-no-files-found: warn
 
+  multiplayer-agent-gate:
+    name: Multiplayer agent gate (netcode + gameplay)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install root dependencies
+        run: npm ci
+      - name: Start multiplayer server
+        run: |
+          mkdir -p ci-logs/agents
+          nohup node server-multiplayer.js > ci-logs/agents/multiplayer-server.log 2>&1 &
+          echo $! > ci-logs/agents/multiplayer-server.pid
+      - name: Wait for multiplayer health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:42735/multiplayer/active-games" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "multiplayer server failed to become healthy"
+          exit 1
+      - name: Run netcode and gameplay agents
+        env:
+          NETCODE_CHECK_HTTP_BASE: http://127.0.0.1:42735
+          NETCODE_CHECK_WS_URL: ws://127.0.0.1:42735/multiplayer
+          GAMEPLAY_CHECK_BASE_URL: http://127.0.0.1:42735
+        run: |
+          npm run agent:netcode
+          npm run agent:gameplay
+      - name: Upload multiplayer agent logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multiplayer-agent-logs
+          path: ci-logs/agents
+          if-no-files-found: warn
+      - name: Stop multiplayer server
+        if: always()
+        run: |
+          if [ -f ci-logs/agents/multiplayer-server.pid ]; then
+            kill "$(cat ci-logs/agents/multiplayer-server.pid)" >/dev/null 2>&1 || true
+          fi
+
   ci-required-gate:
     name: Required CI gate
     runs-on: ubuntu-latest
@@ -134,6 +184,7 @@ jobs:
       - community-api-quality
       - community-web-quality
       - surface-smoke
+      - multiplayer-agent-gate
     if: always()
     steps:
       - name: Enforce required checks
@@ -148,6 +199,10 @@ jobs:
           fi
           if [ "${{ needs.surface-smoke.result }}" != "success" ]; then
             echo "surface-smoke result: ${{ needs.surface-smoke.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.multiplayer-agent-gate.result }}" != "success" ]; then
+            echo "multiplayer-agent-gate result: ${{ needs.multiplayer-agent-gate.result }}"
             exit 1
           fi
           echo "All required quality and smoke checks passed."

@@ -27,6 +27,12 @@ class TeamBRQueue {
         this.teams = []; // Array of [player1Id, player2Id]
         this.countdownTimer = null;
         this.countdownStartedAt = null;
+        this.metrics = {
+            launches: 0,
+            launch_failures: 0,
+            players_launched: 0,
+            total_wait_ms: 0,
+        };
         console.log(`[TeamBRQueue] Initialized (${mode})`);
     }
     
@@ -76,6 +82,7 @@ class TeamBRQueue {
      */
     _createTeamInstant(playerId, conn) {
         const ServerPlayer = require('./ServerPlayer').ServerPlayer;
+        const queued = this.waitingPlayers.get(playerId);
         
         // Create dungeon for this team
         const dungeon = this.gameServer._createDungeon();
@@ -102,6 +109,12 @@ class TeamBRQueue {
         this.gameServer._sendInit(conn, dungeon);
         
         console.log(`[TeamBRQueue] Team created: player ${playerId} + bot in dungeon ${dungeon.id}`);
+
+        if (queued?.joinedAt) {
+            this.metrics.total_wait_ms += Math.max(0, Date.now() - queued.joinedAt);
+        }
+        this.metrics.launches += 1;
+        this.metrics.players_launched += 1;
         
         // Remove from waiting
         this.waitingPlayers.delete(playerId);
@@ -114,7 +127,7 @@ class TeamBRQueue {
         const waiting = this.waitingPlayers.size;
         
         // Check if we can form teams (need at least 2 players per team, min 2 teams)
-        const minPlayers = MIN_TEAMS_SITNGO * 2;
+        const minPlayers = CONFIG.minTeamsSitNGo * 2;
         
         if (waiting >= minPlayers && !this.countdownTimer) {
             this._startCountdown();
@@ -133,12 +146,12 @@ class TeamBRQueue {
     _startCountdown() {
         if (this.countdownTimer) return;
         
-        console.log(`[TeamBRQueue] Starting countdown: ${COUNTDOWN_MS}ms`);
+        console.log(`[TeamBRQueue] Starting countdown: ${CONFIG.countdownMs}ms`);
         this.countdownStartedAt = Date.now();
         
         this.countdownTimer = setTimeout(() => {
             this._launchTeamGame();
-        }, COUNTDOWN_MS);
+        }, CONFIG.countdownMs);
         
         this._broadcastQueueStatus();
     }
@@ -163,8 +176,9 @@ class TeamBRQueue {
     _launchTeamGame() {
         const players = Array.from(this.waitingPlayers.entries());
         
-        if (players.length < MIN_TEAMS_SITNGO * 2) {
+        if (players.length < CONFIG.minTeamsSitNGo * 2) {
             console.warn('[TeamBRQueue] Not enough players to launch');
+            this.metrics.launch_failures += 1;
             return;
         }
         
@@ -184,6 +198,10 @@ class TeamBRQueue {
         for (let i = 0; i < players.length; i += 2) {
             const [player1Id, { conn: conn1 }] = players[i];
             const player2Data = players[i + 1];
+            if (!this._isConnectionOpen(conn1)) {
+                console.log(`[TeamBRQueue] Skipping disconnected player before init: ${player1Id}`);
+                continue;
+            }
             
             // Create dungeon for this team
             const dungeon = this.gameServer._createDungeon();
@@ -220,12 +238,34 @@ class TeamBRQueue {
             dungeon.startGame();
             
             // Send init to both players
-            this.gameServer._sendInit(conn1, dungeon);
+            this._sendMatchStarting(conn1);
+            if (this._isConnectionOpen(conn1)) {
+                this.gameServer._sendInit(conn1, dungeon);
+            } else {
+                console.log(`[TeamBRQueue] Player disconnected after match_starting: ${player1Id}`);
+            }
             if (player2Data) {
-                this.gameServer._sendInit(player2Data[1].conn, dungeon);
+                const conn2 = player2Data[1].conn;
+                if (this._isConnectionOpen(conn2)) {
+                    this._sendMatchStarting(conn2);
+                    if (this._isConnectionOpen(conn2)) {
+                        this.gameServer._sendInit(conn2, dungeon);
+                    } else {
+                        console.log(`[TeamBRQueue] Teammate disconnected after match_starting: ${player2Data[0]}`);
+                    }
+                } else {
+                    console.log(`[TeamBRQueue] Skipping disconnected teammate before init: ${player2Data[0]}`);
+                }
             }
         }
         
+        const now = Date.now();
+        for (const [, { joinedAt }] of players) {
+            this.metrics.total_wait_ms += Math.max(0, now - joinedAt);
+        }
+        this.metrics.launches += 1;
+        this.metrics.players_launched += players.length;
+
         // Clear queue
         this.waitingPlayers.clear();
         
@@ -263,7 +303,7 @@ class TeamBRQueue {
             teams_possible: Math.floor(this.waitingPlayers.size / 2),
             countdown_active: !!this.countdownTimer,
             countdown_remaining: this.countdownTimer ? 
-                Math.max(0, COUNTDOWN_MS - (Date.now() - this.countdownStartedAt)) : null
+                Math.max(0, CONFIG.countdownMs - (Date.now() - this.countdownStartedAt)) : null
         };
         
         for (const { conn } of this.waitingPlayers.values()) {
@@ -275,11 +315,25 @@ class TeamBRQueue {
      * Get queue snapshot for API
      */
     getSnapshot() {
+        const avgWaitMs = this.metrics.players_launched > 0
+            ? Math.round(this.metrics.total_wait_ms / this.metrics.players_launched)
+            : 0;
+        const successRate = (this.metrics.launches + this.metrics.launch_failures) > 0
+            ? Math.round((this.metrics.launches / (this.metrics.launches + this.metrics.launch_failures)) * 100)
+            : 0;
         return {
             mode: this.mode,
             players_waiting: this.waitingPlayers.size,
             teams_possible: Math.floor(this.waitingPlayers.size / 2),
-            countdown_active: !!this.countdownTimer
+            countdown_active: !!this.countdownTimer,
+            metrics: {
+                launches: this.metrics.launches,
+                launch_failures: this.metrics.launch_failures,
+                players_launched: this.metrics.players_launched,
+                total_wait_ms: this.metrics.total_wait_ms,
+                avg_wait_ms: avgWaitMs,
+                launch_success_rate_pct: successRate,
+            },
         };
     }
 }
