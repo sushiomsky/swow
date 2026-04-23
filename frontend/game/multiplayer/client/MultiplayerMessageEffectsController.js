@@ -78,9 +78,7 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleInit(msg) {
-        this._dismissMatchStartingStatus();
-        this._hideMatchResultsOverlay();
-        this._setMatchResultsBusy(false);
+        this._clearMatchStartingStatus();
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
         if (typeof this.setHasJoinedGame === 'function') this.setHasJoinedGame(true);
         this.uiController.setButtonState(false);
@@ -118,51 +116,9 @@ export class MultiplayerMessageEffectsController {
         const ttl = Number(msg?.expires_ms) || 4000;
         this._clearMatchStartingStatusTimer();
         this._matchStartingStatusTimer = setTimeout(() => {
-            this._dismissMatchStartingStatus();
+            this.uiController.setStatus('');
+            this._matchStartingStatusTimer = null;
         }, ttl);
-    }
-
-    handleSitNGoQueueStatus(msg) {
-        this._dismissMatchStartingStatus({ clearText: false });
-        this.uiController.setStatusError(false);
-        const waiting = Number(msg?.players_waiting || 0);
-        const minPlayers = Number(msg?.min_players || 2);
-        const hasCountdown = !!msg?.countdown_active;
-        const remainingSec = this._toSeconds(msg?.countdown_remaining);
-
-        if (hasCountdown && remainingSec !== null) {
-            this.uiController.setStatus(`Queue ready: ${waiting} player${waiting === 1 ? '' : 's'} — match starts in ${remainingSec}s…`);
-            return;
-        }
-
-        if (waiting < minPlayers) {
-            this.uiController.setStatus(`Queue: ${waiting}/${minPlayers} players. Waiting for more…`);
-            return;
-        }
-
-        this.uiController.setStatus(`Queue ready: ${waiting} players. Launching soon…`);
-    }
-
-    handleTeamQueueStatus(msg) {
-        this._dismissMatchStartingStatus({ clearText: false });
-        this.uiController.setStatusError(false);
-        const waiting = Number(msg?.players_waiting || 0);
-        const teams = Number(msg?.teams_possible || 0);
-        const hasCountdown = !!msg?.countdown_active;
-        const remainingSec = this._toSeconds(msg?.countdown_remaining);
-        const minPlayers = 4;
-
-        if (hasCountdown && remainingSec !== null) {
-            this.uiController.setStatus(`Team queue ready: ${teams} team${teams === 1 ? '' : 's'} — starts in ${remainingSec}s…`);
-            return;
-        }
-
-        if (waiting < minPlayers) {
-            this.uiController.setStatus(`Team queue: ${waiting}/${minPlayers} players (${teams} team${teams === 1 ? '' : 's'}). Waiting…`);
-            return;
-        }
-
-        this.uiController.setStatus(`Team queue ready: ${teams} team${teams === 1 ? '' : 's'}. Launching soon…`);
     }
 
     handleState(msg) {
@@ -465,11 +421,9 @@ export class MultiplayerMessageEffectsController {
         } catch (_) { /* ignore */ }
     }
 
-    _dismissMatchStartingStatus({ clearText = true } = {}) {
+    _clearMatchStartingStatus() {
         this._clearMatchStartingStatusTimer();
-        if (clearText) {
-            this.uiController.setStatus('');
-        }
+        this.uiController.setStatus('');
     }
 
     _clearMatchStartingStatusTimer() {
@@ -477,11 +431,5 @@ export class MultiplayerMessageEffectsController {
             clearTimeout(this._matchStartingStatusTimer);
             this._matchStartingStatusTimer = null;
         }
-    }
-
-    _toSeconds(ms) {
-        const value = Number(ms);
-        if (Number.isNaN(value)) return null;
-        return Math.max(0, Math.ceil(value / 1000));
     }
 }

@@ -19,19 +19,6 @@ const MIN_TEAMS_SITNGO = 2;
 const COUNTDOWN_MS = 20000;  // 20 seconds for team mode
 const MATCH_STARTING_EVENT = 'match_starting';
 
-function readIntEnv(name, fallback) {
-    const raw = process?.env?.[name];
-    if (!raw) return fallback;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-const CONFIG = (() => {
-    const minTeamsSitNGo = Math.max(2, readIntEnv('TEAM_SITNGO_MIN_TEAMS', MIN_TEAMS_SITNGO));
-    const countdownMs = Math.max(2000, readIntEnv('TEAM_SITNGO_COUNTDOWN_MS', COUNTDOWN_MS));
-    return { minTeamsSitNGo, countdownMs };
-})();
-
 class TeamBRQueue {
     constructor(gameServer, mode = 'team-endless') {
         this.gameServer = gameServer;
@@ -115,6 +102,8 @@ class TeamBRQueue {
         
         // Start game
         dungeon.startGame();
+        
+        this._sendMatchStarting(conn);
 
         // Send init
         this.gameServer._sendInit(conn, dungeon);
@@ -203,6 +192,7 @@ class TeamBRQueue {
         }
         
         const ServerPlayer = require('./ServerPlayer').ServerPlayer;
+        this._notifyMatchStarting();
         
         // Form teams of 2
         for (let i = 0; i < players.length; i += 2) {
@@ -282,19 +272,24 @@ class TeamBRQueue {
         console.log('[TeamBRQueue] Team game launched');
     }
 
+    _notifyMatchStarting() {
+        const payload = {
+            type: MATCH_STARTING_EVENT,
+            message: 'Match found, launching…',
+            expires_ms: 4000,
+        };
+
+        for (const { conn } of this.waitingPlayers.values()) {
+            this.gameServer._send(conn.ws, payload);
+        }
+    }
+
     _sendMatchStarting(conn) {
-        if (!this._isConnectionOpen(conn)) return;
         this.gameServer._send(conn.ws, {
             type: MATCH_STARTING_EVENT,
             message: 'Match found, launching…',
             expires_ms: 4000,
         });
-    }
-
-    _isConnectionOpen(conn) {
-        if (!conn?.ws) return false;
-        if (typeof conn.ws.readyState !== 'number') return true;
-        return conn.ws.readyState === 1;
     }
     
     /**

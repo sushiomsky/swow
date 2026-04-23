@@ -18,20 +18,6 @@ const MAX_PLAYERS = 8;  // Maximum before instant start
 const COUNTDOWN_MS = 15000;  // 15 seconds after MIN_PLAYERS
 const MATCH_STARTING_EVENT = 'match_starting';
 
-function readIntEnv(name, fallback) {
-    const raw = process?.env?.[name];
-    if (!raw) return fallback;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-const CONFIG = (() => {
-    const minPlayers = Math.max(2, readIntEnv('SITNGO_MIN_PLAYERS', MIN_PLAYERS));
-    const maxPlayers = Math.max(minPlayers, readIntEnv('SITNGO_MAX_PLAYERS', MAX_PLAYERS));
-    const countdownMs = Math.max(2000, readIntEnv('SITNGO_COUNTDOWN_MS', COUNTDOWN_MS));
-    return { minPlayers, maxPlayers, countdownMs };
-})();
-
 class SitNGoQueue {
     constructor(gameServer) {
         this.gameServer = gameServer;
@@ -148,6 +134,8 @@ class SitNGoQueue {
         
         const ServerPlayer = require('./ServerPlayer').ServerPlayer;
         const players = Array.from(this.waitingPlayers.entries());
+
+        this._notifyMatchStarting();
         
         // Create dungeon for each player
         players.forEach(([playerId, { conn }]) => {
@@ -198,19 +186,16 @@ class SitNGoQueue {
         console.log('[SitNGoQueue] Game launched successfully');
     }
 
-    _sendMatchStarting(conn) {
-        if (!this._isConnectionOpen(conn)) return;
-        this.gameServer._send(conn.ws, {
+    _notifyMatchStarting() {
+        const payload = {
             type: MATCH_STARTING_EVENT,
             message: 'Match found, launching…',
             expires_ms: 4000,
-        });
-    }
+        };
 
-    _isConnectionOpen(conn) {
-        if (!conn?.ws) return false;
-        if (typeof conn.ws.readyState !== 'number') return true;
-        return conn.ws.readyState === 1;
+        for (const { conn } of this.waitingPlayers.values()) {
+            this.gameServer._send(conn.ws, payload);
+        }
     }
 
     launchWithBots() {
