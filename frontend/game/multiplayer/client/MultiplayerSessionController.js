@@ -73,7 +73,7 @@ export class MultiplayerSessionController {
 
     handleSocketClose() {
         this._isConnecting = false;
-        this.uiController.setButtonState(false);
+        this.uiController.setButtonState(!this._hasJoinedGame);
         this.uiController.toggleRetry(!!this._lastJoinType);
         const shouldAutoReconnect = this._hasJoinedGame && !!this._lastJoinType;
         if (shouldAutoReconnect) {
@@ -91,6 +91,8 @@ export class MultiplayerSessionController {
     }
 
     handleSocketError() {
+        this._isConnecting = false;
+        this.uiController.setButtonState(!this._hasJoinedGame);
         this.uiController.setStatus('Connection error — check server status and try again.');
         this.uiController.setStatusError(true);
     }
