@@ -6,7 +6,6 @@ import { LocaleProvider } from '../providers/LocaleProvider';
 import LocaleSwitcher from '../components/LocaleSwitcher';
 import SessionNotice from '../components/SessionNotice';
 import FeedbackButton from '../components/FeedbackButton';
-import LocaleSwitcher from '../components/LocaleSwitcher';
 import { GAME_URLS } from '../lib/gameLinks';
 
 export const metadata = {
@@ -44,7 +43,6 @@ export default function RootLayout({ children }) {
                   <Link href="/community/forum">Forum</Link>
                   <Link href="/community/social">Sozial</Link>
                   <a href={GAME_URLS.spectate} className="text-zinc-300 hover:text-white">Zuschauen</a>
-                  <LocaleSwitcher />
                   <a className="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500" href={GAME_URLS.multiplayer}>Spielen</a>
                   <LocaleSwitcher />
                 </nav>
