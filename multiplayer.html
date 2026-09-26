@@ -49,6 +49,7 @@
             <a href="/spectate.html">👁 Spectate</a>
             <a href="/public/handbook.html" target="_blank">📖 Handbook</a>
             <a href="/">🏠 Home</a>
+            <a href="/community" target="_blank" rel="noopener">💬 Community</a>
         </div>
     </div>
 
@@ -206,6 +207,26 @@
 
     <script>
     (function() {
+        // M1: the game host serves no /api/* routes — the Community API
+        // lives on its own origin (compose: COMMUNITY_API_PUBLIC_PORT,
+        // default :17000; production edge: same-origin /api/community* via
+        // Caddy). __SWOW_API_BASE__ wins, then same-origin path, then the
+        // well-known local API port as a last resort.
+        function resolveCommunityApiBase() {
+            if (window.__SWOW_API_BASE__) return window.__SWOW_API_BASE__;
+            const host = window.location.hostname;
+            const port = window.location.port;
+            if (port === '17000') return `${window.location.protocol}//${window.location.host}/api/community`;
+            if (host === 'localhost' || host === '127.0.0.1') {
+                return `${window.location.protocol}//${host}:17000/api/community`;
+            }
+            return '/api/community';
+        }
+        const COMMUNITY_API_BASE = resolveCommunityApiBase();
+        const COMMUNITY_WEB_URL = window.__SWOW_COMMUNITY_URL__
+            || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? `${window.location.protocol}//${window.location.hostname}:13000/community`
+                : '/community');
         const fab = document.getElementById('feedback-fab');
         const overlay = document.getElementById('feedback-overlay');
         fab.addEventListener('click', () => { overlay.style.display = 'flex'; });
@@ -214,14 +235,17 @@
         document.getElementById('fb-submit').addEventListener('click', async () => {
             const errEl = document.getElementById('fb-error');
             const token = localStorage.getItem('communityToken');
-            if (!token) { errEl.textContent = 'Please log in on the community site first.'; errEl.style.display = 'block'; return; }
+            if (!token) {
+                errEl.innerHTML = 'Please <a href="' + COMMUNITY_WEB_URL + '" target="_blank" rel="noopener" style="color:#818cf8;">log in on the community site</a> first.';
+                errEl.style.display = 'block'; return;
+            }
             const title = document.getElementById('fb-title').value.trim();
             const desc = document.getElementById('fb-desc').value.trim();
             if (title.length < 5) { errEl.textContent = 'Title must be at least 5 characters.'; errEl.style.display = 'block'; return; }
             if (desc.length < 10) { errEl.textContent = 'Description must be at least 10 characters.'; errEl.style.display = 'block'; return; }
             errEl.style.display = 'none';
             try {
-                const res = await fetch('/api/community/feedback', {
+                const res = await fetch(COMMUNITY_API_BASE + '/feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                     body: JSON.stringify({ type: document.getElementById('fb-type').value, title, description: desc, url: location.href }),
