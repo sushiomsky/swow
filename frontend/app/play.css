@@ -226,10 +226,26 @@ html, body {
 }
 
 /* ─── Game root ──────────────────────────────────────────────────── */
+/* Height anchor: the SP engine measures #border (percentage height), which
+   only resolves when every ancestor up to the viewport has a definite height. */
 #game-root {
     position: relative;
     width: 100%;
     height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: #000;
+}
+
+/* Container injected around #body in singleplayer mode — centers the canvas */
+#sp-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
 /* Screen shake on death */

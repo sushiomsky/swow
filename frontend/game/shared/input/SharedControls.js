@@ -373,8 +373,11 @@ export class SharedControlsRuntime {
             return;
         }
 
+        // Latch key as 'hold' (persistent until consumed by game logic or
+        // released). This keeps short taps visible to the 50fps scan loop
+        // even when keyup arrives between two scan frames.
         if (this.pressedKeys[keyCode] === false || typeof this.pressedKeys[keyCode] === 'undefined') {
-            this.pressedKeys[keyCode] = true;
+            this.pressedKeys[keyCode] = 'hold';
         }
 
         if (typeof this.onKeyDown === 'function') this.onKeyDown(event, keyCode);
@@ -407,7 +410,8 @@ export class SharedControlsRuntime {
         const mapping = binding.actions[action];
         if (!mapping) return false;
         if (binding.device === 'keyboard') {
-            return this.pressedKeys[mapping.code] === true;
+            // 'hold' = latched tap not yet consumed; `true` kept for back-compat.
+            return this.pressedKeys[mapping.code] === 'hold' || this.pressedKeys[mapping.code] === true;
         }
         const pressed = this._isGamepadInputPressed(binding.gamepadIndex, mapping);
         const holdToken = this._gamepadHoldToken(binding.gamepadIndex, action, mapping);

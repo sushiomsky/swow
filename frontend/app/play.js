@@ -96,7 +96,7 @@ function createSPDOM() {
     root.innerHTML = `
         <div id="body">
             <div id="border">
-                <canvas id="screen" width="960" height="600" class="hide" moz-opaque></canvas>
+                <canvas id="screen" width="960" height="600" class="hide" moz-opaque role="img" aria-label="Wizard of Wor game screen"></canvas>
                 <canvas id="visualFilterLayer" width="960" height="600"></canvas>
             </div>
             <div id="menuOverlay" class="hide"></div>
@@ -163,7 +163,7 @@ function createMPDOM() {
         </div>
         <div id="body">
             <div id="border">
-                <canvas id="screen" width="960" height="600" class="hide" moz-opaque></canvas>
+                <canvas id="screen" width="960" height="600" class="hide" moz-opaque role="img" aria-label="Wizard of Wor game screen"></canvas>
                 <canvas id="visualFilterLayer" width="960" height="600"></canvas>
             </div>
         </div>
@@ -284,6 +284,7 @@ async function teardownSP() {
     _engine = null;
     _activeMode = null;
     document.getElementById('sp-root')?.remove();
+    document.getElementById('sound-badge')?.remove();
     document.getElementById('play-gameover')?.remove();
     document.querySelectorAll('.kill-popup').forEach(el => el.remove());
     if (_spCSSLink) { _spCSSLink.remove(); _spCSSLink = null; }
@@ -395,6 +396,15 @@ async function startGame(numPlayers) {
     setAmbientUiVisible(false);
     showOverlay(false);
     document.getElementById('play-gameover')?.remove();
+    // Stop attract mode cleanly before starting a real game: reset to title
+    // first and clear stale key state, so leftover input from the background
+    // demo can't instantly end the new run (immediate game over on PLAY).
+    _engine.resetGame();
+    const _rt = _spApp?.controlsRuntime;
+    if (_rt) {
+        for (const key of Object.keys(_rt.pressedKeys)) _rt.pressedKeys[key] = false;
+        _rt.heldGamepadInputs?.clear?.();
+    }
     _engine.startNewGame(numPlayers);
     _state = 'playing';
 }
@@ -521,6 +531,7 @@ function _teardownForEngine() {
     _engine = null;
     _activeMode = null;
     document.getElementById('sp-root')?.remove();
+    document.getElementById('sound-badge')?.remove();
     document.getElementById('mp-root')?.remove();
     document.getElementById('play-gameover')?.remove();
     document.querySelectorAll('.kill-popup').forEach(el => el.remove());

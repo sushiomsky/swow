@@ -36,7 +36,7 @@ function createSingleplayerDOM() {
     root.innerHTML = `
         <div id="body">
             <div id="border">
-                <canvas id="screen" width="960" height="600" class="hide" moz-opaque></canvas>
+                <canvas id="screen" width="960" height="600" class="hide" moz-opaque role="img" aria-label="Wizard of Wor game screen"></canvas>
                 <canvas id="visualFilterLayer" width="960" height="600"></canvas>
             </div>
             <div id="menuOverlay" class="hide"></div>
@@ -108,7 +108,7 @@ function createMultiplayerDOM() {
         </div>
         <div id="body">
             <div id="border">
-                <canvas id="screen" width="960" height="600" class="hide" moz-opaque></canvas>
+                <canvas id="screen" width="960" height="600" class="hide" moz-opaque role="img" aria-label="Wizard of Wor game screen"></canvas>
                 <canvas id="visualFilterLayer" width="960" height="600"></canvas>
             </div>
         </div>
@@ -284,6 +284,8 @@ export class Platform {
 
         // Remove floating back button
         document.getElementById('platform-back-float')?.remove();
+        // Remove singleplayer sound badge (recreated on next SP start)
+        document.getElementById('sound-badge')?.remove();
 
         // Remove mode-specific DOM
         const existing = this._gameRoot?.firstChild;
