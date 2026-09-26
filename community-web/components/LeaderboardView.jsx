@@ -5,8 +5,36 @@ import LeaderboardTable from './LeaderboardTable';
 import { apiGet } from '../lib/api';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
 import { useRealtime, useRealtimeEvent } from '../providers/RealtimeProvider';
+import { useLocale } from '../providers/LocaleProvider';
+
+const TEXTS = {
+  de: {
+    scope: 'Bereich',
+    global: 'Global',
+    regional: 'Regional',
+    friends: 'Freunde',
+    season: 'Saison',
+    region: 'Region',
+    back: 'Zurück',
+    next: 'Weiter',
+    page: 'Seite'
+  },
+  en: {
+    scope: 'Scope',
+    global: 'Global',
+    regional: 'Regional',
+    friends: 'Friends',
+    season: 'Season',
+    region: 'Region',
+    back: 'Back',
+    next: 'Next',
+    page: 'Page'
+  }
+};
 
 export default function LeaderboardView() {
+  const { locale } = useLocale();
+  const t = TEXTS[locale] || TEXTS.de;
   const [rows, setRows] = useState([]);
   const [scope, setScope] = useState('global');
   const [season, setSeason] = useState('current');
@@ -51,29 +79,29 @@ export default function LeaderboardView() {
     <div className="space-y-4">
       <section className="card flex flex-wrap items-end gap-3">
         <label className="text-sm">
-          Bereich
-          <select value={scope} onChange={(e) => { setPage(1); setScope(e.target.value); }} className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-1" aria-label="Bereich">
-            <option value="global">Global</option>
-            <option value="regional">Regional</option>
-            <option value="friends">Freunde</option>
+          {t.scope}
+          <select value={scope} onChange={(e) => { setPage(1); setScope(e.target.value); }} className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-1" aria-label={t.scope}>
+            <option value="global">{t.global}</option>
+            <option value="regional">{t.regional}</option>
+            <option value="friends">{t.friends}</option>
           </select>
         </label>
         <label className="text-sm">
-          Saison
-          <input value={season} onChange={(e) => { setPage(1); setSeason(e.target.value); }} className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-1" aria-label="Saison" />
+          {t.season}
+          <input value={season} onChange={(e) => { setPage(1); setSeason(e.target.value); }} className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-1" aria-label={t.season} />
         </label>
         {scope === 'regional' && (
           <label className="text-sm">
-            Region
-            <input value={region} onChange={(e) => { setPage(1); setRegion(e.target.value); }} className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-1" aria-label="Region" />
+            {t.region}
+            <input value={region} onChange={(e) => { setPage(1); setRegion(e.target.value); }} className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-1" aria-label={t.region} />
           </label>
         )}
       </section>
       <LeaderboardTable rows={rows} />
       <div className="flex gap-2">
-        <button className="rounded border border-zinc-700 px-3 py-1 text-sm" onClick={() => setPage((p) => Math.max(1, p - 1))}>Zurück</button>
-        <span className="px-2 py-1 text-sm text-zinc-300">Seite {page}</span>
-        <button className="rounded border border-zinc-700 px-3 py-1 text-sm" onClick={() => setPage((p) => p + 1)}>Weiter</button>
+        <button className="rounded border border-zinc-700 px-3 py-1 text-sm" onClick={() => setPage((p) => Math.max(1, p - 1))}>{t.back}</button>
+        <span className="px-2 py-1 text-sm text-zinc-300">{t.page} {page}</span>
+        <button className="rounded border border-zinc-700 px-3 py-1 text-sm" onClick={() => setPage((p) => p + 1)}>{t.next}</button>
       </div>
     </div>
   );
