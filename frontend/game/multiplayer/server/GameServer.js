@@ -30,6 +30,9 @@ const TARGET_DUNGEONS_PER_MODE = 4;
 // Jede WS-Verbindung kann sonst Dungeons + 50-FPS-Ticks erzeugen.
 const MAX_CONNECTIONS = Number(process.env.MP_MAX_CONNECTIONS || 500);
 const MAX_DUNGEONS = Number(process.env.MP_MAX_DUNGEONS || 200);
+// Hardening (Leak): keine Bot-Seeds bei vollem Haus — sonst kämpft der
+// Seeder gegen den Dungeon-Cap und der Log läuft voll.
+const BOT_SEED_PAUSE_AT = Math.floor(MAX_DUNGEONS * 0.8);
 const MAX_MSG_BYTES = 64 * 1024;
 
 // Hardening: Input-Schema — nur diese Boolean-Keys erreichen die Simulation.
@@ -786,22 +789,26 @@ class GameServer {
     }
 
     _seedEndlessBattleRoyaleBots() {
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('endless_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('endless_br');
     }
 
     _seedSitNGoBattleRoyaleBots() {
         if (this.sitNGoQueue.getWaitingCount() > 0) this.sitNGoQueue.launchWithBots();
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('sitngo_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('sitngo_br');
     }
 
     _seedTeamEndlessBots() {
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_endless_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_endless_br');
     }
 
     _seedTeamSitNGoBots() {
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_sitngo_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_sitngo_br');
     }
