@@ -104,6 +104,9 @@ services:
       context: ./community-web
       dockerfile: Dockerfile
     environment:
+      # Server-side Next rewrite target (container DNS). Local dev without
+      # Docker can override with COMMUNITY_API_INTERNAL_BASE=http://localhost:17000/api/community
+      COMMUNITY_API_INTERNAL_BASE: ${COMMUNITY_API_INTERNAL_BASE:-http://community-api:7000/api/community}
       NEXT_PUBLIC_COMMUNITY_API_BASE: ${NEXT_PUBLIC_COMMUNITY_API_BASE:-http://localhost:17000/api/community}
       NEXT_PUBLIC_COMMUNITY_SOCKET_URL: ${NEXT_PUBLIC_COMMUNITY_SOCKET_URL:-http://localhost:17000}
     ports:
