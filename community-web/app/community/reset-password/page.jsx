@@ -4,10 +4,52 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ErrorText from '../../../components/ErrorText';
 import { useCommunitySession } from '../../../providers/CommunitySessionProvider';
+import { useLocale } from '../../../providers/LocaleProvider';
 import { toUserErrorMessage } from '../../../lib/errorUtils';
+
+const T = {
+  de: {
+    title: 'Passwort zurücksetzen',
+    intro: 'Fordere ein Token für deine Konto-E-Mail an.',
+    emailLabel: 'E-Mail',
+    sendToken: 'Token senden',
+    confirmTitle: 'Zurücksetzen bestätigen',
+    confirmIntro: 'Token und neues Passwort eingeben.',
+    tokenLabel: 'Reset-Token',
+    newPassword: 'Neues Passwort',
+    confirmPassword: 'Passwort bestätigen',
+    reset: 'Passwort zurücksetzen',
+    loadingFallback: 'Zurücksetzen wird geladen…',
+    mailSent: 'Falls ein Konto existiert, wurde eine E-Mail zum Zurücksetzen gesendet.',
+    requestFail: 'Zurücksetzen konnte nicht angefordert werden.',
+    mismatch: 'Passwörter stimmen nicht überein.',
+    done: 'Passwort zurückgesetzt. Du kannst dich jetzt mit dem neuen Passwort anmelden.',
+    confirmFail: 'Passwort konnte nicht zurückgesetzt werden.'
+  },
+  en: {
+    title: 'Reset password',
+    intro: 'Request a token for your account email.',
+    emailLabel: 'Email',
+    sendToken: 'Send token',
+    confirmTitle: 'Confirm reset',
+    confirmIntro: 'Enter the token and a new password.',
+    tokenLabel: 'Reset token',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm password',
+    reset: 'Reset password',
+    loadingFallback: 'Loading reset…',
+    mailSent: 'If an account exists, a reset email was sent.',
+    requestFail: 'Could not request reset.',
+    mismatch: 'Passwords do not match.',
+    done: 'Password reset. You can now sign in with the new password.',
+    confirmFail: 'Could not reset password.'
+  }
+};
 
 function ResetPasswordContent() {
   const { api, user } = useCommunitySession();
+  const { locale } = useLocale();
+  const t = T[locale] || T.de;
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState('');
@@ -35,9 +77,9 @@ function ResetPasswordContent() {
       if (response?.password_reset_token) {
         setToken(response.password_reset_token);
       }
-      setStatus('Falls ein Konto existiert, wurde eine E-Mail zum Zurücksetzen gesendet.');
+      setStatus(t.mailSent);
     } catch (requestError) {
-      setError(toUserErrorMessage(requestError, 'Zurücksetzen konnte nicht angefordert werden.'));
+      setError(toUserErrorMessage(requestError, t.requestFail));
     }
   };
 
@@ -46,25 +88,25 @@ function ResetPasswordContent() {
     setError('');
     setStatus('');
     if (password !== confirmPassword) {
-      setError('Passwörter stimmen nicht überein.');
+      setError(t.mismatch);
       return;
     }
     try {
       await api.confirmPasswordReset({ token: token.trim(), password });
-      setStatus('Passwort zurückgesetzt. Du kannst dich jetzt mit dem neuen Passwort anmelden.');
+      setStatus(t.done);
       setPassword('');
       setConfirmPassword('');
     } catch (confirmError) {
-      setError(toUserErrorMessage(confirmError, 'Passwort konnte nicht zurückgesetzt werden.'));
+      setError(toUserErrorMessage(confirmError, t.confirmFail));
     }
   };
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <section className="card">
-        <h1 className="text-2xl font-bold">Passwort zurücksetzen</h1>
+        <h1 className="text-2xl font-bold">{t.title}</h1>
         <p className="mt-2 text-sm text-zinc-300">
-          Fordere ein Token für deine Konto-E-Mail an.
+          {t.intro}
         </p>
         <form onSubmit={requestReset} className="mt-4 space-y-2">
           <input
@@ -72,24 +114,24 @@ function ResetPasswordContent() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="E-Mail"
-            aria-label="E-Mail"
+            placeholder={t.emailLabel}
+            aria-label={t.emailLabel}
             required
           />
-          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">Token senden</button>
+          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">{t.sendToken}</button>
         </form>
       </section>
 
       <section className="card">
-        <h2 className="text-lg font-semibold">Zurücksetzen bestätigen</h2>
-        <p className="mt-2 text-sm text-zinc-300">Token und neues Passwort eingeben.</p>
+        <h2 className="text-lg font-semibold">{t.confirmTitle}</h2>
+        <p className="mt-2 text-sm text-zinc-300">{t.confirmIntro}</p>
         <form onSubmit={confirmReset} className="mt-4 space-y-2">
           <input
             value={token}
             onChange={(event) => setToken(event.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="Reset-Token"
-            aria-label="Reset-Token"
+            placeholder={t.tokenLabel}
+            aria-label={t.tokenLabel}
             required
           />
           <input
@@ -97,8 +139,8 @@ function ResetPasswordContent() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="Neues Passwort"
-            aria-label="Neues Passwort"
+            placeholder={t.newPassword}
+            aria-label={t.newPassword}
             minLength={8}
             required
           />
@@ -107,12 +149,12 @@ function ResetPasswordContent() {
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="Passwort bestätigen"
-            aria-label="Passwort bestätigen"
+            placeholder={t.confirmPassword}
+            aria-label={t.confirmPassword}
             minLength={8}
             required
           />
-          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">Passwort zurücksetzen</button>
+          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">{t.reset}</button>
         </form>
         <ErrorText message={error} />
         {status && <p className="mt-2 text-sm text-emerald-300">{status}</p>}
@@ -123,7 +165,7 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<section className="card"><p className="text-sm text-zinc-400">Zurücksetzen wird geladen…</p></section>}>
+    <Suspense fallback={<section className="card"><p className="text-sm text-zinc-400">…</p></section>}>
       <ResetPasswordContent />
     </Suspense>
   );
