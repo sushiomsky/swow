@@ -36,7 +36,7 @@ const httpServer = http.createServer((req, res) => {
         res.writeHead(200, {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-store',
-            'Access-Control-Allow-Origin': '*',
+            // Hardening: kein CORS-Wildcard (same-origin via Caddy).
         });
         res.end(JSON.stringify(snapshot));
         return;
@@ -51,7 +51,7 @@ const httpServer = http.createServer((req, res) => {
         res.writeHead(200, {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-store',
-            'Access-Control-Allow-Origin': '*',
+            // Hardening: kein CORS-Wildcard (same-origin via Caddy).
         });
         res.end(JSON.stringify(topology));
         return;
@@ -81,7 +81,7 @@ const httpServer = http.createServer((req, res) => {
         console.log(`[HTTP] 200 - ${filePath} (${data.length} bytes, ${MIME[ext] || 'application/octet-stream'})`);
         res.writeHead(200, {
             'Content-Type': MIME[ext] || 'application/octet-stream',
-            'Access-Control-Allow-Origin': '*',
+            // Hardening: kein CORS-Wildcard (same-origin via Caddy).
         });
         res.end(data);
     });
