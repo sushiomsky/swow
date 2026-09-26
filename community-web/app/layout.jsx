@@ -2,6 +2,8 @@ import './globals.css';
 import Link from 'next/link';
 import { CommunitySessionProvider } from '../providers/CommunitySessionProvider';
 import { RealtimeProvider } from '../providers/RealtimeProvider';
+import { LocaleProvider } from '../providers/LocaleProvider';
+import LocaleSwitcher from '../components/LocaleSwitcher';
 import SessionNotice from '../components/SessionNotice';
 import FeedbackButton from '../components/FeedbackButton';
 import { GAME_URLS } from '../lib/gameLinks';
@@ -28,6 +30,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="de">
       <body>
+        <LocaleProvider>
         <CommunitySessionProvider>
           <RealtimeProvider>
             <header className="site-header">
@@ -41,6 +44,7 @@ export default function RootLayout({ children }) {
                   <Link href="/community/social">Sozial</Link>
                   <a href={GAME_URLS.spectate} className="text-zinc-300 hover:text-white">Zuschauen</a>
                   <a className="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500" href={GAME_URLS.multiplayer}>Spielen</a>
+                  <LocaleSwitcher />
                 </nav>
               </div>
             </header>
@@ -63,6 +67,7 @@ export default function RootLayout({ children }) {
             <FeedbackButton />
           </RealtimeProvider>
         </CommunitySessionProvider>
+        </LocaleProvider>
       </body>
     </html>
   );
