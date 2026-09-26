@@ -1,3 +1,6 @@
+// Browser: absolute NEXT_PUBLIC_COMMUNITY_API_BASE (Build-Time) oder relativer
+// Fallback '/api/community', der per Next-Rewrite (next.config.js) auf die
+// Community-API (:17000) proxied wird.
 const API_BASE = process.env.NEXT_PUBLIC_COMMUNITY_API_BASE || '/api/community';
 
 export class CommunityApiError extends Error {
@@ -107,6 +110,9 @@ export function createCommunityApiClient({ getToken, onUnauthorized } = {}) {
     sendFriendRequest: (friendId) => runAuthed(`/friends/request/${friendId}`, { method: 'POST', body: {} }),
     joinClan: (clanId) => runAuthed(`/clans/${clanId}/join`, { method: 'POST', body: {} }),
     leaveClan: () => runAuthed('/clans/leave', { method: 'POST', body: {} }),
+    listClans: () => run('/clans'),
+    getClan: (clanId) => run(`/clans/${clanId}`),
+    createClan: (name) => runAuthed('/clans', { method: 'POST', body: { name } }),
     listChatMessages: (roomType, roomId) => runAuthed(`/chat/${roomType}/${roomId}`),
     reportChatMessage: (messageId, reason = 'abuse') => runAuthed(`/chat/report/${messageId}`, {
       method: 'POST',

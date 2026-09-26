@@ -11,6 +11,8 @@ const authRoutes = (await import('../../src/routes/auth.js')).default;
 const chatRoutes = (await import('../../src/routes/chat.js')).default;
 const forumRoutes = (await import('../../src/routes/forum.js')).default;
 const adminRoutes = (await import('../../src/routes/admin.js')).default;
+const leaderboardRoutes = (await import('../../src/routes/leaderboards.js')).default;
+const clansRoutes = (await import('../../src/routes/clans.js')).default;
 const { createApiRateLimiter } = await import('../../src/middleware/rateLimit.js');
 const { db } = await import('../../src/db.js');
 
@@ -368,4 +370,77 @@ test('admin leaderboard adjust validates payload shape', async () => {
       assert.ok(response.body.details.length >= 1);
     }
   );
+});
+
+test('leaderboard rejects unknown scope with structured 400', async () => {
+  await withServer(
+    (app) => app.use('/api/community/leaderboards', leaderboardRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/leaderboards?scope=xyz');
+      assert.equal(response.status, 400);
+      assert.equal(response.body.error, 'Validation failed');
+      assert.ok(Array.isArray(response.body.details));
+      assert.ok(response.body.details.some((d) => d.path === 'scope'));
+    }
+  );
+});
+
+test('leaderboard rejects oversized limit with structured 400', async () => {
+  await withServer(
+    (app) => app.use('/api/community/leaderboards', leaderboardRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/leaderboards?scope=global&limit=1000000');
+      assert.equal(response.status, 400);
+      assert.equal(response.body.error, 'Validation failed');
+      assert.ok(Array.isArray(response.body.details));
+      assert.ok(response.body.details.some((d) => d.path === 'limit'));
+    }
+  );
+});
+
+test('clans index lists clans without auth', async () => {
+  db.query = async () => ({
+    rows: [{ clan_id: '11111111-1111-1111-1111-111111111111', name: 'TestClan', member_count: 2 }]
+  });
+  await withServer(
+    (app) => app.use('/api/community/clans', clansRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/clans');
+      assert.equal(response.status, 200);
+      assert.ok(Array.isArray(response.body.rows));
+      assert.equal(response.body.rows[0].name, 'TestClan');
+    }
+  );
+});
+
+test('malformed JSON returns 400 Invalid JSON', async () => {
+  const app = express();
+  app.use(express.json({ limit: '1mb' }));
+  app.use('/api/community/auth', authRoutes);
+  // Same mapping as src/index.js: body-parser SyntaxError -> 400 JSON.
+  app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      return res.status(400).json({ error: 'Invalid JSON' });
+    }
+    return next(err);
+  });
+  app.use((err, _req, res, _next) => {
+    res.status(500).json({ error: 'Internal server error' });
+  });
+  const server = await new Promise((resolve) => {
+    const handle = app.listen(0, () => resolve(handle));
+  });
+  const { port } = server.address();
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/community/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: 'notjson'
+    });
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.equal(body.error, 'Invalid JSON');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

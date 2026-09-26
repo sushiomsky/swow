@@ -2,25 +2,39 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { handleValidationError } from '../middleware/validation.js';
 import { enqueueSeasonRecompute } from '../services/leaderboardService.js';
 import { emitToAll } from '../realtime.js';
 
 const router = Router();
 const MAX_LEADERBOARD_SCORE = 100000000;
 const MAX_SCORE_JUMP_PER_SUBMISSION = 250000;
+const MAX_LEADERBOARD_LIMIT = 100;
+const LEADERBOARD_SCOPES = ['global', 'regional', 'friends'];
 const scoreSubmitSchema = z.object({
   user_id: z.string().min(1).max(120).optional(),
   score: z.number().int().min(0).max(MAX_LEADERBOARD_SCORE),
   season: z.string().trim().min(1).max(40).regex(/^[a-zA-Z0-9_-]+$/).default('current')
 });
 
+const leaderboardQuerySchema = z.object({
+  season: z.string().trim().min(1).max(40).default('current'),
+  scope: z.enum(LEADERBOARD_SCOPES),
+  region: z.string().trim().min(1).max(64).optional(),
+  userId: z.string().trim().min(1).max(120).optional(),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
+  limit: z.coerce.number().int().min(1).max(MAX_LEADERBOARD_LIMIT).default(25)
+});
+
 router.get('/', async (req, res, next) => {
-  const season = (req.query.season || 'current').toString();
-  const scope = (req.query.scope || 'global').toString(); // global | regional | friends
-  const region = req.query.region ? req.query.region.toString() : null;
-  const userId = req.query.userId ? req.query.userId.toString() : null;
-  const page = Math.max(1, Number(req.query.page || 1));
-  const limit = Math.min(100, Math.max(1, Number(req.query.limit || 25)));
+  let query;
+  try {
+    query = leaderboardQuerySchema.parse(req.query || {});
+  } catch (e) {
+    if (handleValidationError(res, e)) return;
+    return next(e);
+  }
+  const { season, scope, region, userId, page, limit } = query;
   const offset = (page - 1) * limit;
 
   try {

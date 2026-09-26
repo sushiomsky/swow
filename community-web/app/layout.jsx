@@ -4,6 +4,7 @@ import { CommunitySessionProvider } from '../providers/CommunitySessionProvider'
 import { RealtimeProvider } from '../providers/RealtimeProvider';
 import SessionNotice from '../components/SessionNotice';
 import FeedbackButton from '../components/FeedbackButton';
+import { GAME_URLS } from '../lib/gameLinks';
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://wizardofwor.duckdns.org'),
@@ -38,9 +39,9 @@ export default function RootLayout({ children }) {
                   <Link href="/community/challenges">Challenges</Link>
                   <Link href="/community/forum">Forum</Link>
                   <Link href="/community/social">Social</Link>
-                  <a href="/spectate.html" className="text-zinc-300 hover:text-white">Spectate</a>
-                  <a className="rounded border border-zinc-600 px-3 py-2 text-white hover:bg-zinc-800" href="/index.html">Play Classic</a>
-                  <a className="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500" href="/multiplayer.html">Play Multiplayer</a>
+                  <a href={GAME_URLS.spectate} className="text-zinc-300 hover:text-white">Spectate</a>
+                  <a className="rounded border border-zinc-600 px-3 py-2 text-white hover:bg-zinc-800" href={GAME_URLS.classic}>Play Classic</a>
+                  <a className="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500" href={GAME_URLS.multiplayer}>Play Multiplayer</a>
                 </nav>
               </div>
             </header>

@@ -2,18 +2,19 @@ import Link from 'next/link';
 import AuthPanel from '../components/AuthPanel';
 import ChatRoom from '../components/ChatRoom';
 import ActiveGamesPanel from '../components/ActiveGamesPanel';
+import { GAME_URLS, multiplayerModeUrl } from '../lib/gameLinks';
 
 const MULTIPLAYER_MODES = [
-  { title: 'Endless BR', href: '/multiplayer.html?mode=endless', description: 'Drop in and battle across connected dungeons, anytime.' },
-  { title: 'Sit-n-Go BR', href: '/multiplayer.html?mode=sitngo', description: 'Queue up and launch once enough players are ready.' },
-  { title: 'Team Endless BR', href: '/multiplayer.html?mode=team', description: 'Gold vs Blue team battles across linked dungeons.' },
-  { title: 'Team Sit-n-Go BR', href: '/multiplayer.html?mode=team-sitngo', description: 'Organized team match — queue, fill, fight.' },
-  { title: 'Private Room', href: '/multiplayer.html?mode=pair-host', description: 'Create a private classic room and share the code.' },
+  { title: 'Endless BR', mode: 'endless', description: 'Drop in and battle across connected dungeons, anytime.' },
+  { title: 'Sit-n-Go BR', mode: 'sitngo', description: 'Queue up and launch once enough players are ready.' },
+  { title: 'Team Endless BR', mode: 'team', description: 'Gold vs Blue team battles across linked dungeons.' },
+  { title: 'Team Sit-n-Go BR', mode: 'team-sitngo', description: 'Organized team match — queue, fill, fight.' },
+  { title: 'Private Room', mode: 'pair-host', description: 'Create a private classic room and share the code.' },
 ];
 
 const CLASSIC_MODES = [
-  { title: 'Classic Solo', href: '/index.html', description: 'Original arcade action for one player.' },
-  { title: 'Classic Local 2P', href: '/index.html', description: 'Two players on one keyboard (press 2 on title screen).' },
+  { title: 'Classic Solo', href: GAME_URLS.classic, description: 'Original arcade action for one player.' },
+  { title: 'Classic Local 2P', href: GAME_URLS.classic, description: 'Two players on one keyboard (press 2 on title screen).' },
 ];
 
 const COMMUNITY_LINKS = [
@@ -44,8 +45,8 @@ export default function HomePage() {
           Gameplay, profiles, leaderboards, clans, forum, challenges, and real-time social — all in one place.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <a href="/multiplayer.html" className="rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Play Multiplayer</a>
-          <a href="/index.html" className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">Play Classic</a>
+          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Play Multiplayer</a>
+          <a href={GAME_URLS.classic} className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">Play Classic</a>
           <Link href="/community/leaderboards" className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">Leaderboards</Link>
         </div>
       </section>
@@ -61,7 +62,7 @@ export default function HomePage() {
           <h2 className="mb-3 text-lg font-bold">Multiplayer Modes</h2>
           <div className="space-y-2">
             {MULTIPLAYER_MODES.map((m) => (
-              <a key={m.title} href={m.href} className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/60 px-4 py-3 hover:bg-zinc-800">
+              <a key={m.title} href={multiplayerModeUrl(m.mode)} className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/60 px-4 py-3 hover:bg-zinc-800">
                 <div>
                   <p className="text-sm font-semibold">{m.title}</p>
                   <p className="text-xs text-zinc-400">{m.description}</p>

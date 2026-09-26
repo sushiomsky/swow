@@ -90,6 +90,25 @@ app.use('/api/community/admin', adminRateLimiter, adminRoutes);
 app.use('/api/community/forum', forumRateLimiter, forumRoutes);
 app.use('/api/community/feedback', feedbackRateLimiter, feedbackRoutes);
 
+// M2: malformed JSON must surface as 400, not 500. Express's body parser
+// raises a SyntaxError with status 400 — map it explicitly before the
+// generic error handler.
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    logError('http_bad_json', err, {
+      request_id: req.requestId || null,
+      method: req.method,
+      path: req.originalUrl || req.url
+    });
+    return res.status(400).json({ error: 'Invalid JSON' });
+  }
+  return next(err);
+});
+
+// L2: unknown /api/* paths return JSON (the frontend parses response.json()),
+// never Express's default HTML error page.
+app.use('/api/', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
 app.use((err, req, res, _next) => {
   logError('http_error', err, {
     request_id: req.requestId || null,

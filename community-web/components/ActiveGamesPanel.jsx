@@ -1,6 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GAME_URLS, multiplayerModeUrl, spectateUrl as buildSpectateUrl } from '../lib/gameLinks';
+
+// Absolute Game-host URL (ENV). The community host (:13000) does not serve
+// /multiplayer/active-games — the game platform (:18080) does.
+const ACTIVE_GAMES_URL =
+  process.env.NEXT_PUBLIC_ACTIVE_GAMES_URL ||
+  `${GAME_URLS.multiplayer.replace(/\/multiplayer\.html$/, '')}/multiplayer/active-games`;
+
+// Capped retries: stop polling after repeated failures instead of spamming
+// the console with endless 404s.
+const POLL_INTERVAL_MS = 15000;
+const MAX_CONSECUTIVE_FAILURES = 3;
 
 const MODE_LABELS = {
   endless: 'Endless BR',
@@ -11,10 +23,10 @@ const MODE_LABELS = {
 };
 
 const MODE_JOIN_URL = {
-  endless: '/multiplayer.html?mode=endless',
-  sitngo: '/multiplayer.html?mode=sitngo',
-  'team-endless': '/multiplayer.html?mode=team',
-  'team-sitngo': '/multiplayer.html?mode=team-sitngo',
+  endless: multiplayerModeUrl('endless'),
+  sitngo: multiplayerModeUrl('sitngo'),
+  'team-endless': multiplayerModeUrl('team'),
+  'team-sitngo': multiplayerModeUrl('team-sitngo'),
 };
 
 const MODE_BADGE_COLOR = {
@@ -43,12 +55,22 @@ export default function ActiveGamesPanel() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const failuresRef = useRef(0);
+  const timerRef = useRef(null);
+
+  const stopPolling = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch('/multiplayer/active-games', { cache: 'no-store' });
+      const response = await fetch(ACTIVE_GAMES_URL, { cache: 'no-store' });
       if (!response.ok) throw new Error(`Request failed (${response.status})`);
       const data = await response.json();
+      failuresRef.current = 0;
       setSnapshot({
         total_games: Number(data?.total_games || 0),
         total_players: Number(data?.total_players || 0),
@@ -58,17 +80,23 @@ export default function ActiveGamesPanel() {
       });
       setError('');
     } catch (_) {
-      setError('Unable to load active games right now.');
+      failuresRef.current += 1;
+      if (failuresRef.current >= MAX_CONSECUTIVE_FAILURES) {
+        stopPolling();
+        setError('Live game data is currently unavailable.');
+      } else {
+        setError('Unable to load active games right now.');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stopPolling]);
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, 10000);
-    return () => clearInterval(timer);
-  }, [load]);
+    timerRef.current = setInterval(load, POLL_INTERVAL_MS);
+    return () => stopPolling();
+  }, [load, stopPolling]);
 
   const summary = useMemo(() => {
     if (loading) return 'Loading active games…';
@@ -92,7 +120,7 @@ export default function ActiveGamesPanel() {
             <p className="mt-1 text-xs text-amber-300">{queueNotices.join(' · ')}</p>
           )}
         </div>
-        <a href="/multiplayer.html" className="shrink-0 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+        <a href={GAME_URLS.multiplayer} className="shrink-0 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
           Play Now
         </a>
       </div>
@@ -109,7 +137,7 @@ export default function ActiveGamesPanel() {
         <ul className="grid gap-2 sm:grid-cols-2">
           {snapshot.games.map((game) => {
             const joinUrl = game.joinable ? MODE_JOIN_URL[game.mode] : null;
-            const spectateUrl = `/spectate.html?dungeon=${game.dungeon_id}`;
+            const gameSpectateUrl = buildSpectateUrl(game.dungeon_id);
             const humanCount = game.players ? game.players.filter(p => !p.isBot).length : 0;
             const botCount = game.players ? game.players.filter(p => p.isBot).length : 0;
 
@@ -133,7 +161,7 @@ export default function ActiveGamesPanel() {
                       Join
                     </a>
                   )}
-                  <a href={spectateUrl} className="flex-1 rounded border border-zinc-700 py-1 text-center text-xs font-semibold text-zinc-300 hover:bg-zinc-800">
+                  <a href={gameSpectateUrl} className="flex-1 rounded border border-zinc-700 py-1 text-center text-xs font-semibold text-zinc-300 hover:bg-zinc-800">
                     Spectate
                   </a>
                 </div>
