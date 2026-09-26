@@ -13,4 +13,10 @@ const scoring = { burwor: 100, garwor: 200, thorwor: 500, worluk: 1000, worrior:
 // Ordered list of movement directions used by the path-generation system.
 const directions = ["up", "right", "down", "left"];
 
-module.exports = { dungeons, scoring, directions };
+// Queue tuning (single source of truth for SitNGo / TeamBR matchmaking).
+const queues = {
+    sitngo: { minPlayers: 2, maxPlayers: 8, countdownMs: 15000 },
+    teamSitngo: { minTeams: 2, countdownMs: 20000 },
+};
+
+module.exports = { dungeons, scoring, directions, queues };
