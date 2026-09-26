@@ -49,9 +49,22 @@
             <a href="/spectate.html">👁 Spectate</a>
             <a href="/public/handbook.html" target="_blank">📖 Handbook</a>
             <a href="/">🏠 Home</a>
-            <a href="/community" target="_blank" rel="noopener">💬 Community</a>
+            <a id="mp-community-link" href="/community" target="_blank" rel="noopener">💬 Community</a>
         </div>
     </div>
+
+    <!-- N-05: /community-Link am Game-Host lief ins 404 — absolut auf den
+         Community-Host auflösen (Override via window.__SWOW_COMMUNITY_URL__). -->
+    <script>
+        (function () {
+            var base = window.__SWOW_COMMUNITY_URL__
+                || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? window.location.protocol + '//' + window.location.hostname + ':13000/community'
+                    : '/community');
+            var link = document.getElementById('mp-community-link');
+            if (link) link.href = base;
+        })();
+    </script>
 
     <div id="body">
         <div id="border">
