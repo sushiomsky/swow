@@ -608,10 +608,14 @@ class DungeonInstance {
         }
     }
 
-    // Transitions dungeon to COLLAPSING when all home players have lost their final life
+    // Transitions dungeon to COLLAPSING when all HUMAN home players are out.
+    // Hardening (Team): Bots zählen nicht — sonst hängt ein toter Mensch als
+    // Zuschauer fest, solange sein Bot-Partner noch lebt (kein match_end).
     _checkLifecycle() {
         const homePlayers = this.players.filter(p => p && p.id && p.homeDungeonId === this.id);
-        if (homePlayers.length > 0 && homePlayers.every(p => p.status === 'out')) {
+        const humanHome = homePlayers.filter(p => !this.gameServer.bots.has(p.id));
+        const relevant = humanHome.length > 0 ? humanHome : homePlayers;
+        if (relevant.length > 0 && relevant.every(p => p.status === 'out')) {
             if (this.lifecycleState === STATE.ACTIVE) {
                 // Notify eliminated players with their final stats
                 this.gameServer.notifyPlayersEliminated(homePlayers, this);
