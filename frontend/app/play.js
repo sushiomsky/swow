@@ -395,16 +395,10 @@ async function startGame(numPlayers) {
     
     setAmbientUiVisible(false);
     showOverlay(false);
-    document.getElementById('play-gameover')?.remove();
-    // Stop attract mode cleanly before starting a real game: reset to title
-    // first and clear stale key state, so leftover input from the background
-    // demo can't instantly end the new run (immediate game over on PLAY).
-    _engine.resetGame();
-    const _rt = _spApp?.controlsRuntime;
-    if (_rt) {
-        for (const key of Object.keys(_rt.pressedKeys)) _rt.pressedKeys[key] = false;
-        _rt.heldGamepadInputs?.clear?.();
-    }
+    // Deterministic attract stop (shared helper): reset to title first and
+    // clear stale key state, so leftover input from the background demo
+    // can't instantly end the new run (immediate game over on PLAY).
+    _stopAttractDeterministic();
     _engine.startNewGame(numPlayers);
     _state = 'playing';
 }
@@ -507,6 +501,25 @@ async function teardownMP() {
     _mpCSSLinks = [];
 }
 
+// ─── Deterministic attract stop (shared by startGame + engine path) ──
+function _stopAttractDeterministic() {
+    // Deterministic attract stop shared by the EngineController path and the
+    // direct startGame() path: reset the engine to the title scene and drop
+    // all stale/latched key state, so leftover input or a mid-cycle attract
+    // scene can't instantly end the new run (instant game over on PLAY).
+    // NOTE: resetGame() alone is NOT enough — it leaves enemyRoster scene +
+    // frameCounters intact and only clears to `false` (stale 'hold' latches
+    // would survive); clearPressedKeys() consumes latched taps properly.
+    try { _engine?.resetGame(); } catch (_) { /* engine may be mid-init */ }
+    _engine?.clearPressedKeys?.();
+    const rt = _spApp?.controlsRuntime;
+    if (rt) {
+        for (const key of Object.keys(rt.pressedKeys)) rt.pressedKeys[key] = false;
+        rt.heldGamepadInputs?.clear?.();
+    }
+    document.getElementById('play-gameover')?.remove();
+}
+
 // ─── Engine-driven initialization (for automation) ────────────────────
 
 async function _startSPForEngine(numPlayers) {
@@ -514,9 +527,17 @@ async function _startSPForEngine(numPlayers) {
     if (!_spApp) {
         await initAttract();
     }
+    // Re-announce the (possibly pre-existing) attract engine to the
+    // controller: startNewGame waits generation-guarded for the spReady that
+    // belongs to THIS start (N-1). When play.js already runs an attract
+    // engine (fresh tab, no teardown happened), initAttract() returns early
+    // without emitting — so announce explicitly.
+    if (window.engine && _spApp && _engine) {
+        window.engine._setSPApp(_spApp, _engine);
+    }
     setAmbientUiVisible(false);
     showOverlay(false);
-    document.getElementById('play-gameover')?.remove();
+    _stopAttractDeterministic();
     _state = 'playing';
 }
 
@@ -548,20 +569,70 @@ function _teardownForEngine() {
 }
 
 // ─── Bind UI ──────────────────────────────────────────────────────
+// Start buttons queue on engine readiness (N-1): while the attract engine
+// is still initializing (sprite load), clicks wait for spReady instead of
+// racing teardown vs. init (→ permanent black screen). Buttons stay
+// enabled and show a "LOADING…" state; clicks are serialized.
+let _spStartQueued = false;
+function _setSpButtonsBusy(busy) {
+    _spStartQueued = busy;
+    for (const id of ['btn-play', 'btn-2p']) {
+        const btn = document.getElementById(id);
+        if (!btn) continue;
+        btn.disabled = busy;
+        btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = busy ? '… LOADING' : btn.dataset.label;
+    }
+}
+function _spEngineReady() {
+    // Attract engine fully initialized (sprite loaded, scan loop running).
+    return !!(_spApp && _engine);
+}
+async function _waitForAttractReady(timeoutMs = 10000) {
+    if (_spEngineReady()) return;
+    _setSpButtonsBusy(true);
+    try {
+        await new Promise((resolve, reject) => {
+            const t0 = Date.now();
+            const timer = setInterval(() => {
+                if (_spEngineReady()) { clearInterval(timer); resolve(); }
+                else if (Date.now() - t0 > timeoutMs) { clearInterval(timer); reject(new Error('Attract engine not ready')); }
+            }, 50);
+        });
+    } finally {
+        _setSpButtonsBusy(false);
+    }
+}
 // UI buttons now trigger engine controller methods (can also use engine directly)
 document.getElementById('btn-play')?.addEventListener('click', async () => {
+    if (_spStartQueued) return;
     if (window.engine) {
-        await window.engine.startNewGame(1);
+        try {
+            await window.engine.startNewGame(1);
+        } catch (err) {
+            // startNewGame waits for spReady internally (10s); a failure
+            // here means the engine never became ready — stay on the menu
+            // (overlay visible) instead of a black screen.
+            console.error('[play.js] PLAY failed:', err);
+        }
         return;
     }
+    try { await _waitForAttractReady(); } catch (err) { console.error('[play.js] PLAY failed:', err); return; }
     await startGame(1);
 });
 
 document.getElementById('btn-2p')?.addEventListener('click', async () => {
+    if (_spStartQueued) return;
     if (window.engine) {
-        await window.engine.startNewGame(2);
+        try {
+            await window.engine.startNewGame(2);
+        } catch (err) {
+            console.error('[play.js] 2 PLAYER failed:', err);
+        }
         return;
     }
+    try { await _waitForAttractReady(); } catch (err) { console.error('[play.js] 2 PLAYER failed:', err); return; }
     await startGame(2);
 });
 

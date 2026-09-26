@@ -48,7 +48,15 @@ export class GameEngine {
     clearPressedKeys() {
         const rt = this.app && this.app.controlsRuntime;
         if (!rt) return;
-        for (const key of Object.keys(rt.pressedKeys)) rt.pressedKeys[key] = !1;
+        // Consume latched taps: a tap latched as 'hold' means "pressed once";
+        // the scan loop saw it and now marks it consumed (`true`) so a later
+        // keyup can clear it while a physical hold stays visible via repeat
+        // keydown events. Plain `false` would leave a stale 'hold' that
+        // re-triggers on the next scan (e.g. instant game-over restart).
+        for (const key of Object.keys(rt.pressedKeys)) {
+            if (rt.pressedKeys[key] === 'hold') rt.pressedKeys[key] = !0;
+            else rt.pressedKeys[key] = !1;
+        }
         rt.heldGamepadInputs && rt.heldGamepadInputs.clear && rt.heldGamepadInputs.clear();
     }
 
@@ -64,6 +72,10 @@ export class GameEngine {
     }
 
     startNewGame(a) {
+        // Consume the latched menu/game-over tap BEFORE (re-)creating players,
+        // so the same tap can't instantly re-trigger on a later scan frame
+        // (e.g. PLAY click → fire tap still latched → instant game over).
+        this.clearPressedKeys();
         this.app.ui.setToggler("small");
         this.level = 0;
         this.speedSoundTempo = this.speed = 1;
@@ -413,11 +425,13 @@ export class GameEngine {
         this.frameCounters.title++;
         if (this.frameCounters.title > u(b, 13)) { this.frameCounters.title = 0; this.animateSkip.title = !1; this.scene = "title" }
         else if (this.frameCounters.title == u(b, 7)) { this.scene = "enemyRoster"; this.animateSkip.enemyRoster = !1; }
-        // NOTE: `true` = key down this frame, 'hold' = latched via setPressedKeyHold.
-        // Accept both so short taps between scan frames still register.
+        // NOTE: `true` = key down this frame, 'hold' = latched tap not yet
+        // consumed by the scan loop (see SharedControlsRuntime: keyup never
+        // clears a latched 'hold', so even very short taps survive until
+        // the next scan frame). Accept both states everywhere.
         // Enter (13) always starts 1P, Shift (16) always starts 2P.
-        if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[13]) { b.setPressedKeyHold(13); this.startNewGame(1); return }
-        else if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[16]) { b.setPressedKeyHold(16); this.startNewGame(2); return }
+        if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[13] || "hold" === b.pressedKeys[13]) { b.setPressedKeyHold(13); this.startNewGame(1); return }
+        else if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[16] || "hold" === b.pressedKeys[16]) { b.setPressedKeyHold(16); this.startNewGame(2); return }
         if (!0 === b.pressedKeys[49] || "hold" === b.pressedKeys[49]) { b.setPressedKeyHold(49); this.startNewGame(1) }
         else if (!0 === b.pressedKeys[50] || "hold" === b.pressedKeys[50]) { b.setPressedKeyHold(50); this.startNewGame(2) }
     }
@@ -441,10 +455,10 @@ export class GameEngine {
         // Accept tap (`true`) and latched ('hold') states; Enter (13) restarts
         // 1P, Shift (16) restarts with the previous player count (P2 restart).
         if (this.frameCounters.gameOver >= u(b, 1.5)) {
-            if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[13] || !0 === b.pressedKeys[49] || "hold" === b.pressedKeys[49]) {
+            if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[13] || "hold" === b.pressedKeys[13] || !0 === b.pressedKeys[49] || "hold" === b.pressedKeys[49]) {
                 b.setPressedKeyHold(13); b.setPressedKeyHold(49); this.startNewGame(1); return;
             }
-            if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[16] || !0 === b.pressedKeys[50] || "hold" === b.pressedKeys[50]) {
+            if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[16] || "hold" === b.pressedKeys[16] || !0 === b.pressedKeys[50] || "hold" === b.pressedKeys[50]) {
                 b.setPressedKeyHold(16); b.setPressedKeyHold(50); this.startNewGame(this.numOfPlayers); return;
             }
         }
