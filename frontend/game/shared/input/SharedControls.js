@@ -373,10 +373,13 @@ export class SharedControlsRuntime {
             return;
         }
 
-        // Latch key as 'hold' (persistent until consumed by game logic or
-        // released). This keeps short taps visible to the 50fps scan loop
-        // even when keyup arrives between two scan frames.
-        if (this.pressedKeys[keyCode] === false || typeof this.pressedKeys[keyCode] === 'undefined') {
+        // Latch every keydown as 'hold' (persistent until consumed by game
+        // logic or released). A short tap's keyup often arrives between two
+        // 50fps scan frames; without unconditional latching the tap is lost
+        // and menu/game-over restarts feel "dead on keyboard".
+        // Repeat keydown events (auto-repeat) must not overwrite a consumed
+        // state, so only latch when not already latched.
+        if (this.pressedKeys[keyCode] !== 'hold') {
             this.pressedKeys[keyCode] = 'hold';
         }
 
@@ -389,7 +392,15 @@ export class SharedControlsRuntime {
     _handleKeyUp(event) {
         const keyCode = event.which || event.keyCode;
         if (!keyCode) return;
-        this.pressedKeys[keyCode] = false;
+        // A latched 'hold' tap survives keyup until the game logic consumes
+        // it (scan loop runs at 50fps; a short tap's keyup usually arrives
+        // before the next scan frame). States:
+        //   'hold' → fresh tap, keep latched for the next scan;
+        //   `true`  → consumed by game logic, keyup clears (a physical hold
+        //             re-latches via repeat keydown events while held).
+        if (this.pressedKeys[keyCode] !== 'hold') {
+            this.pressedKeys[keyCode] = false;
+        }
         if (typeof this.onKeyUp === 'function') this.onKeyUp(event, keyCode);
         if (typeof this.shouldPreventDefault === 'function' && this.shouldPreventDefault(event, keyCode)) {
             event.preventDefault();

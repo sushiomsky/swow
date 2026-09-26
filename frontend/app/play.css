@@ -176,6 +176,13 @@ html, body {
 }
 .play-btn-sm.green { background: #070; border-color: #070; }
 .play-btn-sm.green:hover { background: #090; border-color: #090; box-shadow: 0 0 12px rgba(0,153,0,0.5); }
+/* Disabled/loading state while the attract engine initializes (N-1):
+   queued start waits for spReady instead of racing into a black screen. */
+.play-btn:disabled, .play-btn-sm:disabled {
+    opacity: 0.55;
+    cursor: wait;
+    transform: none;
+}
 .play-btn-sm.blue { background: #15c; border-color: #15c; }
 .play-btn-sm.blue:hover { background: #27e; border-color: #27e; box-shadow: 0 0 12px rgba(34,119,238,0.5); }
 

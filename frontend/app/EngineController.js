@@ -69,6 +69,15 @@ class EngineController {
             await this._initPromise;
 
             try {
+                // Generation-guarded waiter, registered BEFORE teardown emits:
+                // _teardown() only notifies play.js when this controller owns
+                // a running mode (fresh tab: attract engine stays alive), and
+                // after a real teardown we wait for the NEXT spReady (not a
+                // stale pre-teardown engine) — closes the N-1 black-screen
+                // race where startNewGame ran on a destroyed engine while
+                // play.js rebuilt a new attract engine underneath it.
+                const genBefore = this._spGeneration();
+                const spReadyPromise = this._waitForSPReady(genBefore);
                 await this._teardown();
 
                 this.mode = 'sp';
@@ -80,7 +89,7 @@ class EngineController {
                 this._emit('gameStarting', { numPlayers, mode: 'sp' });
                 this._emit('startSP', { numPlayers });
 
-                await this._waitForSPReady();
+                await spReadyPromise;
 
                 if (!this._engine?.startNewGame) {
                     throw new Error('Singleplayer engine not ready');
@@ -361,31 +370,51 @@ class EngineController {
     }
     
     // ─── Internal Helpers ─────────────────────────────────────────────
-    
+    // Generation counter: incremented on every _setSPApp. Lets startNewGame
+    // wait for an spReady that arrived AFTER its own teardown (N-1/N-2).
+    // Initialized lazily (constructor predates this field in old snapshots).
+
     async _teardown() {
+        // Only tear down (and notify play.js) when this controller actually
+        // owns a running mode. On a fresh tab mode===null while the attract
+        // engine runs play.js-side: emitting 'teardown' there would kill the
+        // live attract engine/DOM even though the controller owns nothing —
+        // the classic N-1 (black screen) / N-2 (instant game over) race.
+        let owned = false;
         if (this.mode === 'sp') {
+            owned = true;
             try {
                 this._spModule?.destroySingleplayer?.();
             } catch (_) { /* ok */ }
             this._spApp = null;
             this._engine = null;
         }
-        
+
         if (this.mode === 'mp') {
+            owned = true;
             try {
                 this._mpModule?.destroyMultiplayer?.();
             } catch (_) { /* ok */ }
             this._mpApp = null;
         }
-        
-        this._emit('teardown');
+
+        if (owned) this._emit('teardown');
     }
-    
-    async _waitForSPReady() {
+
+    _spGeneration() {
+        return this._spGenerationCounter || 0;
+    }
+
+    async _waitForSPReady(generation) {
+        const want = typeof generation === 'number' ? generation + 1 : null;
         return this._waitForEvent(
             'spReady',
-            () => this._spApp && this._engine,
-            3000,
+            () => {
+                if (!this._spApp || !this._engine) return null;
+                if (want !== null && this._spGeneration() < want) return null;
+                return this._engine;
+            },
+            10000,
             'singleplayer engine'
         );
     }
@@ -469,6 +498,7 @@ class EngineController {
     _setSPApp(app, engine) {
         this._spApp = app;
         this._engine = engine;
+        this._spGenerationCounter = (this._spGenerationCounter || 0) + 1;
         this._emit('spReady', { app, engine });
     }
     
