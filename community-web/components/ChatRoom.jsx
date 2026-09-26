@@ -2,9 +2,39 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { useLocale } from '../providers/LocaleProvider';
 import { useRealtime, useRealtimeEvent } from '../providers/RealtimeProvider';
 import { toUserErrorMessage } from '../lib/errorUtils';
 import ErrorText from './ErrorText';
+
+const STRINGS = {
+  de: {
+    chat: 'Chat',
+    room: 'Raum',
+    signInToChat: 'Melde dich an, um am Live-Chat teilzunehmen.',
+    filterPlaceholder: 'Nachrichten nach Absender oder Text filtern…',
+    loadingMessages: 'Lade aktuelle Nachrichten…',
+    noMessages: 'Noch keine Nachrichten.',
+    report: 'melden',
+    messagePlaceholder: 'Nachricht schreiben…',
+    send: 'Senden',
+    historyFailed: 'Chatverlauf konnte nicht geladen werden.',
+    reportFailed: 'Melden fehlgeschlagen.'
+  },
+  en: {
+    chat: 'Chat',
+    room: 'room',
+    signInToChat: 'Sign in to join the live chat.',
+    filterPlaceholder: 'Filter messages by sender or text…',
+    loadingMessages: 'Loading recent messages…',
+    noMessages: 'No messages yet.',
+    report: 'report',
+    messagePlaceholder: 'Write a message…',
+    send: 'Send',
+    historyFailed: 'Unable to load chat history.',
+    reportFailed: 'Unable to report message.'
+  }
+};
 
 function buildRoomKey(roomType, roomId) {
   return `${roomType}:${roomId}`;
@@ -38,6 +68,8 @@ function appendUniqueMessage(messages, incoming) {
 }
 
 export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
+  const { locale } = useLocale();
+  const t = STRINGS[locale] || STRINGS.de;
   const rooms = useMemo(
     () => normalizeRoomOptions(roomType, roomId, roomOptions),
     [roomType, roomId, roomOptions]
@@ -100,11 +132,11 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
         [room.key]: {
           loading: false,
           loaded: false,
-          error: toUserErrorMessage(historyError, 'Unable to load chat history.')
+          error: toUserErrorMessage(historyError, t.historyFailed)
         }
       }));
     }
-  }, [api, isAuthenticated]);
+  }, [api, isAuthenticated, t.historyFailed]);
 
   const onMessage = useCallback((msg) => {
     const key = buildRoomKey(msg?.room_type, msg?.room_id);
@@ -180,7 +212,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
       await api.reportChatMessage(messageId, 'abuse');
       setError('');
     } catch (reportError) {
-      setError(toUserErrorMessage(reportError, 'Unable to report message.'));
+      setError(toUserErrorMessage(reportError, t.reportFailed));
     }
   };
 
@@ -201,7 +233,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
 
   return (
     <section className="card">
-      <h3 className="mb-2 text-lg font-semibold">Chat • {activeRoom?.label || 'room'}</h3>
+      <h3 className="mb-2 text-lg font-semibold">{t.chat} • {activeRoom?.label || t.room}</h3>
       {rooms.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {rooms.map((room) => {
@@ -228,21 +260,21 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
           })}
         </div>
       )}
-      {authRequired && <p className="mb-2 text-xs text-amber-300">Melde dich an, um am Live-Chat teilzunehmen.</p>}
+      {authRequired && <p className="mb-2 text-xs text-amber-300">{t.signInToChat}</p>}
       {!authRequired && connectionError && <p className="mb-2 text-xs text-amber-300">{connectionError}</p>}
       {!authRequired && (
         <input
           value={filterText}
           onChange={(event) => setFilterText(event.target.value)}
           className="mb-3 w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-          placeholder="Nachrichten nach Absender oder Text filtern…"
+          placeholder={t.filterPlaceholder}
         />
       )}
       <ErrorText message={activeHistoryError || error} className="mb-2" />
       <div className="mb-3 h-56 overflow-auto rounded border border-zinc-800 p-2 text-sm">
-        {activeHistoryLoading && <p className="text-zinc-400">Lade aktuelle Nachrichten…</p>}
+        {activeHistoryLoading && <p className="text-zinc-400">{t.loadingMessages}</p>}
         {!activeHistoryLoading && filteredMessages.length === 0 && (
-          <p className="text-zinc-500">Noch keine Nachrichten.</p>
+          <p className="text-zinc-500">{t.noMessages}</p>
         )}
         {!activeHistoryLoading && filteredMessages.map((message, index) => (
           <p key={message.message_id || `${message.created_at || 'live'}-${index}`} className="mb-1">
@@ -253,7 +285,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
                 onClick={() => reportMessage(message.message_id)}
                 className="ml-2 text-xs text-rose-300 underline"
               >
-                melden
+                {t.report}
               </button>
             )}
           </p>
@@ -264,7 +296,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           className="flex-1 rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-          placeholder="Nachricht schreiben…"
+          placeholder={t.messagePlaceholder}
           disabled={authRequired}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -273,7 +305,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
             }
           }}
         />
-        <button onClick={send} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60" disabled={authRequired}>Senden</button>
+        <button onClick={send} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60" disabled={authRequired}>{t.send}</button>
       </div>
     </section>
   );

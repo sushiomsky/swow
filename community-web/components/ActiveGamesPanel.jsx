@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GAME_URLS, multiplayerModeUrl, spectateUrl as buildSpectateUrl } from '../lib/gameLinks';
+import { useLocale } from '../providers/LocaleProvider';
 
 // Absolute Game-host URL (ENV). The community host (:13000) does not serve
 // /multiplayer/active-games — the game platform (:18080) does.
@@ -37,6 +38,47 @@ const MODE_BADGE_COLOR = {
   private: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',
 };
 
+const T = {
+  de: {
+    title: 'Live-Spiele',
+    loading: 'Live-Spiele werden geladen…',
+    noneActive: 'Gerade keine aktiven Spiele',
+    activeGames: (n) => `${n} aktive Spiel${n === 1 ? '' : 'e'}`,
+    playersOnline: (n) => `${n} Spieler online`,
+    playNow: 'Jetzt spielen',
+    join: 'Beitreten',
+    spectate: 'Zuschauen',
+    empty: 'Gerade keine aktiven Spiele — starte als Erster eines!',
+    errUnavailable: 'Live-Spieldaten sind derzeit nicht verfügbar.',
+    errLoad: 'Aktive Spiele konnten gerade nicht geladen werden.',
+    humans: (n) => `${n} Mensch${n !== 1 ? 'en' : ''}`,
+    botsOnly: 'nur Bots',
+    bots: (n) => `${n} Bot${n !== 1 ? 's' : ''}`,
+    queueSitngo: (n) => `Sit-n-Go: ${n} warten`,
+    queueTeam: (n) => `Team Sit-n-Go: ${n} warten`,
+    dungeon: 'Dungeon'
+  },
+  en: {
+    title: 'Live Games',
+    loading: 'Loading live games…',
+    noneActive: 'No active games right now',
+    activeGames: (n) => `${n} active game${n === 1 ? '' : 's'}`,
+    playersOnline: (n) => `${n} players online`,
+    playNow: 'Play now',
+    join: 'Join',
+    spectate: 'Spectate',
+    empty: 'No active games right now — start the first one!',
+    errUnavailable: 'Live game data is currently unavailable.',
+    errLoad: 'Could not load active games right now.',
+    humans: (n) => `${n} human${n !== 1 ? 's' : ''}`,
+    botsOnly: 'bots only',
+    bots: (n) => `${n} bot${n !== 1 ? 's' : ''}`,
+    queueSitngo: (n) => `Sit-n-Go: ${n} waiting`,
+    queueTeam: (n) => `Team Sit-n-Go: ${n} waiting`,
+    dungeon: 'Dungeon'
+  }
+};
+
 function formatMode(mode) {
   return MODE_LABELS[mode] || String(mode || 'Unknown').replaceAll('_', ' ');
 }
@@ -46,6 +88,8 @@ function badgeClass(mode) {
 }
 
 export default function ActiveGamesPanel() {
+  const { locale } = useLocale();
+  const t = T[locale] || T.de;
   const [snapshot, setSnapshot] = useState({
     total_games: 0,
     total_players: 0,
@@ -83,14 +127,14 @@ export default function ActiveGamesPanel() {
       failuresRef.current += 1;
       if (failuresRef.current >= MAX_CONSECUTIVE_FAILURES) {
         stopPolling();
-        setError('Live-Spieldaten sind derzeit nicht verfügbar.');
+        setError(t.errUnavailable);
       } else {
-        setError('Aktive Spiele konnten gerade nicht geladen werden.');
+        setError(t.errLoad);
       }
     } finally {
       setLoading(false);
     }
-  }, [stopPolling]);
+  }, [stopPolling, t]);
 
   useEffect(() => {
     load();
@@ -99,29 +143,29 @@ export default function ActiveGamesPanel() {
   }, [load, stopPolling]);
 
   const summary = useMemo(() => {
-    if (loading) return 'Live-Spiele werden geladen…';
-    if (!snapshot.total_games) return 'Gerade keine aktiven Spiele';
-    return `${snapshot.total_games} aktive Spiel${snapshot.total_games === 1 ? '' : 'e'} · ${snapshot.total_players} Spieler online`;
-  }, [loading, snapshot.total_games, snapshot.total_players]);
+    if (loading) return t.loading;
+    if (!snapshot.total_games) return t.noneActive;
+    return `${t.activeGames(snapshot.total_games)} · ${t.playersOnline(snapshot.total_players)}`;
+  }, [loading, snapshot.total_games, snapshot.total_players, t]);
 
   const queueNotices = [];
   if (snapshot.queued_sitngo_players > 0)
-    queueNotices.push(`Sit-n-Go: ${snapshot.queued_sitngo_players} warten`);
+    queueNotices.push(t.queueSitngo(snapshot.queued_sitngo_players));
   if (snapshot.queued_team_sitngo_players > 0)
-    queueNotices.push(`Team Sit-n-Go: ${snapshot.queued_team_sitngo_players} warten`);
+    queueNotices.push(t.queueTeam(snapshot.queued_team_sitngo_players));
 
   return (
     <section className="card border-zinc-700">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">Live-Spiele</h2>
+          <h2 className="text-xl font-bold">{t.title}</h2>
           <p className="mt-1 text-sm text-zinc-400">{summary}</p>
           {queueNotices.length > 0 && (
             <p className="mt-1 text-xs text-amber-300">{queueNotices.join(' · ')}</p>
           )}
         </div>
         <a href={GAME_URLS.multiplayer} className="shrink-0 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-          Jetzt spielen
+          {t.playNow}
         </a>
       </div>
 
@@ -129,7 +173,7 @@ export default function ActiveGamesPanel() {
 
       {!loading && !snapshot.games.length && !error && (
         <div className="rounded border border-zinc-800 bg-zinc-950/50 py-8 text-center text-sm text-zinc-500">
-          Gerade keine aktiven Spiele — starte als Erster eines!
+          {t.empty}
         </div>
       )}
 
@@ -147,22 +191,22 @@ export default function ActiveGamesPanel() {
                   <span className={`inline-flex rounded border px-2 py-0.5 text-xs font-semibold ${badgeClass(game.mode)}`}>
                     {formatMode(game.mode)}
                   </span>
-                  <span className="text-xs text-zinc-500">Dungeon {game.dungeon_id}</span>
+                  <span className="text-xs text-zinc-500">{t.dungeon} {game.dungeon_id}</span>
                 </div>
                 <p className="text-xs text-zinc-400">
-                  {humanCount > 0 ? `${humanCount} Mensch${humanCount !== 1 ? 'en' : ''}` : 'nur Bots'}
-                  {botCount > 0 ? ` · ${botCount} Bot${botCount !== 1 ? 's' : ''}` : ''}
+                  {humanCount > 0 ? t.humans(humanCount) : t.botsOnly}
+                  {botCount > 0 ? ` · ${t.bots(botCount)}` : ''}
                   {' · '}
                   {String(game.status || 'in_progress').replaceAll('_', ' ')}
                 </p>
                 <div className="flex gap-2">
                   {joinUrl && (
                     <a href={joinUrl} className="flex-1 rounded border border-indigo-600 bg-indigo-600/10 py-1 text-center text-xs font-semibold text-indigo-300 hover:bg-indigo-600/30">
-                      Beitreten
+                      {t.join}
                     </a>
                   )}
                   <a href={gameSpectateUrl} className="flex-1 rounded border border-zinc-700 py-1 text-center text-xs font-semibold text-zinc-300 hover:bg-zinc-800">
-                    Zuschauen
+                    {t.spectate}
                   </a>
                 </div>
               </li>
