@@ -12,7 +12,8 @@ export class MultiplayerShareController {
         const absoluteJoinUrl = rawJoinUrl.startsWith('http')
             ? rawJoinUrl
             : `${location.origin}${rawJoinUrl}`;
-        const fallbackText = `Private classic link: ${absoluteJoinUrl}`;
+        const maxPlayers = Number(msg?.maxPlayers) || 4;
+        const fallbackText = `Join my Wizard of Wor private room (up to ${maxPlayers} players): ${absoluteJoinUrl}`;
 
         try {
             if (navigator.clipboard?.writeText) {

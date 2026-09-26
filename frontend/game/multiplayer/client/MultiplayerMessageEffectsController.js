@@ -27,12 +27,13 @@ export class MultiplayerMessageEffectsController {
 
     handleWaitingForPartner() {
         this._dismissMatchStartingStatus({ clearText: false });
-        this.uiController.setStatus('Waiting for second player to join…');
+        this.uiController.setStatus('Waiting for more players to join… (up to 4)');
     }
 
     handlePrivatePairCreated(msg) {
         this._dismissMatchStartingStatus({ clearText: false });
         const code = msg.code || '';
+        const maxPlayers = Number(msg?.maxPlayers) || 4;
         const rawJoinUrl = msg?.joinUrl || `/multiplayer.html?room=${encodeURIComponent(code)}`;
         const absoluteUrl = rawJoinUrl.startsWith('http') ? rawJoinUrl : `${location.origin}${rawJoinUrl}`;
         const shareText = `Join my Wizard of Wor game! ${absoluteUrl}`;
@@ -44,12 +45,12 @@ export class MultiplayerMessageEffectsController {
         panel.id = 'mp-share-panel';
         panel.innerHTML = `
             <div class="mp-share-code">${code}</div>
-            <div class="mp-share-label">Share this code or link with a friend</div>
+            <div class="mp-share-label">Share this code or link with up to ${maxPlayers - 1} friends (${maxPlayers} players max)</div>
             <div class="mp-share-buttons">
                 <button class="share-btn share-copy" id="mp-copy-link">📋 COPY LINK</button>
                 <a class="share-btn share-twitter" href="${twitterUrl}" target="_blank" rel="noopener">𝕏 SHARE</a>
             </div>
-            <div class="mp-share-waiting">Waiting for player 2…</div>
+            <div class="mp-share-waiting" id="mp-share-waiting">Waiting for players… (1/${maxPlayers})</div>
         `;
         const statusEl = document.getElementById('status');
         if (statusEl) statusEl.after(panel);
@@ -66,6 +67,22 @@ export class MultiplayerMessageEffectsController {
             window.engine._setRoomCode(code);
         }
         this.onCopyPrivateLink(msg);
+    }
+
+    // ROOM-1: live room occupancy (private_room_status).
+    handlePrivateRoomStatus(msg) {
+        const count = Number(msg?.playerCount) || 0;
+        const max = Number(msg?.maxPlayers) || 4;
+        const waitingEl = document.getElementById('mp-share-waiting');
+        if (waitingEl) {
+            waitingEl.textContent = count >= max
+                ? `Room full — ${count}/${max} players. Fight!`
+                : `Waiting for players… (${count}/${max})`;
+        }
+        if (count > 1) {
+            this.uiController.setStatus(`Private room: ${count}/${max} players in.`);
+            this.uiController.setStatusError(false);
+        }
     }
 
     handleJoinError(msg) {
@@ -474,7 +491,8 @@ export class MultiplayerMessageEffectsController {
     }
 
     _playerColorLabel(playerNum) {
-        return playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
+        // ROOM-1: only 2 sprite palettes — slots share by parity.
+        return (playerNum ?? 0) % 2 === 0 ? '🟡 Yellow' : '🔵 Blue';
     }
 
     // Derive the teammate colour from live server team data (players sharing

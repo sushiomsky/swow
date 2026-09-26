@@ -58,7 +58,7 @@ class ServerMonster {
 
     canHide() {
         if ('alive' !== this.status || 'burwor' === this.type || 'worluk' === this.type || 'wizardOfWor' === this.type) return false;
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < this.engine.players.length; i++) {
             const p = this.engine.players[i];
             if (p && 'out' !== p.status &&
                 (p.x - 24 < this.x && p.x + 24 > this.x || p.y - 24 < this.y && p.y + 24 > this.y)) return false;

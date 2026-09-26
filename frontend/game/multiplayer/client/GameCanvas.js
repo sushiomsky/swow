@@ -191,8 +191,10 @@ export class GameCanvas {
             this._drawPlayer(app, p, state.animationFrameCounter);
         }
 
-        // Player life icons
-        const p0 = state.players[0], p1 = state.players[1];
+        // Player life icons (ROOM-1: slots 0/2 right side, slots 1/3 left side).
+        // Extra slots stack below the classic icons.
+        const playersBySlot = state.players || [];
+        const p0 = playersBySlot[0], p1 = playersBySlot[1];
         if (p0 && 'wait' !== p0.status && 'enter' !== p0.status) {
             t(app, 271, 142, 22, 2, false);
         }
@@ -210,6 +212,13 @@ export class GameCanvas {
             const livesToShow = p1.lives - ('wait' !== p1.status ? 1 : 0);
             if (p1.lives > 1 || 'wait' === p1.status) l(app, d1.x, d1.y, 18, 18, 34, 147);
             for (let c = 0; c < livesToShow - 1; c++) l(app, d1.x, d1.y, 18, 18, 7, 147 - 24 * c);
+        }
+        for (let s = 2; s < playersBySlot.length; s++) {
+            const p = playersBySlot[s];
+            if (!p || !p.id || 'wait' === p.status || 'enter' === p.status || 'out' === p.status) continue;
+            const spr = m.sprite.players[(p.colorNum ?? p.num) % 2][p.d]?.[2] || m.sprite.players[0].left[2];
+            const baseX = s % 2 === 0 ? 274 : 34;
+            l(app, spr.x, spr.y, 18, 18, baseX, 147 - 24);
         }
 
         // Monsters
@@ -276,15 +285,18 @@ export class GameCanvas {
                         ? m.sprite.players[0][p.d][frameIdx]
                         : m.sprite.players[1][p.d][frameIdx];
                 } else {
+                    // ROOM-1: parity sprites (only 2 palettes).
+                    const cn = (p.colorNum ?? p.num) % 2;
                     sprCoords = 10 < p.frameCounters.dead % 20
-                        ? m.sprite.players[p.colorNum][p.d][frameIdx]
-                        : m.sprite.players[p.colorNum].death[p.d][frameIdx];
+                        ? m.sprite.players[cn][p.d][frameIdx]
+                        : m.sprite.players[cn].death[p.d][frameIdx];
                 }
             } else {
                 sprCoords = m.sprite.hit[Math.floor(animFC % 48 / 3)];
             }
         } else {
-            const pSprite = m.sprite.players[p.colorNum];
+            // ROOM-1: only 2 sprite palettes exist — slots share by parity.
+            const pSprite = m.sprite.players[(p.colorNum ?? p.num) % 2];
             sprCoords = p.frameCounters.justShoot > 0 ? pSprite.shoot[p.d] : pSprite[p.d][frameIdx];
         }
         if (sprCoords) l(app, sprCoords.x, sprCoords.y, 18, 18, p.x, p.y);

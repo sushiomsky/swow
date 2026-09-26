@@ -17,9 +17,10 @@ class ServerPlayer {
         this.score = 0;
         this.lives = 3;
         this.status = 'wait';
-        this.col = 1 === num ? 1 : 11;
+        // ROOM-1: odd slots spawn left (col 1), even slots right (col 11).
+        this.col = 1 === num % 2 ? 1 : 11;
         this.row = 6;
-        this.d = 1 === num ? 'right' : 'left';
+        this.d = 1 === num % 2 ? 'right' : 'left';
         this.animationSequence = 4;
         this.bullet = false;
         this.frameCounters = { justShoot: 0, entering: 0, dead: 0 };
@@ -52,10 +53,10 @@ class ServerPlayer {
 
     goToStartPosition() {
         this.status = 'wait';
-        this.col = 1 === this.num ? 1 : 11;
+        this.col = 1 === this.num % 2 ? 1 : 11;
         this.row = 6;
         this.calcPositionByCoordinates();
-        this.d = 1 === this.num ? 'right' : 'left';
+        this.d = 1 === this.num % 2 ? 'right' : 'left';
         this.animationSequence = 4;
         this.frameCounters = { justShoot: 0, entering: Math.round(this.engine.scanFPS * 10), dead: 0 };
         this.bullet = false;
@@ -85,7 +86,7 @@ class ServerPlayer {
                 this.lives--;
                 if (1 > this.lives) {
                     this.status = 'out';
-                    if ('out' === e.players[0].status && 'out' === e.players[1].status) e.gameOver();
+                    if (e._allPlayersOut()) e.gameOver();
                 } else {
                     // Respawn in home dungeon
                     e.respawnPlayer(this);

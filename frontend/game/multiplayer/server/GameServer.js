@@ -19,6 +19,8 @@ const { TeamBRQueue } = require('./TeamBRQueue');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
+// ROOM-1: private rooms support up to 4 players (2 previously).
+const PRIVATE_ROOM_MAX_PLAYERS = 4;
 // WIRE-2: decouple simulation tick (50 Hz) from network broadcast.
 // Snapshots go out at BROADCAST_FPS; the client interpolates between them
 // (see MultiplayerInterpolator) so motion stays smooth at any frame rate
@@ -189,10 +191,12 @@ class GameServer {
     }
 
     // ─── Room Management ──────────────────────────────────────────────────────
+    // ROOM-1: private rooms host up to PRIVATE_ROOM_MAX_PLAYERS (4) players.
 
     _createPrivatePair(playerId, conn) {
         if (conn.player) return;
         const dungeon = this._createDungeon();
+        dungeon.ensureSlots(PRIVATE_ROOM_MAX_PLAYERS);
         dungeon.matchMode = 'classic_private_pair';
         const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
         player.homeSlot = 0;
@@ -205,42 +209,126 @@ class GameServer {
         const code = this._generatePrivateCode();
         this.privatePairLobbies.set(code, { hostConn: conn, hostId: playerId, dungeon, createdAt: Date.now() });
         const joinUrl = `/multiplayer.html?room=${encodeURIComponent(code)}`;
-        this._send(conn.ws, { type: 'private_pair_created', code, joinUrl });
+        this._send(conn.ws, { type: 'private_pair_created', code, joinUrl, maxPlayers: PRIVATE_ROOM_MAX_PLAYERS });
         this._send(conn.ws, { type: 'waiting_for_partner' });
-        console.log(`[GameServer] private pair host ${playerId} code=${code}`);
+        this._broadcastPrivateRoomStatus(code);
+        console.log(`[GameServer] private room host ${playerId} code=${code}`);
     }
 
     _joinPrivatePair(playerId, conn, rawCode) {
         const code = (rawCode || '').toString().trim().toUpperCase();
         const lobby = this.privatePairLobbies.get(code);
-        if (!lobby || lobby.hostId === playerId) {
+        // ROOM-1: when the lobby entry is gone the code may still belong to
+        // a full room (deleted on fill). Resolve via dungeon so late joiners
+        // get "full" instead of "invalid link".
+        const sharedDungeon = lobby?.dungeon ?? this._findRoomDungeonByCode(code);
+        if (!lobby && !sharedDungeon) {
             this._send(conn.ws, { type: 'join_error', message: 'Invalid or expired private link.' });
             return;
         }
-        const sharedDungeon = lobby.dungeon;
+        if (lobby && lobby.hostId === playerId) {
+            this._send(conn.ws, { type: 'join_error', message: 'Invalid or expired private link.' });
+            return;
+        }
         if (!sharedDungeon || sharedDungeon.lifecycleState === STATE.DESTROYED) {
             this.privatePairLobbies.delete(code);
             this._send(conn.ws, { type: 'join_error', message: 'Private session is no longer available.' });
             return;
         }
-        if (sharedDungeon.players[1] && sharedDungeon.players[1].id !== null) {
-            this.privatePairLobbies.delete(code);
+        // Already in this room (e.g. re-join after disconnect)?
+        const existingSlot = sharedDungeon.players.findIndex(
+            (p) => p && p.id === playerId && p.homeDungeonId === sharedDungeon.id);
+        const hostId = lobby ? lobby.hostId : (this._roomHostByCode?.get(code) ?? null);
+        if (existingSlot >= 0) {
+            conn.player = sharedDungeon.players[existingSlot];
+            conn.dungeonId = sharedDungeon.id;
+            conn.sessionId = hostId;
+            conn.mode = 'classic_private_pair';
+            this._sendInit(conn, sharedDungeon);
+            this._broadcastPrivateRoomStatus(code);
+            return;
+        }
+        const slot = this._findAvailableSlot(sharedDungeon);
+        if (slot === null) {
+            // Room full but lobby entry may already be gone (deleted when the
+            // 4th player filled the last slot) — still report "full".
             this._send(conn.ws, { type: 'join_error', message: 'Private session is already full.' });
             return;
         }
-        const player2 = new ServerPlayer(1, sharedDungeon, playerId, sharedDungeon.id);
-        player2.homeSlot = 1;
-        conn.player = player2;
+        if (!lobby) {
+            // No lobby entry (should not happen for non-full rooms) — refuse.
+            this._send(conn.ws, { type: 'join_error', message: 'Invalid or expired private link.' });
+            return;
+        }
+        const newcomer = new ServerPlayer(slot, sharedDungeon, playerId, sharedDungeon.id);
+        newcomer.homeSlot = slot;
+        conn.player = newcomer;
         conn.dungeonId = sharedDungeon.id;
         conn.sessionId = lobby.hostId;
         conn.mode = 'classic_private_pair';
-        sharedDungeon.addPlayer(player2);
+        sharedDungeon.addPlayer(newcomer);
 
-        sharedDungeon.startGame();
-        this._sendInit(lobby.hostConn, sharedDungeon);
+        // (Re)start only while nobody was playing yet: the first joiner
+        // (slot 1) starts the match; later joiners hot-join the running game.
+        const occupants = sharedDungeon.players.filter((p) => p && p.id !== null).length;
+        if (occupants === 2) {
+            sharedDungeon.startGame();
+            this._sendInit(lobby.hostConn, sharedDungeon);
+        }
         this._sendInit(conn, sharedDungeon);
-        this.privatePairLobbies.delete(code);
-        console.log(`[GameServer] private pair joined ${lobby.hostId} + ${playerId} code=${code}`);
+        if (occupants >= PRIVATE_ROOM_MAX_PLAYERS) {
+            // Room full — stop advertising the code but remember it so
+            // further joiners get "full" instead of "invalid link".
+            this.privatePairLobbies.delete(code);
+            this._rememberRoomCode(code, sharedDungeon.id);
+            if (!this._roomHostByCode) this._roomHostByCode = new Map();
+            this._roomHostByCode.set(code, lobby.hostId);
+        } else {
+            this._broadcastPrivateRoomStatus(code);
+        }
+        console.log(`[GameServer] private room joined ${lobby.hostId} + ${playerId} slot=${slot} code=${code}`);
+    }
+
+    /**
+     * ROOM-1: tell every room member who is in (player count, slots).
+     * Keeps the lobby code alive until the room is full or empty.
+     */
+    _broadcastPrivateRoomStatus(code) {
+        const lobby = this.privatePairLobbies.get(code);
+        if (!lobby) return;
+        const occupants = lobby.dungeon.players
+            .filter((p) => p && p.id !== null)
+            .map((p) => ({ slot: p.num }));
+        const status = {
+            type: 'private_room_status',
+            code,
+            playerCount: occupants.length,
+            maxPlayers: PRIVATE_ROOM_MAX_PLAYERS,
+            slots: occupants,
+        };
+        this._send(lobby.hostConn.ws, status);
+        for (const [, conn] of this.connections) {
+            if (conn.dungeonId === lobby.dungeon.id && conn !== lobby.hostConn && conn.player) {
+                this._send(conn.ws, status);
+            }
+        }
+    }
+
+    /**
+     * ROOM-1: resolve a room dungeon by its (expired) code. Full rooms drop
+     * their lobby entry; remember code→dungeon so late joiners get "full".
+     */
+    _findRoomDungeonByCode(code) {
+        if (!this._roomDungeonByCode) return null;
+        const dungeonId = this._roomDungeonByCode.get(code);
+        if (!dungeonId) return null;
+        return this.dungeons.get(dungeonId) ?? null;
+    }
+
+    /** ROOM-1: remember code→dungeon (called on room create + on fill). */
+    _rememberRoomCode(code, dungeonId) {
+        if (!this._roomDungeonByCode) this._roomDungeonByCode = new Map();
+        this._roomDungeonByCode.set(code, dungeonId);
     }
     
     // ─── Spectator Mode ───────────────────────────────────────────────────────
@@ -746,7 +834,7 @@ class GameServer {
                 mode,
                 status: waitingPrivateLobby ? 'waiting_for_partner' : 'in_progress',
                 player_count: players.length,
-                max_players: 2,
+                max_players: dungeon.players.length,
                 joinable: !waitingPrivateLobby && ['endless', 'sitngo', 'team-endless', 'team-sitngo'].includes(mode),
                 created_at: dungeon.createdAt,
                 players: players.map((player) => ({
@@ -965,4 +1053,4 @@ class GameServer {
     }
 }
 
-module.exports = { GameServer };
+module.exports = { GameServer, PRIVATE_ROOM_MAX_PLAYERS };

@@ -21,6 +21,10 @@ export class MultiplayerMessageController {
                 this.effectsController.handlePrivatePairCreated(msg);
                 break;
 
+            case SERVER_EVENTS.PRIVATE_ROOM_STATUS:
+                this.effectsController.handlePrivateRoomStatus(msg);
+                break;
+
             case SERVER_EVENTS.JOIN_ERROR:
                 this.effectsController.handleJoinError(msg);
                 break;

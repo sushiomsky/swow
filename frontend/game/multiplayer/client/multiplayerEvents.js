@@ -15,6 +15,7 @@ export const SERVER_EVENTS = Object.freeze({
     STATE: 'state',
     WAITING_FOR_PARTNER: 'waiting_for_partner',
     PRIVATE_PAIR_CREATED: 'private_pair_created',
+    PRIVATE_ROOM_STATUS: 'private_room_status',
     JOIN_ERROR: 'join_error',
     // Battle Royale: Cross-dungeon events
     PLAYER_LEFT_VIA_TUNNEL: 'player_left_via_tunnel',
