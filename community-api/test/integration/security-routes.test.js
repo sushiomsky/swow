@@ -376,7 +376,13 @@ test('leaderboard rejects unknown scope with structured 400', async () => {
   await withServer(
     (app) => app.use('/api/community/leaderboards', leaderboardRoutes),
     async (baseUrl) => {
-      const response = await apiRequest(baseUrl, '/api/community/leaderboards?scope=xyz');
+      // Hardening: Leaderboards brauchen Auth — erst 401 ohne Token prüfen,
+      // dann 400-Validierung mit Token.
+      const unauthed = await apiRequest(baseUrl, '/api/community/leaderboards?scope=xyz');
+      assert.equal(unauthed.status, 401);
+      const response = await apiRequest(baseUrl, '/api/community/leaderboards?scope=xyz', {
+        token: createToken('user', 'user-1')
+      });
       assert.equal(response.status, 400);
       assert.equal(response.body.error, 'Validation failed');
       assert.ok(Array.isArray(response.body.details));
@@ -389,11 +395,23 @@ test('leaderboard rejects oversized limit with structured 400', async () => {
   await withServer(
     (app) => app.use('/api/community/leaderboards', leaderboardRoutes),
     async (baseUrl) => {
-      const response = await apiRequest(baseUrl, '/api/community/leaderboards?scope=global&limit=1000000');
+      const response = await apiRequest(baseUrl, '/api/community/leaderboards?scope=global&limit=1000000', {
+        token: createToken('user', 'user-1')
+      });
       assert.equal(response.status, 400);
       assert.equal(response.body.error, 'Validation failed');
       assert.ok(Array.isArray(response.body.details));
       assert.ok(response.body.details.some((d) => d.path === 'limit'));
+    }
+  );
+});
+
+test('leaderboard friends scope requires auth and only returns own circle', async () => {
+  await withServer(
+    (app) => app.use('/api/community/leaderboards', leaderboardRoutes),
+    async (baseUrl) => {
+      const unauthed = await apiRequest(baseUrl, '/api/community/leaderboards?scope=friends');
+      assert.equal(unauthed.status, 401);
     }
   );
 });

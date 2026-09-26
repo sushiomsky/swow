@@ -89,6 +89,10 @@ class TeamBRQueue {
         
         // Create dungeon for this team
         const dungeon = this.gameServer._createDungeon();
+        if (!dungeon) {
+            this.gameServer._send(conn.ws, { type: 'server_full', message: 'Server is full, try again later' });
+            return;
+        }
         dungeon.matchMode = 'team_endless_br';
         
         // Add real player in slot 0
@@ -125,21 +129,38 @@ class TeamBRQueue {
     
     /**
      * Handle sit-n-go team queue
+     * Hardening: Bot-Fill nach Wartezeit — sonst hängt die Queue mit 1–3
+     * Spielern ewig (Countdown erst ab 4). Analog zu Solo-SitNGo.
      */
     _handleSitNGoQueue() {
         const waiting = this.waitingPlayers.size;
-        
+
         // Check if we can form teams (need at least 2 players per team, min 2 teams)
         const minPlayers = MIN_TEAMS_SITNGO * 2;
-        
+
         if (waiting >= minPlayers && !this.countdownTimer) {
             this._startCountdown();
         }
-        
+
         if (waiting < minPlayers && this.countdownTimer) {
             this._cancelCountdown();
         }
-        
+
+        // Bot-Fill: 1–3 wartende Spieler nach 45 s mit Bots starten
+        // (ungerade Zahl → letztes Team Mensch + Bot, s. _launchTeamGame).
+        if (waiting > 0 && waiting < minPlayers && !this.countdownTimer) {
+            const oldest = Math.min(...Array.from(this.waitingPlayers.values()).map(v => v.joinedAt));
+            if (Date.now() - oldest > 45000 && !this._botFillTimer) {
+                this._botFillTimer = setTimeout(() => {
+                    this._botFillTimer = null;
+                    if (this.waitingPlayers.size > 0 && this.waitingPlayers.size < minPlayers) {
+                        console.log(`[TeamBRQueue] Bot-fill: launching ${this.waitingPlayers.size} waiting players`);
+                        this._launchTeamGame(true);
+                    }
+                }, 1000);
+            }
+        }
+
         this._broadcastQueueStatus();
     }
     
@@ -174,16 +195,18 @@ class TeamBRQueue {
     }
     
     /**
-     * Launch team game
+     * Launch team game (botFill=true: auch unter Minimum starten, Rest mit Bots)
      */
-    _launchTeamGame() {
+    _launchTeamGame(botFill = false) {
         const players = Array.from(this.waitingPlayers.entries());
-        
-        if (players.length < MIN_TEAMS_SITNGO * 2) {
+
+        if (!botFill && players.length < MIN_TEAMS_SITNGO * 2) {
             console.warn('[TeamBRQueue] Not enough players to launch');
             this.metrics.launch_failures += 1;
             return;
         }
+        if (botFill && players.length === 0) return;
+        // (Rest der Launch-Logik unten nutzt `players` weiter.)
         
         console.log(`[TeamBRQueue] Launching team game with ${players.length} players`);
         
@@ -208,6 +231,10 @@ class TeamBRQueue {
             
             // Create dungeon for this team
             const dungeon = this.gameServer._createDungeon();
+            if (!dungeon) {
+                console.log(`[TeamBRQueue] Server full, skipping team: ${player1Id}`);
+                continue;
+            }
             dungeon.matchMode = 'team_sitngo_br';
             
             // Add player 1 (slot 0)

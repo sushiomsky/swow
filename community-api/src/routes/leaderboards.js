@@ -26,7 +26,7 @@ const leaderboardQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_LEADERBOARD_LIMIT).default(25)
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', requireAuth, async (req, res, next) => {
   let query;
   try {
     query = leaderboardQuerySchema.parse(req.query || {});
@@ -39,7 +39,10 @@ router.get('/', async (req, res, next) => {
 
   try {
     if (scope === 'friends') {
-      if (!userId) return res.status(400).json({ error: 'userId required for friends scope' });
+      // Hardening: friends-Scope nur für den eigenen Freundeskreis —
+      // sonst konnte jeder das Freundes-Board jedes Users abfragen (IDOR).
+      const selfId = req.user?.sub;
+      if (!selfId) return res.status(401).json({ error: 'Missing authenticated user' });
       const { rows } = await db.query(
         `SELECT l.user_id, u.username, u.display_name, u.region, l.score, l.rank, l.season
          FROM leaderboards l
@@ -53,7 +56,7 @@ router.get('/', async (req, res, next) => {
            )
          ORDER BY l.rank ASC
          LIMIT $3 OFFSET $4`,
-        [season, userId, limit, offset]
+        [season, selfId, limit, offset]
       );
       return res.json({ page, limit, rows });
     }
@@ -127,8 +130,14 @@ router.post('/score', requireAuth, async (req, res, next) => {
 
 router.post('/season/reset', requireAuth, async (req, res, next) => {
   if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  const season = (req.body?.season || '').toString();
-  if (!season) return res.status(400).json({ error: 'season required' });
+  // Hardening: Season-Name validieren — sonst Massen-Delete per beliebigem String.
+  const parsed = z.object({
+    season: z.string().trim().min(1).max(40).regex(/^[a-zA-Z0-9_-]+$/)
+  }).safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'season required (alphanumeric, max 40)' });
+  }
+  const season = parsed.data.season;
   try {
     await db.query(`DELETE FROM leaderboards WHERE season = $1`, [season]);
     emitToAll('leaderboard_reset', { season });

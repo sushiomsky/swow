@@ -26,6 +26,23 @@ const MAX_STATE_BUFFERED_BYTES = 256 * 1024;
 const BOT_SEED_INITIAL_DELAY_MS = 15 * 1000;
 const BOT_SEED_INTERVAL_MS = 60 * 1000;
 const TARGET_DUNGEONS_PER_MODE = 4;
+// Hardening (DoS): Caps gegen unbegrenzte Dungeon-/Verbindungs-Erzeugung.
+// Jede WS-Verbindung kann sonst Dungeons + 50-FPS-Ticks erzeugen.
+const MAX_CONNECTIONS = Number(process.env.MP_MAX_CONNECTIONS || 500);
+const MAX_DUNGEONS = Number(process.env.MP_MAX_DUNGEONS || 200);
+// Hardening (Leak): keine Bot-Seeds bei vollem Haus — sonst kämpft der
+// Seeder gegen den Dungeon-Cap und der Log läuft voll.
+const BOT_SEED_PAUSE_AT = Math.floor(MAX_DUNGEONS * 0.8);
+const MAX_MSG_BYTES = 64 * 1024;
+
+// Hardening: Input-Schema — nur diese Boolean-Keys erreichen die Simulation.
+const KNOWN_INPUT_KEYS = ['up', 'down', 'left', 'right', 'fire'];
+function sanitizeInputs(keys) {
+    if (!keys || typeof keys !== 'object') return {};
+    const out = {};
+    for (const k of KNOWN_INPUT_KEYS) out[k] = keys[k] === true;
+    return out;
+}
 
 let nextPlayerId = 1;
 
@@ -69,12 +86,22 @@ class GameServer {
 
     _onConnect(ws) {
         try {
+            // Hardening: Verbindungs-Cap (DoS-Schutz).
+            if (this.connections.size >= MAX_CONNECTIONS) {
+                try { ws.close(1013, 'server full, try again later'); } catch (_) {}
+                return;
+            }
             const playerId = String(nextPlayerId++);
             const conn = { ws, player: null, dungeonId: null, inputs: {}, sessionId: null };
             this.connections.set(playerId, conn);
 
             ws.on('message', (msg) => {
-                try { this._onMessage(playerId, JSON.parse(msg)); } catch (e) { console.error(`[GameServer] Message error for player ${playerId}:`, e.message); }
+                try {
+                    // Hardening: Riesen-Nachrichten sofort verwerfen.
+                    const size = typeof msg === 'string' ? msg.length : (msg?.length || msg?.byteLength || 0);
+                    if (size > MAX_MSG_BYTES) return;
+                    this._onMessage(playerId, JSON.parse(msg));
+                } catch (e) { console.error(`[GameServer] Message error for player ${playerId}:`, e.message); }
             });
             ws.on('close', () => this._onDisconnect(playerId));
             ws.on('error', (err) => {
@@ -150,29 +177,68 @@ class GameServer {
                 this._joinTeamSitNGoBR(playerId, conn);
                 break;
             case 'input':
-                conn.inputs = msg.keys || {};
+                // Hardening: nur bekannte Boolean-Keys übernehmen (kein Schema-
+                // Check vorher — beliebiges Objekt landete in conn.inputs).
+                conn.inputs = sanitizeInputs(msg.keys);
                 break;
         }
     }
-    
+
     // ─── BR Queue Handlers ────────────────────────────────────────────────────
-    
+
+    // Hardening: Doppel-Join-Guard — wer schon in einem Spiel steckt, wird
+    // erst dort entfernt (kein Ghost-Slot im alten Dungeon).
+    _leaveCurrentGame(playerId, conn) {
+        try {
+            this.endlessBRQueue.removePlayer(playerId);
+            this.sitNGoQueue.removePlayer(playerId);
+            this.teamEndlessQueue.removePlayer(playerId);
+            this.teamSitNGoQueue.removePlayer(playerId);
+            if (conn.player && conn.dungeonId != null) {
+                const dungeon = this.dungeons.get(conn.dungeonId);
+                if (dungeon) {
+                    try { dungeon.removePlayer(conn.player); } catch (_) {}
+                    this._checkDungeonEmpty(dungeon);
+                }
+                conn.player = null;
+                conn.dungeonId = null;
+                conn.mode = null;
+            }
+        } catch (e) {
+            console.error(`[GameServer] _leaveCurrentGame failed for ${playerId}:`, e.message);
+        }
+    }
+
+    _serverFull(conn) {
+        if (this.dungeons.size >= MAX_DUNGEONS) {
+            this._send(conn.ws, { type: 'server_full', message: 'Server is full, try again later' });
+            return true;
+        }
+        return false;
+    }
+
     _joinEndlessBR(playerId, conn) {
+        if (conn.player) this._leaveCurrentGame(playerId, conn);
+        if (this._serverFull(conn)) return;
         console.log('[GameServer] Player requesting endless BR:', playerId);
         this.endlessBRQueue.addPlayer(playerId, conn);
     }
-    
+
     _joinSitNGoBR(playerId, conn) {
+        if (conn.player) this._leaveCurrentGame(playerId, conn);
         console.log('[GameServer] Player requesting sit-n-go BR:', playerId);
         this.sitNGoQueue.addPlayer(playerId, conn);
     }
-    
+
     _joinTeamEndlessBR(playerId, conn) {
+        if (conn.player) this._leaveCurrentGame(playerId, conn);
+        if (this._serverFull(conn)) return;
         console.log('[GameServer] Player requesting team endless BR:', playerId);
         this.teamEndlessQueue.addPlayer(playerId, conn);
     }
-    
+
     _joinTeamSitNGoBR(playerId, conn) {
+        if (conn.player) this._leaveCurrentGame(playerId, conn);
         console.log('[GameServer] Player requesting team sit-n-go BR:', playerId);
         this.teamSitNGoQueue.addPlayer(playerId, conn);
     }
@@ -182,6 +248,10 @@ class GameServer {
     _createPrivatePair(playerId, conn) {
         if (conn.player) return;
         const dungeon = this._createDungeon();
+        if (!dungeon) {
+            this._send(conn.ws, { type: 'server_full', message: 'Server is full, try again later' });
+            return;
+        }
         dungeon.matchMode = 'classic_private_pair';
         const player = new ServerPlayer(0, dungeon, playerId, dungeon.id);
         player.homeSlot = 0;
@@ -277,6 +347,9 @@ class GameServer {
     // ─── Dungeon Management ───────────────────────────────────────────────────
 
     _createDungeon() {
+        // Hardening: Dungeon-Cap (DoS-Schutz) — bei vollem Haus keinen
+        // neuen Dungeon erzeugen, Aufrufer bekommt null.
+        if (this.dungeons.size >= MAX_DUNGEONS) return null;
         const d = new DungeonInstance(this);
         this.dungeons.set(d.id, d);
         
@@ -321,7 +394,10 @@ class GameServer {
     }
 
     _checkDungeonEmpty(dungeon) {
-        const hasRealPlayers = dungeon.players.some(p => p && p.id !== null);
+        // Hardening (Leak): Bots zählen NICHT als echte Spieler — sonst werden
+        // Bot-only-Dungeons (Seeds, verlassene BR-Dungeons) nie abgeräumt und
+        // der Server füllt sich bis zum Dungeon-Cap.
+        const hasRealPlayers = dungeon.players.some(p => p && p.id !== null && !this.bots.has(p.id));
         if (!hasRealPlayers && dungeon.lifecycleState !== STATE.DESTROYED) {
             this._removePrivateLobbyByDungeonId(dungeon.id);
             this.onDungeonDestroyed(dungeon.id);
@@ -713,22 +789,26 @@ class GameServer {
     }
 
     _seedEndlessBattleRoyaleBots() {
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('endless_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('endless_br');
     }
 
     _seedSitNGoBattleRoyaleBots() {
         if (this.sitNGoQueue.getWaitingCount() > 0) this.sitNGoQueue.launchWithBots();
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('sitngo_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('sitngo_br');
     }
 
     _seedTeamEndlessBots() {
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_endless_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_endless_br');
     }
 
     _seedTeamSitNGoBots() {
+        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
         const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_sitngo_br');
         for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_sitngo_br');
     }

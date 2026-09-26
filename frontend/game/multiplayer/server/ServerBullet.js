@@ -3,6 +3,19 @@
 const { scoring } = require('./serverConstants');
 const { overlaps } = require('./serverUtils');
 
+// Hardening (Team): Team-Modi starten mit "team", Partner teilen sich den
+// Home-Dungeon. Bot-Flag wird via engine-Spieler (isBot) erkannt.
+function isTeamMode(matchMode) {
+    return typeof matchMode === 'string' && matchMode.startsWith('team');
+}
+
+function isTeammate(engine, shooter, target) {
+    if (!isTeamMode(engine?.matchMode)) return false;
+    if (!shooter || !target) return false;
+    if (shooter.homeDungeonId == null || target.homeDungeonId == null) return false;
+    return shooter.homeDungeonId === target.homeDungeonId;
+}
+
 /**
  * A projectile fired by either a player or a monster.
  * Moves a fixed number of pixels per tick and is destroyed on impact with a
@@ -63,9 +76,15 @@ class ServerBullet {
             }
 
             // Check player bullet vs other player (PvP)
+            // Hardening (Team): kein Friendly-Fire in Team-Modi — gleicher
+            // Home-Dungeon + Team-Modus = Partner, kein Kill + keine Punkte.
             const otherPlayer = e.players[otherNum];
             if (otherPlayer && 'alive' === otherPlayer.status &&
                 overlaps(otherPlayer.x, otherPlayer.y, 18, 18, this.x, this.y, this.bw, this.bh)) {
+                if (isTeammate(e, this.owner, otherPlayer)) {
+                    this.owner.bullet = false;
+                    return;
+                }
                 let pts = scoring.worrior;
                 if (e.doubleScoreNow) pts *= 2;
                 this.owner.score += pts;

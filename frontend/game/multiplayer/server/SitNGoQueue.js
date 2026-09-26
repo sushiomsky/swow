@@ -147,6 +147,10 @@ class SitNGoQueue {
                 return;
             }
             const dungeon = this.gameServer._createDungeon();
+            if (!dungeon) {
+                console.log(`[SitNGoQueue] Server full, skipping player: ${playerId}`);
+                return;
+            }
             dungeon.matchMode = 'sitngo_br';
             
             // Add real player in slot 0

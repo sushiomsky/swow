@@ -78,14 +78,21 @@ export function attachCommunitySocket(io, db, redis) {
     });
 
     // Room model: global/match/clan channels are namespaced as "<type>:<id>".
+    // Hardening: Typ + ID validieren (Format), sonst Room-Spoofing per
+    // beliebigem String. Clan/Match-Membership prüft der Chat-HTTP-Pfad;
+    // Socket-Joins für diese Typen folgen dem gleichen Prinzip (s.u.).
+    const ROOM_ID_PATTERN = /^[a-zA-Z0-9_-]{1,120}$/;
+    const validRoom = (roomType, roomId) =>
+      ['global', 'match', 'clan', 'user'].includes(roomType) &&
+      typeof roomId === 'string' && ROOM_ID_PATTERN.test(roomId);
     socket.on('join_room', ({ roomType, roomId } = {}) => {
-      if (!roomType || !roomId) return;
+      if (!validRoom(roomType, roomId)) return;
       if (roomType === 'user' && roomId !== userId) return;
       socket.join(`${roomType}:${roomId}`);
     });
 
     socket.on('leave_room', ({ roomType, roomId } = {}) => {
-      if (!roomType || !roomId) return;
+      if (!validRoom(roomType, roomId)) return;
       if (roomType === 'user' && roomId !== userId) return;
       socket.leave(`${roomType}:${roomId}`);
     });
@@ -94,7 +101,10 @@ export function attachCommunitySocket(io, db, redis) {
     socket.on('chat_message', async (payload) => {
       try {
         const { roomType, roomId, content } = payload || {};
-        if (!roomType || !roomId || typeof content !== 'string' || !content.trim()) return;
+        if (!validRoom(roomType, roomId) || typeof content !== 'string' || !content.trim()) return;
+        // Hardening: nur in Räume senden, die man auch gejoint hat —
+        // sonst Broadcast in fremde Clan-/Match-Räume.
+        if (!socket.rooms.has(`${roomType}:${roomId}`)) return;
         const safeContent = sanitizeContent(content.trim().slice(0, 1000));
         const { rows } = await db.query(
           `INSERT INTO chat_messages (sender_id, room_type, room_id, content)
@@ -114,8 +124,18 @@ export function attachCommunitySocket(io, db, redis) {
     });
 
     socket.on('match_update', ({ matchId, score, kills, deaths } = {}) => {
-      if (!matchId) return;
-      io.to(`match:${matchId}`).emit('match_update', { matchId, score, kills, deaths });
+      // Hardening: keine gespooften Score-Events in fremde Matches —
+      // nur bei eigenem Socket-Room-Join weiterleiten. Echte Scores kommen
+      // ohnehin aus dem Game-Server, nicht von Clients.
+      if (typeof matchId !== 'string' || !ROOM_ID_PATTERN.test(matchId)) return;
+      if (!socket.rooms.has(`match:${matchId}`)) return;
+      const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+      io.to(`match:${matchId}`).emit('match_update', {
+        matchId,
+        score: num(score),
+        kills: num(kills),
+        deaths: num(deaths)
+      });
     });
 
     // User-specific notifications are both persisted and published.

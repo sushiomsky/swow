@@ -79,7 +79,8 @@ const server = http.createServer((req, res) => {
 
         res.writeHead(200, {
             'Content-Type': mime,
-            'Access-Control-Allow-Origin': '*',
+            // Hardening: kein CORS-Wildcard mehr — Game-Client nutzt
+            // same-origin /api/community via Caddy. Cross-origin nur wo nötig.
         });
         res.end(data);
     });

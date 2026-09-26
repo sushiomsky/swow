@@ -48,7 +48,8 @@ services:
     environment:
       POSTGRES_DB: wow_community
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      # Hardening: kein Default-Passwort im Repo — per .env setzen.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -75,9 +76,11 @@ services:
       dockerfile: Dockerfile
     environment:
       COMMUNITY_API_PORT: 7000
-      COMMUNITY_JWT_SECRET: ${COMMUNITY_JWT_SECRET:-change-me}
+      # Hardening: kein Default mehr — ohne gesetztes Secret startet die API
+      # nicht (fail-fast in config.js). :? erzwingt das beim Compose-Start.
+      COMMUNITY_JWT_SECRET: ${COMMUNITY_JWT_SECRET:?COMMUNITY_JWT_SECRET must be set in .env}
       COMMUNITY_ALLOW_DEV_AUTH: ${COMMUNITY_ALLOW_DEV_AUTH:-false}
-      COMMUNITY_EXPOSE_AUTH_FLOW_TOKENS: ${COMMUNITY_EXPOSE_AUTH_FLOW_TOKENS:-true}
+      COMMUNITY_EXPOSE_AUTH_FLOW_TOKENS: ${COMMUNITY_EXPOSE_AUTH_FLOW_TOKENS:-false}
       COMMUNITY_DATABASE_URL: postgres://postgres:postgres@postgres:5432/wow_community
       COMMUNITY_REDIS_URL: redis://redis:6379
     ports:
