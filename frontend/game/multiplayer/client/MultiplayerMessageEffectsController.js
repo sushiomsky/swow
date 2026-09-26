@@ -85,6 +85,27 @@ export class MultiplayerMessageEffectsController {
         }
     }
 
+    // RESUME-1: reconnect landed on the live slot — same treatment as init
+    // plus a status note. The full state arrives inline (msg.state).
+    handleResumed(msg) {
+        this.handleInit(msg);
+        try {
+            sessionStorage.setItem('swow_resume_token', msg.resumeToken || '');
+        } catch (_) { /* storage may be unavailable */ }
+        this.uiController.setStatus('Reconnected — back in the match.');
+        this.uiController.setStatusError(false);
+    }
+
+    handleResumeError(msg) {
+        try {
+            sessionStorage.removeItem('swow_resume_token');
+        } catch (_) { /* noop */ }
+        this.uiController.setStatus(msg.message || 'Reconnect failed — join a new match.');
+        this.uiController.setStatusError(true);
+        this.uiController.setButtonState(false);
+        if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
+    }
+
     handleJoinError(msg) {
         this._dismissMatchStartingStatus({ clearText: false });
         this.uiController.setStatus(msg.message || 'Unable to join.');
@@ -105,6 +126,12 @@ export class MultiplayerMessageEffectsController {
         this.session.playerNum = msg.playerNum;
         this.session.dungeonId = msg.dungeonId;
         this.session.matchMode = msg.matchMode || this.session.matchMode || null;
+        // RESUME-1: cache the resume token for reconnects after a drop.
+        if (msg.resumeToken) {
+            try {
+                sessionStorage.setItem('swow_resume_token', msg.resumeToken);
+            } catch (_) { /* storage may be unavailable */ }
+        }
         // WIRE-1/2: prime the interpolator with the full layout from init.
         try {
             const interp = typeof this.getInterpolator === 'function' ? this.getInterpolator() : null;

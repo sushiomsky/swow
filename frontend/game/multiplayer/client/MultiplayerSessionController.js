@@ -98,6 +98,9 @@ export class MultiplayerSessionController {
     exitToMenu() {
         this._clearReconnectTimer();
         this._reconnectAttempt = 0;
+        try {
+            sessionStorage.removeItem('swow_resume_token');
+        } catch (_) { /* noop */ }
         const socketClient = this.getSocketClient();
         if (socketClient) socketClient.disconnect();
         if (typeof this.onResetState === 'function') this.onResetState();
@@ -127,7 +130,18 @@ export class MultiplayerSessionController {
         this._reconnectTimer = setTimeout(() => {
             this._reconnectTimer = null;
             this._reconnectAttempt += 1;
-            this.connect(this._lastJoinType, this._lastJoinPayload, { isReconnect: true });
+            // RESUME-1: rejoining after a drop resumes the live slot via the
+            // cached token instead of starting a new dungeon.
+            let joinType = this._lastJoinType;
+            let payload = this._lastJoinPayload;
+            try {
+                const token = sessionStorage.getItem('swow_resume_token');
+                if (token && this._hasJoinedGame) {
+                    joinType = 'resume_session';
+                    payload = { token };
+                }
+            } catch (_) { /* storage may be unavailable */ }
+            this.connect(joinType, payload, { isReconnect: true });
         }, delayMs);
     }
 

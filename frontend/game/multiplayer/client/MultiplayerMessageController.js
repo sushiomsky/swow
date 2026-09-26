@@ -25,6 +25,14 @@ export class MultiplayerMessageController {
                 this.effectsController.handlePrivateRoomStatus(msg);
                 break;
 
+            case SERVER_EVENTS.RESUMED:
+                this.effectsController.handleResumed(msg);
+                break;
+
+            case SERVER_EVENTS.RESUME_ERROR:
+                this.effectsController.handleResumeError(msg);
+                break;
+
             case SERVER_EVENTS.JOIN_ERROR:
                 this.effectsController.handleJoinError(msg);
                 break;

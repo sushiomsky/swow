@@ -21,6 +21,10 @@ const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
 // ROOM-1: private rooms support up to 4 players (2 previously).
 const PRIVATE_ROOM_MAX_PLAYERS = 4;
+// RESUME-1: reconnect grace — a disconnected player's slot stays reserved
+// this long before the dungeon treats them as gone.
+const RESUME_GRACE_MS = 60 * 1000;
+const RESUME_TOKEN_BYTES = 16;
 // WIRE-2: decouple simulation tick (50 Hz) from network broadcast.
 // Snapshots go out at BROADCAST_FPS; the client interpolates between them
 // (see MultiplayerInterpolator) so motion stays smooth at any frame rate
@@ -67,6 +71,11 @@ class GameServer {
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
+        // RESUME-1: token → { playerId, dungeonId, slot, mode, expiresAt }.
+        // Lets a dropped client reattach to its live slot instead of
+        // starting a new dungeon.
+        this._resumeTokens = new Map(); // token → resume record
+        this._playerToken = new Map(); // playerId → token
         // WIRE-1/2: per-dungeon wire state — last layout digest sent (cache),
         // tick counter for broadcast decimation, last broadcast payload for
         // delta-unchanged heartbeats.
@@ -107,24 +116,32 @@ class GameServer {
     _onDisconnect(playerId) {
         const conn = this.connections.get(playerId);
         if (!conn) return;
-        
+
         // Remove spectator if exists
         if (this.spectators.has(playerId)) {
             this.spectators.delete(playerId);
             console.log(`[GameServer] spectator ${playerId} disconnected`);
         }
-        
+
         // Remove from BR queues if waiting
         this.endlessBRQueue.removePlayer(playerId);
         this.sitNGoQueue.removePlayer(playerId);
         this.teamEndlessQueue.removePlayer(playerId);
         this.teamSitNGoQueue.removePlayer(playerId);
-        
+
         if (conn.player) {
-            const dungeon = this.dungeons.get(conn.dungeonId);
-            if (dungeon) {
-                dungeon.removePlayer(conn.player);
-                this._checkDungeonEmpty(dungeon);
+            // RESUME-1: keep the slot reserved during the grace window.
+            // The player object stays seated (status frozen); a reconnect
+            // with the token reattaches. Only evict after grace expiry.
+            const token = this._issueResumeToken(playerId, conn);
+            if (token) {
+                console.log(`[GameServer] player ${playerId} disconnected — slot held for reconnect (grace ${RESUME_GRACE_MS / 1000}s)`);
+            } else {
+                const dungeon = this.dungeons.get(conn.dungeonId);
+                if (dungeon) {
+                    dungeon.removePlayer(conn.player);
+                    this._checkDungeonEmpty(dungeon);
+                }
             }
         }
         for (const [code, lobby] of this.privatePairLobbies.entries()) {
@@ -162,10 +179,141 @@ class GameServer {
             case 'join_team_sitngo_br':
                 this._joinTeamSitNGoBR(playerId, conn);
                 break;
+            case 'resume_session':
+                this._resumeSession(playerId, conn, msg.token);
+                break;
             case 'input':
                 conn.inputs = msg.keys || {};
                 break;
         }
+    }
+
+    // ─── Session Resume (RESUME-1) ────────────────────────────────────────────
+
+    /**
+     * Issue a resume token for a disconnecting player. The slot stays
+     * seated; the token is delivered... nowhere (socket is dead) — instead
+     * it was already sent with every init, so the client has it cached.
+     * Returns the token, or null when there is nothing resumable.
+     */
+    _issueResumeToken(playerId, conn) {
+        const dungeon = this.dungeons.get(conn.dungeonId);
+        if (!dungeon || dungeon.lifecycleState === STATE.DESTROYED) return null;
+        if (!conn.player || conn.player.id !== playerId) return null;
+        // Reuse an existing live token for this player when present.
+        const existing = this._playerToken.get(playerId);
+        if (existing && this._resumeTokens.has(existing)) {
+            const rec = this._resumeTokens.get(existing);
+            rec.expiresAt = Date.now() + RESUME_GRACE_MS;
+            return existing;
+        }
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(RESUME_TOKEN_BYTES).toString('hex');
+        this._resumeTokens.set(token, {
+            playerId,
+            dungeonId: conn.dungeonId,
+            slot: conn.player.num,
+            mode: conn.mode || null,
+            expiresAt: Date.now() + RESUME_GRACE_MS,
+        });
+        this._playerToken.set(playerId, token);
+        // Lazy expiry sweep.
+        this._sweepResumeTokens();
+        // Evict the seat when grace expires (unless resumed before).
+        setTimeout(() => this._expireResumeToken(token), RESUME_GRACE_MS + 1000);
+        return token;
+    }
+
+    /** Drop expired tokens (lazy sweep on issue). */
+    _sweepResumeTokens() {
+        const now = Date.now();
+        for (const [token, rec] of this._resumeTokens.entries()) {
+            if (rec.expiresAt <= now) {
+                this._resumeTokens.delete(token);
+                if (this._playerToken.get(rec.playerId) === token) {
+                    this._playerToken.delete(rec.playerId);
+                }
+            }
+        }
+    }
+
+    /** Grace expired without reconnect — free the seat for real. */
+    _expireResumeToken(token) {
+        const rec = this._resumeTokens.get(token);
+        if (!rec) return;
+        this._resumeTokens.delete(token);
+        if (this._playerToken.get(rec.playerId) === token) {
+            this._playerToken.delete(rec.playerId);
+        }
+        const dungeon = this.dungeons.get(rec.dungeonId);
+        if (!dungeon) return;
+        const seated = dungeon.players[rec.slot];
+        if (seated && seated.id === rec.playerId) {
+            dungeon.removePlayer(seated);
+            this._checkDungeonEmpty(dungeon);
+            console.log(`[GameServer] resume grace expired — evicted player ${rec.playerId} from dungeon ${rec.dungeonId}`);
+        }
+    }
+
+    /**
+     * Reattach a reconnected socket to its live slot.
+     * Same playerId + same dungeon: full state sync, no new dungeon.
+     */
+    _resumeSession(newPlayerId, conn, rawToken) {
+        const token = (rawToken || '').toString().trim();
+        const rec = this._resumeTokens.get(token);
+        if (!rec || rec.expiresAt <= Date.now()) {
+            if (rec) this._resumeTokens.delete(token);
+            this._send(conn.ws, { type: 'resume_error', message: 'Session expired — join a new match.' });
+            return;
+        }
+        const dungeon = this.dungeons.get(rec.dungeonId);
+        if (!dungeon || dungeon.lifecycleState === STATE.DESTROYED) {
+            this._resumeTokens.delete(token);
+            this._send(conn.ws, { type: 'resume_error', message: 'Match is over — join a new match.' });
+            return;
+        }
+        const seated = dungeon.players[rec.slot];
+        if (!seated || seated.id !== rec.playerId) {
+            this._resumeTokens.delete(token);
+            this._send(conn.ws, { type: 'resume_error', message: 'Slot no longer available — join a new match.' });
+            return;
+        }
+        // Rebind: the new connection adopts the old playerId.
+        this._resumeTokens.delete(token);
+        if (this._playerToken.get(rec.playerId) === token) {
+            this._playerToken.delete(rec.playerId);
+        }
+        // The old connection entry is gone (disconnect deleted it); the new
+        // socket currently lives under newPlayerId. Move it to the old id.
+        this.connections.delete(newPlayerId);
+        conn.player = seated;
+        conn.dungeonId = dungeon.id;
+        conn.sessionId = seated.homeDungeonId === dungeon.id ? rec.playerId : conn.sessionId;
+        conn.mode = rec.mode || conn.mode;
+        conn.inputs = {};
+        this.connections.set(rec.playerId, conn);
+        // Re-issue a token for the next drop (client caches the new one).
+        const crypto = require('crypto');
+        const nextToken = crypto.randomBytes(RESUME_TOKEN_BYTES).toString('hex');
+        this._resumeTokens.set(nextToken, {
+            playerId: rec.playerId,
+            dungeonId: dungeon.id,
+            slot: rec.slot,
+            mode: conn.mode,
+            expiresAt: Date.now() + RESUME_GRACE_MS,
+        });
+        this._playerToken.set(rec.playerId, nextToken);
+        this._send(conn.ws, {
+            type: 'resumed',
+            playerId: rec.playerId,
+            playerNum: seated.num,
+            dungeonId: dungeon.id,
+            matchMode: dungeon.matchMode || null,
+            resumeToken: nextToken,
+            state: this._prepareWireDungeonStateFull(dungeon),
+        });
+        console.log(`[GameServer] player ${rec.playerId} resumed in dungeon ${dungeon.id} slot ${rec.slot}`);
     }
     
     // ─── BR Queue Handlers ────────────────────────────────────────────────────
@@ -791,7 +939,29 @@ class GameServer {
             // WIRE-1: late joiners get the full layout with init so the first
             // decimated snapshots (innerWalls: null) render immediately.
             state: this._prepareWireDungeonStateFull(dungeon),
+            // RESUME-1: token for reconnecting to this slot after a drop.
+            resumeToken: this._tokenForPlayer(conn.player.id, dungeon.id, conn.player.num, conn.mode),
         });
+    }
+
+    /**
+     * RESUME-1: return (creating if needed) the live resume token for a
+     * seated player. Sent with every init so the client can cache it.
+     */
+    _tokenForPlayer(playerId, dungeonId, slot, mode) {
+        const existing = this._playerToken.get(playerId);
+        if (existing && this._resumeTokens.has(existing)) {
+            return existing;
+        }
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(RESUME_TOKEN_BYTES).toString('hex');
+        this._resumeTokens.set(token, {
+            playerId, dungeonId, slot, mode: mode || null,
+            expiresAt: Date.now() + RESUME_GRACE_MS,
+        });
+        this._playerToken.set(playerId, token);
+        setTimeout(() => this._expireResumeToken(token), RESUME_GRACE_MS + 1000);
+        return token;
     }
 
     _generatePrivateCode() {
@@ -1053,4 +1223,4 @@ class GameServer {
     }
 }
 
-module.exports = { GameServer, PRIVATE_ROOM_MAX_PLAYERS };
+module.exports = { GameServer, PRIVATE_ROOM_MAX_PLAYERS, RESUME_GRACE_MS };
