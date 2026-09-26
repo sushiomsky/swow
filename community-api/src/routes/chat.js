@@ -22,6 +22,19 @@ const reportSchema = z.object({
 router.get('/:roomType/:roomId', requireAuth, async (req, res, next) => {
   try {
     const { roomType, roomId } = roomParamsSchema.parse(req.params || {});
+    // Hardening: kein Mitlesen fremder Clan-/Match-Räume. Global + eigene
+    // User-Räume bleiben lesbar; Clan/Match nur für Mitglieder.
+    if (roomType === 'user' && roomId !== req.user.sub) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (roomType === 'clan') {
+      // Mitgliedschaft steckt in users.clan_id (keine clan_members-Tabelle).
+      const { rows: membership } = await db.query(
+        `SELECT 1 FROM users WHERE user_id = $1 AND clan_id = $2 LIMIT 1`,
+        [req.user.sub, roomId]
+      );
+      if (!membership[0]) return res.status(403).json({ error: 'Not a clan member' });
+    }
     const { rows } = await db.query(
       `SELECT message_id, sender_id, room_type, room_id, content, created_at
        FROM chat_messages

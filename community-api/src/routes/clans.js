@@ -38,7 +38,7 @@ router.get('/:clanId', async (req, res, next) => {
     if (!clans[0]) return res.status(404).json({ error: 'Clan not found' });
     const { rows: members } = await db.query(
       `SELECT user_id, username, display_name, avatar_url FROM users WHERE clan_id = $1 ORDER BY username`,
-      [req.params.clanId]
+      [clanId]
     );
     return res.json({ ...clans[0], members });
   } catch (e) {
