@@ -1,6 +1,6 @@
 import { CommunityApiError } from './communityClient';
 
-export function toUserErrorMessage(error, fallback = 'Request failed.') {
+export function toUserErrorMessage(error, fallback = 'Anfrage fehlgeschlagen.') {
   if (!error) return fallback;
 
   if (error instanceof CommunityApiError) {

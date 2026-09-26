@@ -1,15 +1,15 @@
 export default function MatchHistoryTable({ rows = [] }) {
   return (
     <section className="card overflow-x-auto">
-      <h3 className="mb-3 text-lg font-semibold">Recent Matches</h3>
+      <h3 className="mb-3 text-lg font-semibold">Letzte Spiele</h3>
       <table className="min-w-full text-sm">
         <thead className="text-zinc-400">
           <tr>
-            <th className="px-2 py-2 text-left">Date</th>
-            <th className="px-2 py-2 text-left">Mode</th>
-            <th className="px-2 py-2 text-right">Score</th>
+            <th className="px-2 py-2 text-left">Datum</th>
+            <th className="px-2 py-2 text-left">Modus</th>
+            <th className="px-2 py-2 text-right">Punkte</th>
             <th className="px-2 py-2 text-right">K/D</th>
-            <th className="px-2 py-2 text-left">Result</th>
+            <th className="px-2 py-2 text-left">Ergebnis</th>
           </tr>
         </thead>
         <tbody>
@@ -24,7 +24,7 @@ export default function MatchHistoryTable({ rows = [] }) {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td className="px-2 py-4 text-zinc-400" colSpan={5}>No match history yet.</td>
+              <td className="px-2 py-4 text-zinc-400" colSpan={5}>Noch keine Spiele.</td>
             </tr>
           )}
         </tbody>

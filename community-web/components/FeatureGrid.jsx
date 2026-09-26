@@ -1,10 +1,10 @@
 const FEATURES = [
-  { title: 'Ranked Seasons', text: 'Compete on global and regional leaderboards with seasonal resets and rewards.' },
-  { title: 'Player Profiles', text: 'Track XP, level progress, badges, recent match results, and personal highlights.' },
-  { title: 'Clans & Team Play', text: 'Create or join clans, chat with members, and push team standings together.' },
-  { title: 'Daily Challenges', text: 'Complete rotating objectives for cosmetics, titles, and progression boosts.' },
-  { title: 'Live Social Layer', text: 'Use global, match, and clan chat with real-time notifications and invites.' },
-  { title: 'Fair Moderation', text: 'Admin tools support reports, mute/ban actions, and engagement analytics.' }
+  { title: 'Saison-Ranglisten', text: 'Globale und regionale Bestenlisten mit Saison-Resets und Belohnungen.' },
+  { title: 'Spielerprofile', text: 'XP, Level, Abzeichen, Spielergebnisse und Highlights im Blick.' },
+  { title: 'Clans & Teamspiel', text: 'Clans gründen oder beitreten, chatten und gemeinsam aufsteigen.' },
+  { title: 'Tägliche Herausforderungen', text: 'Wechselnde Ziele für Titel, Belohnungen und Fortschritt.' },
+  { title: 'Live-Chat', text: 'Globaler, Spiel- und Clan-Chat mit Echtzeit-Mitteilungen.' },
+  { title: 'Faire Moderation', text: 'Meldungen, Stummschalten und Sperren über Admin-Werkzeuge.' }
 ];
 
 export default function FeatureGrid() {

@@ -228,21 +228,21 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
           })}
         </div>
       )}
-      {authRequired && <p className="mb-2 text-xs text-amber-300">Sign in to join live chat.</p>}
+      {authRequired && <p className="mb-2 text-xs text-amber-300">Melde dich an, um am Live-Chat teilzunehmen.</p>}
       {!authRequired && connectionError && <p className="mb-2 text-xs text-amber-300">{connectionError}</p>}
       {!authRequired && (
         <input
           value={filterText}
           onChange={(event) => setFilterText(event.target.value)}
           className="mb-3 w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-          placeholder="Filter messages by sender or text..."
+          placeholder="Nachrichten nach Absender oder Text filtern…"
         />
       )}
       <ErrorText message={activeHistoryError || error} className="mb-2" />
       <div className="mb-3 h-56 overflow-auto rounded border border-zinc-800 p-2 text-sm">
-        {activeHistoryLoading && <p className="text-zinc-400">Loading recent messages…</p>}
+        {activeHistoryLoading && <p className="text-zinc-400">Lade aktuelle Nachrichten…</p>}
         {!activeHistoryLoading && filteredMessages.length === 0 && (
-          <p className="text-zinc-500">No messages yet.</p>
+          <p className="text-zinc-500">Noch keine Nachrichten.</p>
         )}
         {!activeHistoryLoading && filteredMessages.map((message, index) => (
           <p key={message.message_id || `${message.created_at || 'live'}-${index}`} className="mb-1">
@@ -253,7 +253,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
                 onClick={() => reportMessage(message.message_id)}
                 className="ml-2 text-xs text-rose-300 underline"
               >
-                report
+                melden
               </button>
             )}
           </p>
@@ -264,7 +264,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           className="flex-1 rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-          placeholder="Write message..."
+          placeholder="Nachricht schreiben…"
           disabled={authRequired}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -273,7 +273,7 @@ export default function ChatRoom({ roomType, roomId, roomOptions = null }) {
             }
           }}
         />
-        <button onClick={send} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60" disabled={authRequired}>Send</button>
+        <button onClick={send} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60" disabled={authRequired}>Senden</button>
       </div>
     </section>
   );

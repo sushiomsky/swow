@@ -36,21 +36,21 @@ export default function ForumThreadView({ threadId }) {
   const submitReply = async (e) => {
     e.preventDefault();
     if (!reply.trim()) {
-      setError('Reply cannot be empty.');
+      setError('Antwort darf nicht leer sein.');
       return;
     }
     setError('');
     setBusy(true);
     try {
       if (!isAuthenticated) {
-        setError('Sign in required to post replies.');
+        setError('Melde dich an, um zu antworten.');
         return;
       }
       await api.createForumPost(threadId, { body: reply.trim() });
       setReply('');
       await load();
     } catch (err) {
-      setError(toUserErrorMessage(err, 'Failed to send reply.'));
+      setError(toUserErrorMessage(err, 'Antwort konnte nicht gesendet werden.'));
     } finally {
       setBusy(false);
     }
@@ -64,19 +64,19 @@ export default function ForumThreadView({ threadId }) {
     try {
       if (operation === 'pin') {
         await api.moderateForumThreadPin(threadId, value);
-        setModerationStatus(value ? 'Thread pinned.' : 'Thread unpinned.');
+        setModerationStatus(value ? 'Thema angeheftet.' : 'Thema gelöst.');
       } else if (operation === 'lock') {
         await api.moderateForumThreadLock(threadId, value);
-        setModerationStatus(value ? 'Thread locked.' : 'Thread unlocked.');
+        setModerationStatus(value ? 'Thema gesperrt.' : 'Thema entsperrt.');
       } else if (operation === 'delete') {
         await api.moderateForumThreadDelete(threadId, 'Moderated by staff');
-        setModerationStatus('Thread deleted.');
+        setModerationStatus('Thema gelöscht.');
         router.push('/community/forum');
         return;
       }
       await load();
     } catch (moderationError) {
-      setError(toUserErrorMessage(moderationError, 'Moderation action failed.'));
+      setError(toUserErrorMessage(moderationError, 'Moderation fehlgeschlagen.'));
     } finally {
       setModerationBusy(false);
     }
@@ -89,10 +89,10 @@ export default function ForumThreadView({ threadId }) {
     setModerationBusy(true);
     try {
       await api.moderateForumPostDelete(threadId, postId, 'Moderated by staff');
-      setModerationStatus('Post deleted.');
+      setModerationStatus('Beitrag gelöscht.');
       await load();
     } catch (moderationError) {
-      setError(toUserErrorMessage(moderationError, 'Unable to delete post.'));
+      setError(toUserErrorMessage(moderationError, 'Beitrag konnte nicht gelöscht werden.'));
     } finally {
       setModerationBusy(false);
     }
@@ -101,8 +101,8 @@ export default function ForumThreadView({ threadId }) {
   if (!thread) {
     return (
       <section className="card">
-        <p className="text-sm text-zinc-400">Thread not found or unavailable.</p>
-        <Link href="/community/forum" className="mt-3 inline-block text-sm text-indigo-300">← Back to forum</Link>
+        <p className="text-sm text-zinc-400">Thema nicht gefunden oder nicht verfügbar.</p>
+        <Link href="/community/forum" className="mt-3 inline-block text-sm text-indigo-300">← Zurück zum Forum</Link>
       </section>
     );
   }
@@ -110,11 +110,11 @@ export default function ForumThreadView({ threadId }) {
   return (
     <div className="space-y-4">
       <section className="card">
-        <Link href="/community/forum" className="text-sm text-indigo-300">← Back to forum</Link>
+        <Link href="/community/forum" className="text-sm text-indigo-300">← Zurück zum Forum</Link>
         <h1 className="mt-2 text-2xl font-bold">{thread.title}</h1>
         <p className="mt-2 whitespace-pre-wrap text-zinc-300">{thread.body}</p>
         <p className="mt-3 text-xs text-zinc-500">
-          in {thread.category_name} • by {thread.author_name}
+          in {thread.category_name} • von {thread.author_name}
         </p>
         {canModerate && (
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -123,25 +123,25 @@ export default function ForumThreadView({ threadId }) {
               className="rounded border border-zinc-600 px-2 py-1"
               onClick={() => moderateThread('pin', !thread.pinned)}
             >
-              {thread.pinned ? 'Unpin' : 'Pin'}
+              {thread.pinned ? 'Lösen' : 'Anheften'}
             </button>
             <button
               disabled={moderationBusy}
               className="rounded border border-zinc-600 px-2 py-1"
               onClick={() => moderateThread('lock', !thread.is_locked)}
             >
-              {thread.is_locked ? 'Unlock' : 'Lock'}
+              {thread.is_locked ? 'Entsperren' : 'Sperren'}
             </button>
             <button
               disabled={moderationBusy}
               className="rounded border border-rose-600 px-2 py-1 text-rose-300"
               onClick={() => {
-                if (window.confirm('Delete this thread and all replies?')) {
+                if (window.confirm('Dieses Thema und alle Antworten löschen?')) {
                   moderateThread('delete');
                 }
               }}
             >
-              Delete thread
+              Thema löschen
             </button>
           </div>
         )}
@@ -149,41 +149,42 @@ export default function ForumThreadView({ threadId }) {
       </section>
 
       <section className="card space-y-3">
-        <h2 className="text-lg font-semibold">Replies</h2>
+        <h2 className="text-lg font-semibold">Antworten</h2>
         {posts.map((post) => (
           <article key={post.post_id} className="rounded border border-zinc-800 bg-zinc-950/70 p-3">
             <p className="whitespace-pre-wrap text-sm text-zinc-200">{post.body}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-xs text-zinc-500">by {post.author_name}</p>
+              <p className="text-xs text-zinc-500">von {post.author_name}</p>
               {canModerate && (
                 <button
                   disabled={moderationBusy}
                   className="rounded border border-rose-600 px-2 py-1 text-xs text-rose-300"
                   onClick={() => deletePost(post.post_id)}
                 >
-                  Delete
+                  Löschen
                 </button>
               )}
             </div>
           </article>
         ))}
-        {!posts.length && <p className="text-sm text-zinc-500">No replies yet.</p>}
+        {!posts.length && <p className="text-sm text-zinc-500">Noch keine Antworten.</p>}
       </section>
 
       <section className="card">
-        <h2 className="text-lg font-semibold">Add Reply</h2>
+        <h2 className="text-lg font-semibold">Antworten</h2>
         <form onSubmit={submitReply} className="mt-3 space-y-2">
           <textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             className="min-h-24 w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="Write your reply..."
+            placeholder="Schreibe deine Antwort…"
+            aria-label="Antwort schreiben"
             disabled={thread.is_locked}
           />
-          {thread.is_locked && <p className="text-sm text-amber-300">This thread is locked by moderators.</p>}
+          {thread.is_locked && <p className="text-sm text-amber-300">Dieses Thema wurde von Moderatoren gesperrt.</p>}
           <ErrorText message={error} />
           <button disabled={busy || thread.is_locked} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
-            {busy ? 'Sending...' : 'Post Reply'}
+            {busy ? 'Wird gesendet…' : 'Antwort senden'}
           </button>
         </form>
       </section>

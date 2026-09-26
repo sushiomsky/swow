@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
@@ -11,47 +11,60 @@
 <body>
     <div id="overlay">
         <h1>WIZARD OF WOR</h1>
-        <p>Connected Dungeons — Multiplayer</p>
+        <p>Verbundene Dungeons — Mehrspieler</p>
 
         <div class="lobby-modes">
             <!-- Quick Play -->
             <div class="mode-group">
-                <h3 class="mode-group-title">⚡ QUICK PLAY</h3>
+                <h3 class="mode-group-title">⚡ SCHNELLSTART</h3>
                 <button class="btn" id="btnSolo">▶ ENDLESS BR</button>
                 <button class="btn green" id="btnTeamBr">🛡 TEAM ENDLESS</button>
-                <p class="mode-hint">Jump in instantly — join an active dungeon ring</p>
+                <p class="mode-hint">Sofort einsteigen — tritt einem aktiven Dungeon-Ring bei</p>
             </div>
 
             <!-- Competitive -->
             <div class="mode-group">
-                <h3 class="mode-group-title">🏆 COMPETITIVE</h3>
+                <h3 class="mode-group-title">🏆 WETTKAMPF</h3>
                 <button class="btn blue" id="btnSitNGo">⏱ SIT-N-GO BR</button>
                 <button class="btn purple" id="btnTeamSitNGo">🛡 TEAM SIT-N-GO</button>
-                <p class="mode-hint">Queued start — fair fight from round one</p>
+                <p class="mode-hint">Start aus der Warteschlange — fairer Kampf ab Runde eins</p>
             </div>
 
             <!-- Private -->
             <div class="mode-group">
-                <h3 class="mode-group-title">🔗 PRIVATE</h3>
-                <button class="btn dark" id="btnPairCreate">CREATE CLASSIC ROOM</button>
+                <h3 class="mode-group-title">🔗 PRIVAT</h3>
+                <button class="btn dark" id="btnPairCreate">KLASSIK-RAUM ERSTELLEN</button>
                 <div class="private-join">
-                    <input id="pairCode" type="text" maxlength="12" placeholder="Room code"
+                    <input id="pairCode" type="text" maxlength="12" placeholder="Raum-Code" aria-label="Raum-Code"
                         class="code-input">
-                    <button class="btn dark" id="btnPairJoin">JOIN</button>
+                    <button class="btn dark" id="btnPairJoin">BEITRETEN</button>
                 </div>
             </div>
         </div>
 
-        <button class="btn green hide" id="btnRetry">↻ RETRY LAST MODE</button>
+        <button class="btn green hide" id="btnRetry">↻ LETZTEN MODUS WIEDERHOLEN</button>
         <div id="status" role="status" aria-live="polite"></div>
 
         <div class="lobby-footer">
-            <a href="/spectate.html">👁 Spectate</a>
-            <a href="/public/handbook.html" target="_blank">📖 Handbook</a>
-            <a href="/">🏠 Home</a>
-            <a href="/community" target="_blank" rel="noopener">💬 Community</a>
+            <a href="/spectate.html">👁 Zuschauen</a>
+            <a href="/public/handbook.html" target="_blank">📖 Anleitung</a>
+            <a href="/">🏠 Start</a>
+            <a id="mp-community-link" href="/community" target="_blank" rel="noopener">💬 Community</a>
         </div>
     </div>
+
+    <!-- N-05: /community-Link am Game-Host lief ins 404 — absolut auf den
+         Community-Host auflösen (Override via window.__SWOW_COMMUNITY_URL__). -->
+    <script>
+        (function () {
+            var base = window.__SWOW_COMMUNITY_URL__
+                || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? window.location.protocol + '//' + window.location.hostname + ':13000/community'
+                    : '/community');
+            var link = document.getElementById('mp-community-link');
+            if (link) link.href = base;
+        })();
+    </script>
 
     <div id="body">
         <div id="border">

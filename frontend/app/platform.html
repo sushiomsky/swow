@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="description" content="Wizard Of Wor — browser-based arcade game platform with singleplayer and multiplayer modes.">
@@ -25,22 +25,38 @@
     <!-- Main menu overlay — shown when no game mode is active -->
     <div id="main-menu">
         <h1>WIZARD OF WOR</h1>
-        <p class="subtitle">Browser Arcade — Play Instantly</p>
+        <p class="subtitle">Browser-Arcade — sofort spielen</p>
 
-        <button class="menu-play" id="menu-sp-1p">▶ PLAY</button>
-        <p class="menu-play-hint">Press SPACE or ENTER</p>
+        <button class="menu-play" id="menu-sp-1p">▶ SPIELEN</button>
+        <p class="menu-play-hint">LEERTASTE oder ENTER drücken</p>
 
         <div class="menu-secondary">
-            <button class="menu-btn-sm green" id="menu-sp-2p">2 PLAYER</button>
+            <button class="menu-btn-sm green" id="menu-sp-2p">2 SPIELER</button>
             <button class="menu-btn-sm blue" id="menu-mp">🌐 ONLINE</button>
-            <button class="menu-btn-sm dark" id="menu-handbook">📖 HELP</button>
+            <button class="menu-btn-sm dark" id="menu-handbook">📖 HILFE</button>
         </div>
 
         <div class="menu-footer">
-            <a href="/community" target="_blank">Community</a>
+            <a id="menu-community-link" href="/community" target="_blank" rel="noopener">Community</a>
             <span class="menu-keys">SPACE · 2 · M · H</span>
         </div>
     </div>
+
+    <!-- Game→Community-Rücklink: sichtbarer Community-Link auf der Game-Plattform.
+         Absolut auf den Community-Host aufgelöst (kein relativer /community-Pfad,
+         der am Game-Host :18080 ins Leere läuft — N-05). -->
+    <script>
+        (function () {
+            // window.__SWOW_COMMUNITY_URL__ gewinnt, sonst gleicher Host + Community-Port,
+            // sonst (Prod-Edge, gleiche Origin) relativer /community-Pfad.
+            var base = window.__SWOW_COMMUNITY_URL__
+                || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? window.location.protocol + '//' + window.location.hostname + ':13000/community'
+                    : '/community');
+            var link = document.getElementById('menu-community-link');
+            if (link) link.href = base;
+        })();
+    </script>
 
     <!-- Game root — modes inject their DOM here -->
     <div id="game-root"></div>

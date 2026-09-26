@@ -83,9 +83,9 @@ export default function ActiveGamesPanel() {
       failuresRef.current += 1;
       if (failuresRef.current >= MAX_CONSECUTIVE_FAILURES) {
         stopPolling();
-        setError('Live game data is currently unavailable.');
+        setError('Live-Spieldaten sind derzeit nicht verfügbar.');
       } else {
-        setError('Unable to load active games right now.');
+        setError('Aktive Spiele konnten gerade nicht geladen werden.');
       }
     } finally {
       setLoading(false);
@@ -99,29 +99,29 @@ export default function ActiveGamesPanel() {
   }, [load, stopPolling]);
 
   const summary = useMemo(() => {
-    if (loading) return 'Loading active games…';
-    if (!snapshot.total_games) return 'No active games right now';
-    return `${snapshot.total_games} active game${snapshot.total_games === 1 ? '' : 's'} · ${snapshot.total_players} player${snapshot.total_players === 1 ? '' : 's'} online`;
+    if (loading) return 'Live-Spiele werden geladen…';
+    if (!snapshot.total_games) return 'Gerade keine aktiven Spiele';
+    return `${snapshot.total_games} aktive Spiel${snapshot.total_games === 1 ? '' : 'e'} · ${snapshot.total_players} Spieler online`;
   }, [loading, snapshot.total_games, snapshot.total_players]);
 
   const queueNotices = [];
   if (snapshot.queued_sitngo_players > 0)
-    queueNotices.push(`Sit-n-Go: ${snapshot.queued_sitngo_players} waiting`);
+    queueNotices.push(`Sit-n-Go: ${snapshot.queued_sitngo_players} warten`);
   if (snapshot.queued_team_sitngo_players > 0)
-    queueNotices.push(`Team Sit-n-Go: ${snapshot.queued_team_sitngo_players} waiting`);
+    queueNotices.push(`Team Sit-n-Go: ${snapshot.queued_team_sitngo_players} warten`);
 
   return (
     <section className="card border-zinc-700">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">Live Games</h2>
+          <h2 className="text-xl font-bold">Live-Spiele</h2>
           <p className="mt-1 text-sm text-zinc-400">{summary}</p>
           {queueNotices.length > 0 && (
             <p className="mt-1 text-xs text-amber-300">{queueNotices.join(' · ')}</p>
           )}
         </div>
         <a href={GAME_URLS.multiplayer} className="shrink-0 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-          Play Now
+          Jetzt spielen
         </a>
       </div>
 
@@ -129,7 +129,7 @@ export default function ActiveGamesPanel() {
 
       {!loading && !snapshot.games.length && !error && (
         <div className="rounded border border-zinc-800 bg-zinc-950/50 py-8 text-center text-sm text-zinc-500">
-          No active games right now — be the first to start one!
+          Gerade keine aktiven Spiele — starte als Erster eines!
         </div>
       )}
 
@@ -150,19 +150,19 @@ export default function ActiveGamesPanel() {
                   <span className="text-xs text-zinc-500">Dungeon {game.dungeon_id}</span>
                 </div>
                 <p className="text-xs text-zinc-400">
-                  {humanCount > 0 ? `${humanCount} human${humanCount !== 1 ? 's' : ''}` : 'bots only'}
-                  {botCount > 0 ? ` · ${botCount} bot${botCount !== 1 ? 's' : ''}` : ''}
+                  {humanCount > 0 ? `${humanCount} Mensch${humanCount !== 1 ? 'en' : ''}` : 'nur Bots'}
+                  {botCount > 0 ? ` · ${botCount} Bot${botCount !== 1 ? 's' : ''}` : ''}
                   {' · '}
                   {String(game.status || 'in_progress').replaceAll('_', ' ')}
                 </p>
                 <div className="flex gap-2">
                   {joinUrl && (
                     <a href={joinUrl} className="flex-1 rounded border border-indigo-600 bg-indigo-600/10 py-1 text-center text-xs font-semibold text-indigo-300 hover:bg-indigo-600/30">
-                      Join
+                      Beitreten
                     </a>
                   )}
                   <a href={gameSpectateUrl} className="flex-1 rounded border border-zinc-700 py-1 text-center text-xs font-semibold text-zinc-300 hover:bg-zinc-800">
-                    Spectate
+                    Zuschauen
                   </a>
                 </div>
               </li>

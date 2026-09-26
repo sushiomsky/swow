@@ -1,35 +1,35 @@
 const FAQ = [
   {
-    q: 'Does the community layer change gameplay mechanics?',
-    a: 'No. Core game movement, combat, scoring, enemy behavior, and lifecycle rules are unchanged.'
+    q: 'Verändert die Community das Spiel?',
+    a: 'Nein. Bewegung, Kampf, Punkte und Gegner-Verhalten bleiben unverändert.'
   },
   {
-    q: 'How are ranks calculated?',
-    a: 'Rankings are recalculated per season from stored scores and match performance metrics.'
+    q: 'Wie werden Ränge berechnet?',
+    a: 'Ranglisten werden pro Saison aus gespeicherten Punkten und Spielergebnissen neu berechnet.'
   },
   {
-    q: 'Can I play without joining a clan?',
-    a: 'Yes. Clans are optional. You can still compete in global and regional leaderboards.'
+    q: 'Kann ich ohne Clan spielen?',
+    a: 'Ja. Clans sind optional — du kannst trotzdem in globalen und regionalen Bestenlisten antreten.'
   },
   {
-    q: 'How do I report abusive chat behavior?',
-    a: 'Use in-app moderation controls; reports are reviewed by admins through the moderation dashboard.'
+    q: 'Wie melde ich störendes Chat-Verhalten?',
+    a: 'Nutze die Melden-Funktion im Chat; Meldungen werden von Admins geprüft.'
   },
   {
-    q: 'Where can I find policy pages required for ad compliance?',
-    a: 'See the Privacy Policy, Terms of Service, and Contact pages linked in the footer.'
+    q: 'Wo finde ich Datenschutz und Bedingungen?',
+    a: 'Im Footer: Datenschutz, Bedingungen und Kontakt.'
   }
 ];
 
 export const metadata = {
-  title: 'FAQ',
-  description: 'Frequently asked questions about Wizard of Wor community accounts, rankings, and moderation.'
+  title: 'Hilfe',
+  description: 'Häufige Fragen zu Community-Konto, Ranglisten und Moderation.'
 };
 
 export default function FAQPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Frequently Asked Questions</h1>
+      <h1 className="text-3xl font-bold">Häufige Fragen</h1>
       <div className="space-y-3">
         {FAQ.map((item) => (
           <article key={item.q} className="card">

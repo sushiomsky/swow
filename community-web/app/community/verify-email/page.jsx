@@ -33,15 +33,15 @@ function VerifyEmailContent() {
     if (!tokenFromUrl || autoTried) return;
     setAutoTried(true);
     if (tokenFromUrl.trim().length < 32) {
-      setError('This verification link looks invalid (token too short). Request a new one below.');
+      setError('Dieser Bestätigungslink sieht ungültig aus (Token zu kurz). Fordere unten einen neuen an.');
       return;
     }
     setAutoVerifying(true);
     setError('');
     setStatus('');
     api.confirmEmailVerification(tokenFromUrl.trim())
-      .then(() => setStatus('Email verification complete. You can now sign in.'))
-      .catch((confirmError) => setError(toUserErrorMessage(confirmError, 'This verification link is invalid or expired. Request a new one below.')))
+      .then(() => setStatus('E-Mail bestätigt. Du kannst dich jetzt anmelden.'))
+      .catch((confirmError) => setError(toUserErrorMessage(confirmError, 'Dieser Link ist ungültig oder abgelaufen. Fordere unten einen neuen an.')))
       .finally(() => setAutoVerifying(false));
   }, [searchParams, api, autoTried]);
 
@@ -54,9 +54,9 @@ function VerifyEmailContent() {
       if (response?.email_verification_token) {
         setToken(response.email_verification_token);
       }
-      setStatus('If an account exists, a verification email has been sent.');
+      setStatus('Falls ein Konto existiert, wurde eine Bestätigungs-E-Mail gesendet.');
     } catch (requestError) {
-      setError(toUserErrorMessage(requestError, 'Failed to request email verification.'));
+      setError(toUserErrorMessage(requestError, 'Bestätigungs-E-Mail konnte nicht angefordert werden.'));
     }
   };
 
@@ -66,18 +66,18 @@ function VerifyEmailContent() {
     setStatus('');
     try {
       await api.confirmEmailVerification(token.trim());
-      setStatus('Email verification complete.');
+      setStatus('E-Mail bestätigt.');
     } catch (confirmError) {
-      setError(toUserErrorMessage(confirmError, 'Failed to verify email token.'));
+      setError(toUserErrorMessage(confirmError, 'Token konnte nicht bestätigt werden.'));
     }
   };
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <section className="card">
-        <h1 className="text-2xl font-bold">Verify Email</h1>
+        <h1 className="text-2xl font-bold">E-Mail bestätigen</h1>
         <p className="mt-2 text-sm text-zinc-300">
-          Request a verification link to confirm ownership of your email address.
+          Fordere einen Bestätigungslink an, um deine E-Mail-Adresse nachzuweisen.
         </p>
         <form onSubmit={requestVerification} className="mt-4 space-y-2">
           <input
@@ -85,26 +85,28 @@ function VerifyEmailContent() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="Email"
+            placeholder="E-Mail"
+            aria-label="E-Mail"
             required
           />
-          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">Send verification</button>
+          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">Bestätigung senden</button>
         </form>
       </section>
 
       <section className="card">
-        <h2 className="text-lg font-semibold">Confirm Token</h2>
-        <p className="mt-2 text-sm text-zinc-300">Paste the verification token from your email.</p>
-        {autoVerifying && <p className="mt-2 text-sm text-zinc-400">Verifying your link…</p>}
+        <h2 className="text-lg font-semibold">Token bestätigen</h2>
+        <p className="mt-2 text-sm text-zinc-300">Füge das Token aus deiner E-Mail ein.</p>
+        {autoVerifying && <p className="mt-2 text-sm text-zinc-400">Link wird geprüft…</p>}
         <form onSubmit={confirmVerification} className="mt-4 space-y-2">
           <input
             value={token}
             onChange={(event) => setToken(event.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-            placeholder="Verification token"
+            placeholder="Bestätigungs-Token"
+            aria-label="Bestätigungs-Token"
             required
           />
-          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">Verify token</button>
+          <button className="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold">Token bestätigen</button>
         </form>
         <ErrorText message={error} />
         {status && <p className="mt-2 text-sm text-emerald-300">{status}</p>}
@@ -115,7 +117,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<section className="card"><p className="text-sm text-zinc-400">Loading verification tools...</p></section>}>
+    <Suspense fallback={<section className="card"><p className="text-sm text-zinc-400">Bestätigung wird geladen…</p></section>}>
       <VerifyEmailContent />
     </Suspense>
   );

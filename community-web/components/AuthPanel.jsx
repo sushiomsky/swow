@@ -52,7 +52,7 @@ export default function AuthPanel() {
       }
       setPassword('');
     } catch (err) {
-      setError(toUserErrorMessage(err, 'Authentication failed.'));
+      setError(toUserErrorMessage(err, 'Anmeldung fehlgeschlagen.'));
     } finally {
       setBusy(false);
     }
@@ -66,8 +66,8 @@ export default function AuthPanel() {
   if (!ready) {
     return (
       <section className="card">
-        <h2 className="text-lg font-semibold">Account</h2>
-        <p className="mt-2 text-sm text-zinc-300">Loading session...</p>
+        <h2 className="text-lg font-semibold">Konto</h2>
+        <p className="mt-2 text-sm text-zinc-300">Sitzung wird geladen…</p>
       </section>
     );
   }
@@ -75,18 +75,18 @@ export default function AuthPanel() {
   if (sessionUser) {
     return (
       <section className="card">
-        <h2 className="text-lg font-semibold">Account</h2>
-        <p className="mt-2 text-sm text-zinc-300">Signed in as <b>{sessionUser.username}</b></p>
+        <h2 className="text-lg font-semibold">Konto</h2>
+        <p className="mt-2 text-sm text-zinc-300">Angemeldet als <b>{sessionUser.username}</b></p>
         {sessionUser.email && (
           <p className="mt-1 text-xs text-zinc-400">
-            {sessionUser.email} • {sessionUser.email_verified ? 'verified' : 'not verified'}
+            {sessionUser.email} • {sessionUser.email_verified ? 'bestätigt' : 'nicht bestätigt'}
           </p>
         )}
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-indigo-300">
-          <Link href="/community/verify-email">Verify email</Link>
-          <Link href="/community/reset-password">Reset password</Link>
+          <Link href="/community/verify-email">E-Mail bestätigen</Link>
+          <Link href="/community/reset-password">Passwort zurücksetzen</Link>
         </div>
-        <button onClick={handleLogout} className="mt-3 rounded border border-zinc-700 px-4 py-2 text-sm">Log out</button>
+        <button onClick={handleLogout} className="mt-3 rounded border border-zinc-700 px-4 py-2 text-sm">Abmelden</button>
       </section>
     );
   }
@@ -98,13 +98,13 @@ export default function AuthPanel() {
           onClick={() => setMode('login')}
           className={`rounded px-3 py-1 text-sm ${mode === 'login' ? 'bg-indigo-600' : 'border border-zinc-700'}`}
         >
-          Login
+          Anmelden
         </button>
         <button
           onClick={() => setMode('register')}
           className={`rounded px-3 py-1 text-sm ${mode === 'register' ? 'bg-indigo-600' : 'border border-zinc-700'}`}
         >
-          Register
+          Registrieren
         </button>
       </div>
       <form onSubmit={submit} className="space-y-2">
@@ -112,7 +112,8 @@ export default function AuthPanel() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-          placeholder="Username"
+          placeholder="Benutzername"
+          aria-label="Benutzername"
           required
         />
         {mode === 'register' && (
@@ -122,20 +123,23 @@ export default function AuthPanel() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-              placeholder="Email"
+              placeholder="E-Mail"
+              aria-label="E-Mail"
               required
             />
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-              placeholder="Display name"
+              placeholder="Anzeigename"
+              aria-label="Anzeigename"
             />
             <input
               value={region}
               onChange={(e) => setRegion(e.target.value)}
               className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
               placeholder="Region (optional)"
+              aria-label="Region (optional)"
             />
           </>
         )}
@@ -144,16 +148,17 @@ export default function AuthPanel() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-          placeholder="Password"
+          placeholder="Passwort"
+          aria-label="Passwort"
           required
         />
         <ErrorText message={error} />
         <button disabled={busy} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
-          {busy ? 'Please wait...' : mode === 'register' ? 'Create account' : 'Sign in'}
+          {busy ? 'Bitte warten…' : mode === 'register' ? 'Konto erstellen' : 'Anmelden'}
         </button>
         {mode === 'login' && (
           <p className="text-xs text-indigo-300">
-            <Link href="/community/reset-password">Forgot password?</Link>
+            <Link href="/community/reset-password">Passwort vergessen?</Link>
           </p>
         )}
       </form>

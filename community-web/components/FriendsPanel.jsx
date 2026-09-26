@@ -14,14 +14,14 @@ export default function FriendsPanel() {
     try {
       if (!isAuthenticated) {
         setFriends([]);
-        setStatus('Sign in to manage friends.');
+        setStatus('Melde dich an, um Freunde zu verwalten.');
         return;
       }
       const rows = await api.listFriends();
       setFriends(rows || []);
       setStatus('');
     } catch (error) {
-      setStatus(toUserErrorMessage(error, 'Unable to load friends.'));
+      setStatus(toUserErrorMessage(error, 'Freunde konnten nicht geladen werden.'));
     }
   };
 
@@ -30,24 +30,24 @@ export default function FriendsPanel() {
   const sendRequest = async () => {
     try {
       if (!isAuthenticated) {
-        setStatus('Sign in to send friend requests.');
+        setStatus('Melde dich an, um Freundschaftsanfragen zu senden.');
         return;
       }
       await api.sendFriendRequest(friendId);
-      setStatus('Request sent.');
+      setStatus('Anfrage gesendet.');
       setFriendId('');
       await load();
     } catch (error) {
-      setStatus(toUserErrorMessage(error, 'Request failed.'));
+      setStatus(toUserErrorMessage(error, 'Anfrage fehlgeschlagen.'));
     }
   };
 
   return (
     <section className="card space-y-3">
-      <h3 className="text-lg font-semibold">Friends</h3>
+      <h3 className="text-lg font-semibold">Freunde</h3>
       <div className="flex gap-2">
-        <input value={friendId} onChange={(e) => setFriendId(e.target.value)} placeholder="Friend user_id" className="flex-1 rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" />
-        <button className="rounded bg-indigo-600 px-3 py-2 text-sm" onClick={sendRequest}>Add</button>
+        <input value={friendId} onChange={(e) => setFriendId(e.target.value)} placeholder="Benutzername des Freunds" aria-label="Benutzername des Freunds" className="flex-1 rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" />
+        <button className="rounded bg-indigo-600 px-3 py-2 text-sm" onClick={sendRequest}>Hinzufügen</button>
       </div>
       <ul className="space-y-2 text-sm">
         {friends.map((f) => (
@@ -55,7 +55,7 @@ export default function FriendsPanel() {
             {(f.display_name || f.username)} <span className="text-zinc-500">({f.status})</span>
           </li>
         ))}
-        {friends.length === 0 && <li className="text-zinc-400">No friends yet.</li>}
+        {friends.length === 0 && <li className="text-zinc-400">Noch keine Freunde.</li>}
       </ul>
       {status && <p className="text-xs text-zinc-400">{status}</p>}
     </section>

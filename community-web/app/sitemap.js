@@ -3,7 +3,6 @@ const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://wizardofwor.duckdns.or
 export default function sitemap() {
   const paths = [
     '/community',
-    '/community/features',
     '/community/leaderboards',
     '/community/challenges',
     '/community/chat',

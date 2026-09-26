@@ -26,22 +26,21 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body>
         <CommunitySessionProvider>
           <RealtimeProvider>
             <header className="site-header">
               <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
                 <Link href="/" className="text-lg font-bold tracking-wide">Wizard of Wor Platform</Link>
-                <nav className="flex flex-wrap items-center gap-4 text-sm text-zinc-300">
-                  <Link href="/">Home</Link>
-                  <Link href="/community/leaderboards">Leaderboards</Link>
-                  <Link href="/community/challenges">Challenges</Link>
+                <nav className="flex flex-wrap items-center gap-4 text-sm text-zinc-300" aria-label="Hauptnavigation">
+                  <Link href="/">Start</Link>
+                  <Link href="/community/leaderboards">Bestenlisten</Link>
+                  <Link href="/community/clans">Clans</Link>
                   <Link href="/community/forum">Forum</Link>
-                  <Link href="/community/social">Social</Link>
-                  <a href={GAME_URLS.spectate} className="text-zinc-300 hover:text-white">Spectate</a>
-                  <a className="rounded border border-zinc-600 px-3 py-2 text-white hover:bg-zinc-800" href={GAME_URLS.classic}>Play Classic</a>
-                  <a className="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500" href={GAME_URLS.multiplayer}>Play Multiplayer</a>
+                  <Link href="/community/social">Sozial</Link>
+                  <a href={GAME_URLS.spectate} className="text-zinc-300 hover:text-white">Zuschauen</a>
+                  <a className="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500" href={GAME_URLS.multiplayer}>Spielen</a>
                 </nav>
               </div>
             </header>
@@ -53,11 +52,11 @@ export default function RootLayout({ children }) {
               <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-zinc-400">
                 <p>Wizard of Wor Community Platform</p>
                 <div className="flex gap-4">
-                  <Link href="/community/about">About</Link>
-                  <Link href="/community/privacy-policy">Privacy</Link>
-                  <Link href="/community/terms-of-service">Terms</Link>
-                  <Link href="/community/contact">Support</Link>
-                  <Link href="/community/forum">Forum</Link>
+                  <Link href="/community/about">Über uns</Link>
+                  <Link href="/community/faq">Hilfe</Link>
+                  <Link href="/community/privacy-policy">Datenschutz</Link>
+                  <Link href="/community/terms-of-service">Bedingungen</Link>
+                  <Link href="/community/contact">Kontakt</Link>
                 </div>
               </div>
             </footer>
