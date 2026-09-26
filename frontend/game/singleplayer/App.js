@@ -131,17 +131,31 @@ class App {
 
         this._resizeHandler = () => {
             const border = q("border");
-            this.fullWidth = border.offsetWidth;
-            this.fullHeight = border.offsetHeight;
+            // Fallback: #border reports 0x0 when an ancestor lacks a height anchor
+            // (percentage-height chain broken) — fall back to the viewport size.
+            this.fullWidth = border.offsetWidth || window.innerWidth || 960;
+            this.fullHeight = border.offsetHeight || window.innerHeight || 600;
             var a = 0;
             if (this.fullWidth > 320 * this.scale && this.fullHeight > 200 * this.scale) {
                 a = 100; this.fullWidth -= a; this.fullHeight -= a;
             }
             var c = Math.min(this.fullWidth / this.canvasElement.width, this.fullHeight / this.canvasElement.height);
+            // Clamp: never collapse the canvas to (near-)zero scale.
+            if (!isFinite(c) || c <= 0) c = Math.min(window.innerWidth / this.canvasElement.width, window.innerHeight / this.canvasElement.height);
+            if (!isFinite(c) || c <= 0) c = 0.5;
             this.canvasElement.style.transform = "scale(" + c + ")";
             this.canvasElement.style.webkitTransform = "scale(" + c + ")";
             var f = Math.round((this.fullWidth - 320 * this.scale * c) / 2) + a / 2;
-            this.canvasElement.style.margin = Math.round((this.fullHeight - 200 * this.scale * c) / 2) + a / 2 + "px " + f + "px 0px " + f + "px";
+            // Horizontal centering: the canvas has transform-origin 0 0, so
+            // the scaled output spans [marginLeft, marginLeft + drawnW] in
+            // #border coordinates. left:0 + margin-left=(W-drawnW)/2 centers it.
+            var drawnW = 320 * this.scale * c;
+            this.canvasElement.style.position = "relative";
+            this.canvasElement.style.left = "0px";
+            this.canvasElement.style.marginLeft = Math.round((this.fullWidth - drawnW) / 2) + a / 2 + "px";
+            this.canvasElement.style.marginRight = "0px";
+            this.canvasElement.style.marginTop = Math.round((this.fullHeight - 200 * this.scale * c) / 2) + a / 2 + "px";
+            this.canvasElement.style.marginBottom = "0px";
             this.visualFilter.width = window.innerWidth;
             this.visualFilter.height = window.innerHeight;
         };

@@ -1,5 +1,17 @@
 /* singleplayer.css — Classic singleplayer menu and chrome */
 
+/* Height-chain anchor: percentage heights inside #game-root (#sp-root > #body
+   > #border) only resolve when every ancestor up to the viewport has a
+   definite height. Without this, #border collapses to 0px and the canvas
+   scales to 0 (invisible game). */
+html, body, #game-root, #sp-root, #body, #border {
+    height: 100%;
+}
+#sp-root {
+    position: relative;
+    display: block;
+}
+
 #body {
     position: relative;
     z-index: 50;
@@ -138,6 +150,31 @@
 #menu > .l1 .items > div.active {
     background: #ff0;
     color: #137;
+}
+
+/* Visible sound toggle — always on screen during singleplayer */
+#sound-badge {
+    position: fixed;
+    z-index: 1350;
+    top: 55px;
+    right: 5px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #DFF60A;
+    color: #DFF60A;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+#sound-badge.muted {
+    border-color: #555;
+    color: #777;
+}
+#sound-badge:hover {
+    border-color: #fff;
+    color: #fff;
 }
 
 #buymeacoffee {

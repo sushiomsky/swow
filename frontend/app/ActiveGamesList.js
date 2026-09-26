@@ -101,7 +101,9 @@ export class ActiveGamesList {
         html += '<div class="active-games-header">';
         html += '<div class="active-games-title">🎮 ACTIVE GAMES</div>';
         if (hasGames) {
-            html += `<div class="active-games-count">${this.games.length} games • ${this.totalPlayers} players</div>`;
+            const gameWord = this.games.length === 1 ? 'game' : 'games';
+            const playerWord = this.totalPlayers === 1 ? 'player' : 'players';
+            html += `<div class="active-games-count">${this.games.length} ${gameWord} • ${this.totalPlayers} ${playerWord}</div>`;
             html += '<a href="/minimap" class="minimap-link" title="View all dungeons">🗺</a>';
         }
         html += '</div>';
@@ -141,9 +143,9 @@ export class ActiveGamesList {
         let html = '<div class="game-card">';
         html += `<div class="game-mode">${modeIcon} ${modeLabel}</div>`;
         html += '<div class="game-stats">';
-        html += `<span class="stat">${playerCount} players</span>`;
+        html += `<span class="stat">${playerCount} player${playerCount === 1 ? '' : 's'}</span>`;
         html += `<span class="stat-sep">•</span>`;
-        html += `<span class="stat">${dungeonCount} dungeons</span>`;
+        html += `<span class="stat">${dungeonCount} dungeon${dungeonCount === 1 ? '' : 's'}</span>`;
         if (duration) {
             html += `<span class="stat-sep">•</span>`;
             html += `<span class="stat">${duration}</span>`;

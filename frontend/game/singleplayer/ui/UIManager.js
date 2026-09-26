@@ -72,10 +72,12 @@ export class UIManager {
                 this.app.options.sound = k;
                 localStorage.setItem("sound", k);
                 this.refreshActiveOptions();
+                this.syncSoundBadge();
             }
         });
 
         this.initControlConfigurators();
+        this.initSoundBadge();
     }
 
     openMenu() {
@@ -114,6 +116,38 @@ export class UIManager {
 
         this._refreshControlDeviceActive('yellowControlSelect', this.app.options.yellowControlBinding);
         this._refreshControlDeviceActive('blueControlSelect', this.app.options.blueControlBinding);
+        this.syncSoundBadge();
+    }
+
+    // Visible sound control: fixed badge, always on screen during the game.
+    initSoundBadge() {
+        if (document.getElementById("sound-badge")) return;
+        const badge = document.createElement("button");
+        badge.id = "sound-badge";
+        badge.type = "button";
+        badge.setAttribute("aria-label", "Toggle game sound");
+        badge.onclick = (e) => { e.stopPropagation(); this.toggleSound(); };
+        document.body.appendChild(badge);
+        this.syncSoundBadge();
+    }
+
+    toggleSound() {
+        const next = "off" === this.app.options.sound ? "on" : "off";
+        "off" === next ? this.app.audio.stopAllSound(!0) : this.app.audio.queue = [];
+        this.app.options.sound = next;
+        try { localStorage.setItem("sound", next); } catch (_) { /* ignore */ }
+        this.refreshActiveOptions();
+        this.syncSoundBadge();
+    }
+
+    syncSoundBadge() {
+        const badge = document.getElementById("sound-badge");
+        if (!badge) return;
+        const on = "off" !== this.app.options.sound;
+        badge.textContent = on ? "♪" : "✕";
+        badge.classList.toggle("muted", !on);
+        badge.title = on ? "Sound: on — click to mute" : "Sound: off — click to unmute";
+        badge.setAttribute("aria-pressed", on ? "false" : "true");
     }
 
     getDataValue(el) {

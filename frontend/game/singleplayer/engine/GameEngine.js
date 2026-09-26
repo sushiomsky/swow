@@ -45,11 +45,19 @@ export class GameEngine {
         for (var a in this.animateSkip) this.animateSkip[a] = !1;
     }
 
+    clearPressedKeys() {
+        const rt = this.app && this.app.controlsRuntime;
+        if (!rt) return;
+        for (const key of Object.keys(rt.pressedKeys)) rt.pressedKeys[key] = !1;
+        rt.heldGamepadInputs && rt.heldGamepadInputs.clear && rt.heldGamepadInputs.clear();
+    }
+
     resetGame() {
         this.players[0] && (this.players[0].score = 0);
         this.players[1] && (this.players[1].score = 0);
         this.app.audio.stopAllSound();
         z(0);
+        this.clearPressedKeys();
         this.resetAnimateSkips();
         this.frameCounters.title = 0;
         this.scene = "title";
@@ -405,10 +413,13 @@ export class GameEngine {
         this.frameCounters.title++;
         if (this.frameCounters.title > u(b, 13)) { this.frameCounters.title = 0; this.animateSkip.title = !1; this.scene = "title" }
         else if (this.frameCounters.title == u(b, 7)) { this.scene = "enemyRoster"; this.animateSkip.enemyRoster = !1; }
-        if (!0 === b.getControls(0).fire) this.startNewGame(1);
-        else if (!0 === b.getControls(1).fire) this.startNewGame(2);
-        if (!0 === b.pressedKeys[49]) { b.setPressedKeyHold(49); this.startNewGame(1) }
-        else if (!0 === b.pressedKeys[50]) { b.setPressedKeyHold(50); this.startNewGame(2) }
+        // NOTE: `true` = key down this frame, 'hold' = latched via setPressedKeyHold.
+        // Accept both so short taps between scan frames still register.
+        // Enter (13) always starts 1P, Shift (16) always starts 2P.
+        if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[13]) { b.setPressedKeyHold(13); this.startNewGame(1); return }
+        else if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[16]) { b.setPressedKeyHold(16); this.startNewGame(2); return }
+        if (!0 === b.pressedKeys[49] || "hold" === b.pressedKeys[49]) { b.setPressedKeyHold(49); this.startNewGame(1) }
+        else if (!0 === b.pressedKeys[50] || "hold" === b.pressedKeys[50]) { b.setPressedKeyHold(50); this.startNewGame(2) }
     }
 
     scanGetReady() {
@@ -426,13 +437,15 @@ export class GameEngine {
             if (0 < this.players[0].score) this.subscribeToToplist(this.players[0].score);
             if (1 < this.numOfPlayers && 0 < this.players[1].score) this.subscribeToToplist(this.players[1].score);
         }
-        // Allow quick restart after a brief display (1.5s)
+        // Allow quick restart after a brief display (1.5s).
+        // Accept tap (`true`) and latched ('hold') states; Enter (13) restarts
+        // 1P, Shift (16) restarts with the previous player count (P2 restart).
         if (this.frameCounters.gameOver >= u(b, 1.5)) {
-            if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[49]) {
-                this.startNewGame(1); return;
+            if (!0 === b.getControls(0).fire || !0 === b.pressedKeys[13] || !0 === b.pressedKeys[49] || "hold" === b.pressedKeys[49]) {
+                b.setPressedKeyHold(13); b.setPressedKeyHold(49); this.startNewGame(1); return;
             }
-            if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[50]) {
-                this.startNewGame(this.numOfPlayers); return;
+            if (!0 === b.getControls(1).fire || !0 === b.pressedKeys[16] || !0 === b.pressedKeys[50] || "hold" === b.pressedKeys[50]) {
+                b.setPressedKeyHold(16); b.setPressedKeyHold(50); this.startNewGame(this.numOfPlayers); return;
             }
         }
         // Auto-return to title after 4 seconds
@@ -464,6 +477,9 @@ export class GameEngine {
 
     gameOver() {
         this.app.audio.stopAllSound(); r(this.app, "GameOver");
+        // Clear stale key state so fire keys held during the lost life can't
+        // auto-restart the game — only fresh presses after game over count.
+        this.clearPressedKeys();
         this.frameCounters.gameOver = 0; this.scene = "gameOver";
         // Notify platform with final scores
         const p1Score = this.players[0].score;
