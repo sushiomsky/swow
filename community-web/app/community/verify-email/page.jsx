@@ -14,6 +14,8 @@ function VerifyEmailContent() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const [autoVerifying, setAutoVerifying] = useState(false);
+  const [autoTried, setAutoTried] = useState(false);
 
   useEffect(() => {
     if (user?.email) setEmail(user.email);
@@ -23,6 +25,25 @@ function VerifyEmailContent() {
     const tokenFromUrl = searchParams.get('token');
     if (tokenFromUrl) setToken(tokenFromUrl);
   }, [searchParams]);
+
+  // L3: a ?token= in the URL is verified immediately with direct feedback,
+  // instead of just pre-filling the form silently.
+  useEffect(() => {
+    const tokenFromUrl = searchParams.get('token');
+    if (!tokenFromUrl || autoTried) return;
+    setAutoTried(true);
+    if (tokenFromUrl.trim().length < 32) {
+      setError('This verification link looks invalid (token too short). Request a new one below.');
+      return;
+    }
+    setAutoVerifying(true);
+    setError('');
+    setStatus('');
+    api.confirmEmailVerification(tokenFromUrl.trim())
+      .then(() => setStatus('Email verification complete. You can now sign in.'))
+      .catch((confirmError) => setError(toUserErrorMessage(confirmError, 'This verification link is invalid or expired. Request a new one below.')))
+      .finally(() => setAutoVerifying(false));
+  }, [searchParams, api, autoTried]);
 
   const requestVerification = async (event) => {
     event.preventDefault();
@@ -74,6 +95,7 @@ function VerifyEmailContent() {
       <section className="card">
         <h2 className="text-lg font-semibold">Confirm Token</h2>
         <p className="mt-2 text-sm text-zinc-300">Paste the verification token from your email.</p>
+        {autoVerifying && <p className="mt-2 text-sm text-zinc-400">Verifying your link…</p>}
         <form onSubmit={confirmVerification} className="mt-4 space-y-2">
           <input
             value={token}
