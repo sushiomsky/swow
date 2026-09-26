@@ -92,11 +92,19 @@ class MultiplayerApp {
                 this.uiController.setStatusError(false);
             },
             onMessage: (rawData) => {
+                let msg;
                 try {
-                    this._handleMessage(JSON.parse(rawData));
+                    msg = JSON.parse(rawData);
                 } catch (e) {
+                    console.error('[MultiplayerApp] Failed to parse server message:', e);
                     this.uiController.setStatus('Received invalid server message.');
                     this.uiController.setStatusError(true);
+                    return;
+                }
+                try {
+                    this._handleMessage(msg);
+                } catch (e) {
+                    console.error('[MultiplayerApp] Error handling server message:', msg?.type, e);
                 }
             },
             onClose: () => this.sessionController?.handleSocketClose(),
@@ -122,11 +130,52 @@ class MultiplayerApp {
         this.inputController = new MultiplayerInputController({
             runtime: this.controlsRuntime,
             getControlBinding: () => this.options.controlBinding,
-            onToggleSettings: () => {},
+            onToggleSettings: (visible) => this._toggleSettings(visible),
             onExitToMenu: () => this.sessionController?.exitToMenu(),
-            isSettingsVisible: () => false,
+            isSettingsVisible: () => !document.getElementById('settingsPanel')?.classList.contains('hide'),
         });
         this.inputController.attach();
+        document.getElementById('settingsToggler')?.addEventListener('click', () => this._toggleSettings());
+        this._initSettingsPanel();
+    }
+
+    _toggleSettings(visible) {
+        const panel = document.getElementById('settingsPanel');
+        if (!panel) return;
+        const shouldShow = typeof visible === 'boolean' ? visible : panel.classList.contains('hide');
+        panel.classList.toggle('hide', !shouldShow);
+    }
+
+    // M-10: wire the settings panel controls (visual filter, sound, control
+    // device) so the ⚙ button opens a working panel instead of a no-op.
+    _initSettingsPanel() {
+        const vfSelect = document.getElementById('settingVisualFilter');
+        if (vfSelect) {
+            vfSelect.value = this.options.visualFilter;
+            vfSelect.addEventListener('change', () => {
+                this.options.visualFilter = vfSelect.value;
+                try { localStorage.setItem('visualFilter', vfSelect.value); } catch (_) { /* noop */ }
+                this.renderer?.applyVisualFilter?.(vfSelect.value);
+            });
+        }
+        const soundSelect = document.getElementById('settingSound');
+        if (soundSelect) {
+            soundSelect.value = this.options.sound;
+            soundSelect.addEventListener('change', () => {
+                this.options.sound = soundSelect.value;
+                try { localStorage.setItem('sound', soundSelect.value); } catch (_) { /* noop */ }
+                if (soundSelect.value === 'off') this.audio?.stopAll?.();
+            });
+        }
+        const controlsSelect = document.getElementById('settingControls');
+        if (controlsSelect) {
+            controlsSelect.value = this.options.controlDevice || 'keyboard';
+            controlsSelect.addEventListener('change', () => {
+                this.options.controlDevice = controlsSelect.value;
+                this.options.controlBinding = createKeyboardBinding('arrows');
+                writeControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, this.options.controlBinding);
+            });
+        }
     }
 
     _initLaunchController() {

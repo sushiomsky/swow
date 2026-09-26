@@ -33,18 +33,85 @@
         </div>
     </div>
     
-    <!-- Load game assets and spectator client -->
+    <!-- Load game assets and spectator client.
+         NOTE: SpectatorClient lives in frontend/app/ (outside the mp-client
+         scope) and its connect() opens the socket on the bare host, which
+         serves HTTP only. The game server accepts WS upgrades solely on
+         /multiplayer — so connect inline here with the correct path. -->
     <script type="module">
-        import { SpectatorClient } from '/frontend/app/SpectatorClient.js';
-        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/multiplayer`;
+
+        const overlay = document.getElementById('spectator-overlay');
+        const message = document.getElementById('overlay-message');
+        const info = document.getElementById('dungeon-info');
+        const canvas = document.getElementById('spectator-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
         const urlParams = new URLSearchParams(window.location.search);
+        // M-09: dungeon IDs are server-side strings; keep the raw string form
+        // (numeric coercion would miss the internal Map lookup).
         const dungeonId = urlParams.get('dungeon');
-        
+
+        function showMessage(text) {
+            if (message) message.textContent = text;
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function updateInfo(state) {
+            if (!state || !info) return;
+            const playerCount = state.players?.length || 0;
+            const level = state.level || 0;
+            info.textContent = `Dungeon ${dungeonId} • ${playerCount} players • Level ${level}`;
+        }
+
+        function render(state) {
+            if (!state) return;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('SPECTATOR MODE', canvas.width / 2, 50);
+            ctx.font = '14px monospace';
+            ctx.fillText(`Dungeon ${dungeonId}`, canvas.width / 2, 80);
+            if (state.players) {
+                let y = 120;
+                ctx.fillText(`Players: ${state.players.length}`, canvas.width / 2, y);
+                y += 30;
+                state.players.forEach((player, i) => {
+                    ctx.fillText(`P${i + 1}: Score ${player.score || 0} | Lives ${player.lives || 3}`, canvas.width / 2, y);
+                    y += 25;
+                });
+            }
+            if (state.monsters) ctx.fillText(`Monsters: ${state.monsters.length}`, canvas.width / 2, 240);
+        }
+
+        function connectSpectate() {
+            showMessage('Connecting to game...');
+            const ws = new WebSocket(wsUrl);
+            window.spectator = { dungeonId, ws, disconnect: () => ws.close() };
+            ws.onopen = () => ws.send(JSON.stringify({ type: 'spectate', dungeonId }));
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'spectate_init' || msg.type === 'spectate_state') {
+                        updateInfo(msg.state);
+                        render(msg.state);
+                        overlay?.classList.add('hidden');
+                    } else if (msg.type === 'spectate_error') {
+                        showMessage(`❌ ${msg.message || 'Failed to spectate game'}`);
+                    }
+                } catch (_) { /* ignore malformed frames */ }
+            };
+            ws.onclose = () => showMessage('Disconnected. Reconnecting...');
+            ws.onerror = () => showMessage('Connection error. Retrying...');
+        }
+
         if (dungeonId) {
-            // Direct spectate
-            const spectator = new SpectatorClient(dungeonId);
-            window.spectator = spectator;
-            spectator.connect();
+            connectSpectate();
         } else {
             // Show game browser
             document.getElementById('spectator-overlay').classList.add('hide');
@@ -70,8 +137,10 @@
                 };
                 list.innerHTML = games.map(g => {
                     const color = modeColors[g.mode] || '#888';
-                    const humans = (g.players || []).filter(p => !p.is_bot).length;
-                    const bots = (g.players || []).filter(p => p.is_bot).length;
+                    // M-09: server sends `isBot`; the old `is_bot` key counted
+                    // every player as human.
+                    const humans = (g.players || []).filter(p => !p.isBot && !p.is_bot).length;
+                    const bots = (g.players || []).filter(p => p.isBot || p.is_bot).length;
                     return `
                         <a class="game-card" href="/spectate.html?dungeon=${g.dungeon_id}">
                             <span class="game-mode" style="color:${color}">${(g.mode || '').toUpperCase()}</span>
