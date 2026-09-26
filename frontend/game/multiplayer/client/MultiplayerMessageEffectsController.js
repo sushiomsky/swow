@@ -147,6 +147,16 @@ export class MultiplayerMessageEffectsController {
     }
 
     // N-03: show live queue position / countdown for Sit-n-Go + Team queues.
+    handleEndlessQueueStatus(msg) {
+        this._clearMatchStartingStatusTimer();
+        const waiting = Number(msg?.players_waiting ?? 0);
+        const max = Number(msg?.max_players ?? 4);
+        let text = `Endless BR: ${waiting} player${waiting === 1 ? '' : 's'} pooling (max ${max})`;
+        text += msg?.countdown_active ? ' — launching soon…' : ' — waiting…';
+        this.uiController.setStatus(text);
+        this.uiController.setStatusError(false);
+    }
+
     handleSitngoQueueStatus(msg) {
         this._clearMatchStartingStatusTimer();
         const waiting = Number(msg?.players_waiting ?? msg?.playersWaiting ?? 0);

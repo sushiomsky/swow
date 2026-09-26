@@ -22,6 +22,7 @@ export const SERVER_EVENTS = Object.freeze({
     PLAYER_ARRIVED_VIA_TUNNEL: 'player_arrived_via_tunnel',
     // Battle Royale: Queue status
     SITNGO_QUEUE_STATUS: 'sitngo_queue_status',
+    ENDLESS_QUEUE_STATUS: 'endless_queue_status',
     TEAM_QUEUE_STATUS: 'team_queue_status',
     MATCH_STARTING: 'match_starting',
     // Match lifecycle

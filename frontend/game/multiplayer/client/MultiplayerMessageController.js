@@ -46,6 +46,10 @@ export class MultiplayerMessageController {
                 this.effectsController.handleSitngoQueueStatus(msg);
                 break;
 
+            case SERVER_EVENTS.ENDLESS_QUEUE_STATUS:
+                this.effectsController.handleEndlessQueueStatus(msg);
+                break;
+
             case SERVER_EVENTS.TEAM_QUEUE_STATUS:
                 this.effectsController.handleTeamQueueStatus(msg);
                 break;
