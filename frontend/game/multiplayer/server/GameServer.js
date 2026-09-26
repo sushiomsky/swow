@@ -193,7 +193,7 @@ class GameServer {
 
         const code = this._generatePrivateCode();
         this.privatePairLobbies.set(code, { hostConn: conn, hostId: playerId, dungeon, createdAt: Date.now() });
-        const joinUrl = `/?room=${encodeURIComponent(code)}`;
+        const joinUrl = `/multiplayer.html?room=${encodeURIComponent(code)}`;
         this._send(conn.ws, { type: 'private_pair_created', code, joinUrl });
         this._send(conn.ws, { type: 'waiting_for_partner' });
         console.log(`[GameServer] private pair host ${playerId} code=${code}`);
@@ -233,26 +233,45 @@ class GameServer {
     }
     
     // ─── Spectator Mode ───────────────────────────────────────────────────────
-    
+
+    _lookupDungeon(dungeonId) {
+        // N-01: the browser sends the id from active-games verbatim, but be
+        // tolerant about string/number mismatch in the Map lookup.
+        if (dungeonId == null) return null;
+        return this.dungeons.get(dungeonId)
+            ?? this.dungeons.get(String(dungeonId))
+            ?? this.dungeons.get(Number(dungeonId))
+            ?? null;
+    }
+
     _spectateGame(playerId, conn, dungeonId) {
-        const dungeon = this.dungeons.get(dungeonId);
+        const dungeon = this._lookupDungeon(dungeonId);
         if (!dungeon) {
             this._send(conn.ws, { type: 'spectate_error', message: 'Game not found' });
             return;
         }
-        
-        // Register as spectator
-        this.spectators.set(playerId, { dungeonId, ws: conn.ws });
-        
+
+        // Register as spectator against the canonical id so follow-up
+        // spectate_state frames (keyed by Map id) actually arrive.
+        const canonicalId = dungeon.id;
+        this.spectators.set(playerId, { dungeonId: canonicalId, ws: conn.ws });
+
         // Send initial state
-        const state = dungeon.exportState();
+        let state;
+        try {
+            state = dungeon.exportState();
+        } catch (err) {
+            console.error(`[GameServer] spectate serialize failed for dungeon ${canonicalId}:`, err.message);
+            this._send(conn.ws, { type: 'spectate_error', message: 'Game state unavailable' });
+            return;
+        }
         this._send(conn.ws, {
             type: 'spectate_init',
-            dungeonId,
+            dungeonId: canonicalId,
             state
         });
-        
-        console.log(`[GameServer] player ${playerId} spectating dungeon ${dungeonId}`);
+
+        console.log(`[GameServer] player ${playerId} spectating dungeon ${canonicalId}`);
     }
 
     // ─── Dungeon Management ───────────────────────────────────────────────────
@@ -302,7 +321,7 @@ class GameServer {
     }
 
     _checkDungeonEmpty(dungeon) {
-        const hasRealPlayers = dungeon.players.some(p => p.id !== null);
+        const hasRealPlayers = dungeon.players.some(p => p && p.id !== null);
         if (!hasRealPlayers && dungeon.lifecycleState !== STATE.DESTROYED) {
             this._removePrivateLobbyByDungeonId(dungeon.id);
             this.onDungeonDestroyed(dungeon.id);
@@ -473,7 +492,7 @@ class GameServer {
      */
     _findAvailableSlot(dungeon) {
         for (let i = 0; i < dungeon.players.length; i++) {
-            if (dungeon.players[i].id === null) {
+            if (!dungeon.players[i] || dungeon.players[i].id === null) {
                 return i;
             }
         }
@@ -511,10 +530,16 @@ class GameServer {
         }
 
         // Tick all dungeons and serialize each dungeon state once.
+        // N-02: isolate a faulty dungeon — one bad serialize() must not kill
+        // the process (and with it every session on this server).
         const serializedByDungeon = new Map();
         for (const [dungeonId, dungeon] of this.dungeons) {
-            dungeon.tick(inputsMap);
-            serializedByDungeon.set(dungeonId, this._prepareSerializedDungeonState(dungeon));
+            try {
+                dungeon.tick(inputsMap);
+                serializedByDungeon.set(dungeonId, this._prepareSerializedDungeonState(dungeon));
+            } catch (err) {
+                console.error(`[GameServer] Tick/serialize failed for dungeon ${dungeonId}:`, err.message);
+            }
         }
 
         // Broadcast state to all connected players
@@ -627,7 +652,7 @@ class GameServer {
         const games = [];
         for (const [dungeonId, dungeon] of this.dungeons.entries()) {
             if (dungeon.lifecycleState === STATE.DESTROYED) continue;
-            const players = dungeon.players.filter((player) => player.id !== null);
+            const players = dungeon.players.filter((player) => player && player.id !== null);
             if (!players.length) continue;
             const waitingPrivateLobby = this._hasWaitingPrivateLobby(dungeonId);
             const mode = this._toSnapshotMode(dungeon.matchMode);
@@ -726,8 +751,8 @@ class GameServer {
         
         for (const [dungeonId, dungeon] of this.dungeons.entries()) {
             if (dungeon.lifecycleState === STATE.DESTROYED) continue;
-            
-            const players = dungeon.players.filter((player) => player.id !== null);
+
+            const players = dungeon.players.filter((player) => player && player.id !== null);
             
             dungeons.push({
                 id: dungeonId,
@@ -803,10 +828,14 @@ class GameServer {
         const bot = this.bots.get(botId);
         if (!bot) return;
 
-        // Remove from dungeon
+        // Remove from dungeon — restore the slot placeholder so engine code
+        // can always rely on players[i] being a PlaceholderPlayer-or-better
+        // (never null). N-02: direct null assignment crashed serialize().
         const dungeon = this.dungeons.get(bot.dungeonId);
         if (dungeon && dungeon.players[bot.playerSlot]?.id === botId) {
-            dungeon.players[bot.playerSlot] = null;
+            const { PlaceholderPlayer } = require('./ServerPlayer');
+            dungeon.players[bot.playerSlot] = new PlaceholderPlayer(bot.playerSlot);
+            dungeon.numOfPlayers = dungeon.players.filter((p) => p && p.id !== null).length;
         }
 
         this.bots.delete(botId);

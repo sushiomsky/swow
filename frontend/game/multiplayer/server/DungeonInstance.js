@@ -93,19 +93,23 @@ class DungeonInstance {
 
     /** Seats a player in their numbered slot and updates the active-player count. */
     addPlayer(serverPlayer) {
+        if (!serverPlayer || typeof serverPlayer.num !== 'number'
+            || serverPlayer.num < 0 || serverPlayer.num >= this.players.length) return;
         this.players[serverPlayer.num] = serverPlayer;
         serverPlayer.engine = this;
-        this.numOfPlayers = this.players.filter(p => p.id !== null).length;
+        this.numOfPlayers = this.players.filter(p => p && p.id !== null).length;
     }
 
     /** Replaces the player's slot with a PlaceholderPlayer and updates the active-player count. */
     removePlayer(serverPlayer) {
+        if (!serverPlayer || typeof serverPlayer.num !== 'number'
+            || serverPlayer.num < 0 || serverPlayer.num >= this.players.length) return;
         this.players[serverPlayer.num] = new PlaceholderPlayer(serverPlayer.num);
-        this.numOfPlayers = this.players.filter(p => p.id !== null).length;
+        this.numOfPlayers = this.players.filter(p => p && p.id !== null).length;
     }
 
     activePlayers() {
-        return this.players.filter(p => p.id !== null && p.status !== 'out');
+        return this.players.filter(p => p && p.id !== null && p.status !== 'out');
     }
 
     // ─── Game Start ───────────────────────────────────────────────────────────
@@ -120,14 +124,14 @@ class DungeonInstance {
         this.dungeonNumber = -1;
         this.monsters = [];
         for (let c = 0; c < 2; c++) {
-            if (this.players[c].id) this.players[c].score = 0;
+            if (this.players[c] && this.players[c].id) this.players[c].score = 0;
         }
         for (const key in this.frameCounters) this.frameCounters[key] = 0;
         for (const key in this.animateSkip) this.animateSkip[key] = false;
         // Absent players go out, present players start in wait
         for (let i = 0; i < 2; i++) {
             const p = this.players[i];
-            if (p.id) {
+            if (p && p.id) {
                 p.lives = 3;
                 p.status = 'wait';
                 p.col = 1 === p.num ? 1 : 11;
@@ -184,7 +188,7 @@ class DungeonInstance {
             if (ok) {
                 for (let d = 0; d < 2; d++) {
                     const p = this.players[d];
-                    if ('alive' === p.status) {
+                    if (p && 'alive' === p.status) {
                         if (p.col === col || p.row === row ||
                             (col === p.col - 1 && row === p.row - 1) || (col === p.col + 1 && row === p.row - 1) ||
                             (col === p.col - 1 && row === p.row + 1) || (col === p.col + 1 && row === p.row + 1)) ok = false;
@@ -255,7 +259,7 @@ class DungeonInstance {
                 // Force-kill any remaining visitors
                 for (let i = 0; i < 2; i++) {
                     const p = this.players[i];
-                    if (p.id && p.homeDungeonId !== this.id && p.status !== 'out') {
+                    if (p && p.id && p.homeDungeonId !== this.id && p.status !== 'out') {
                         p.status = 'out';
                     }
                 }
@@ -264,7 +268,7 @@ class DungeonInstance {
             }
             // For solo mode (collapseUntil === null), transition to EMPTY when all real players are out
             if (this.collapseUntil === null) {
-                const realPlayers = this.players.filter(p => p.id !== null);
+                const realPlayers = this.players.filter(p => p && p.id !== null);
                 if (realPlayers.every(p => p.status === 'out')) {
                     this.lifecycleState = STATE.EMPTY;
                     this.speedMultiplier = FAST_SPEED_MULTIPLIER;
@@ -323,7 +327,7 @@ class DungeonInstance {
             if (this.doubleScoreNext) this.queueSound('Doublescore');
             if (3 === this.level || 12 === this.level) {
                 for (let i = 0; i < 2; i++) {
-                    if ('out' !== this.players[i].status) this.players[i].lives++;
+                    if (this.players[i] && 'out' !== this.players[i].status) this.players[i].lives++;
                 }
             }
         }
@@ -351,7 +355,7 @@ class DungeonInstance {
             if (0 >= this.frameCounters.worlukEscaped) {
                 for (let i = 0; i < 2; i++) {
                     const p = this.players[i];
-                    if ('dead' === p.status) p.lives--;
+                    if (p && 'dead' === p.status) p.lives--;
                     if (1 > p.lives) p.status = 'out';
                 }
                 if ('out' === this.players[0].status && 'out' === this.players[1].status) {
@@ -367,7 +371,7 @@ class DungeonInstance {
             this.frameCounters.wizardEscaped--;
             if (0 >= this.frameCounters.wizardEscaped) {
                 for (let i = 0; i < 2; i++) {
-                    if (!this.players[i].lives) this.players[i].status = 'out';
+                    if (this.players[i] && !this.players[i].lives) this.players[i].status = 'out';
                 }
                 if ('out' === this.players[0].status && 'out' === this.players[1].status) {
                     this.wallType = 'red'; this.borderColor = 0; this.gameOver();
@@ -395,7 +399,7 @@ class DungeonInstance {
         // Player scans
         for (let i = 0; i < 2; i++) {
             const p = this.players[i];
-            if (p.id) p.scanRoutine(inputsMap ? inputsMap[p.id] : null);
+            if (p && p.id) p.scanRoutine(inputsMap ? inputsMap[p.id] : null);
         }
 
         // Monster scans
@@ -464,7 +468,7 @@ class DungeonInstance {
         this.doubleScoreNow = this.doubleScoreNext ? true : false;
         this.doubleScoreNext = false;
         for (let i = 0; i < 2; i++) {
-            if ('out' !== this.players[i].status) this.players[i].goToStartPosition();
+            if (this.players[i] && 'out' !== this.players[i].status) this.players[i].goToStartPosition();
         }
         if (1 === this.level) this.radarText = 'RADAR';
         else if (4 === this.level) this.radarText = 'THE ARENA';
@@ -606,7 +610,7 @@ class DungeonInstance {
 
     // Transitions dungeon to COLLAPSING when all home players have lost their final life
     _checkLifecycle() {
-        const homePlayers = this.players.filter(p => p.id && p.homeDungeonId === this.id);
+        const homePlayers = this.players.filter(p => p && p.id && p.homeDungeonId === this.id);
         if (homePlayers.length > 0 && homePlayers.every(p => p.status === 'out')) {
             if (this.lifecycleState === STATE.ACTIVE) {
                 // Notify eliminated players with their final stats
@@ -668,7 +672,9 @@ class DungeonInstance {
             collapseUntil: this.collapseUntil,
             leftTunnelTarget: this.leftTunnelTarget,
             rightTunnelTarget: this.rightTunnelTarget,
-            players: this.players.map(p => ({
+            // N-02: a slot may transiently hold null (bot removal) — skip
+            // it instead of crashing the whole server tick.
+            players: this.players.filter(p => p).map(p => ({
                 id: p.id,
                 num: p.num,
                 // colorNum stays fixed to the player's home slot so their sprite colour
@@ -707,7 +713,7 @@ class DungeonInstance {
         const bullets = [];
         for (let i = 0; i < 2; i++) {
             const p = this.players[i];
-            if (p.bullet) bullets.push({ ownerType: 'player', ownerNum: p.num, x: p.bullet.x, y: p.bullet.y, d: p.bullet.d, bw: p.bullet.bw, bh: p.bullet.bh });
+            if (p && p.bullet) bullets.push({ ownerType: 'player', ownerNum: p.num, x: p.bullet.x, y: p.bullet.y, d: p.bullet.d, bw: p.bullet.bw, bh: p.bullet.bh });
         }
         for (let i = 0; i < this.monsters.length; i++) {
             const m = this.monsters[i];

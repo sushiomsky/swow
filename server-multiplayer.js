@@ -100,10 +100,13 @@ process.on('SIGINT', () => { gameServer.stop(); process.exit(0); });
 process.on('uncaughtException', (err) => {
     console.error('[FATAL] Uncaught Exception:', err.message);
     console.error(err.stack);
-    process.exit(1);
+    // N-02: a serializable tick bug (e.g. null player slot) must not kill
+    // every session via restart. Keep the process alive; the per-tick guard
+    // in _tick() already isolates the faulty dungeon.
+    if (process.env.MP_CRASH_ON_FATAL === '1') process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
+    if (process.env.MP_CRASH_ON_FATAL === '1') process.exit(1);
 });

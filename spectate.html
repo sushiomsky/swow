@@ -62,7 +62,10 @@
 
         function updateInfo(state) {
             if (!state || !info) return;
-            const playerCount = state.players?.length || 0;
+            // N-01: serialize() always emits both slots (empty = placeholder
+            // with id null). Count only real occupants, not array length.
+            const players = Array.isArray(state.players) ? state.players.filter(p => p && p.id) : [];
+            const playerCount = players.length;
             const level = state.level || 0;
             info.textContent = `Dungeon ${dungeonId} • ${playerCount} players • Level ${level}`;
         }
@@ -78,11 +81,14 @@
             ctx.font = '14px monospace';
             ctx.fillText(`Dungeon ${dungeonId}`, canvas.width / 2, 80);
             if (state.players) {
+                // N-01: show only real occupants; placeholders (id null)
+                // carry no score/lives and inflated the list before.
+                const visible = state.players.filter(p => p && p.id);
                 let y = 120;
-                ctx.fillText(`Players: ${state.players.length}`, canvas.width / 2, y);
+                ctx.fillText(`Players: ${visible.length}`, canvas.width / 2, y);
                 y += 30;
-                state.players.forEach((player, i) => {
-                    ctx.fillText(`P${i + 1}: Score ${player.score || 0} | Lives ${player.lives || 3}`, canvas.width / 2, y);
+                visible.forEach((player, i) => {
+                    ctx.fillText(`P${i + 1}: Score ${player.score || 0} | Lives ${player.lives ?? 3}`, canvas.width / 2, y);
                     y += 25;
                 });
             }

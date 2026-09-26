@@ -31,7 +31,7 @@ export class MultiplayerMessageEffectsController {
     handlePrivatePairCreated(msg) {
         this._dismissMatchStartingStatus({ clearText: false });
         const code = msg.code || '';
-        const rawJoinUrl = msg?.joinUrl || `/?room=${encodeURIComponent(code)}`;
+        const rawJoinUrl = msg?.joinUrl || `/multiplayer.html?room=${encodeURIComponent(code)}`;
         const absoluteUrl = rawJoinUrl.startsWith('http') ? rawJoinUrl : `${location.origin}${rawJoinUrl}`;
         const shareText = `Join my Wizard of Wor game! ${absoluteUrl}`;
         const twitterUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
@@ -120,6 +120,42 @@ export class MultiplayerMessageEffectsController {
             this.uiController.setStatus('');
             this._matchStartingStatusTimer = null;
         }, ttl);
+    }
+
+    // N-03: show live queue position / countdown for Sit-n-Go + Team queues.
+    handleSitngoQueueStatus(msg) {
+        this._clearMatchStartingStatusTimer();
+        const waiting = Number(msg?.players_waiting ?? msg?.playersWaiting ?? 0);
+        const min = Number(msg?.min_players ?? msg?.minPlayers ?? 0);
+        const max = Number(msg?.max_players ?? msg?.maxPlayers ?? 0);
+        const remaining = msg?.countdown_remaining ?? msg?.countdownRemaining ?? null;
+        let text = `Sit-n-Go queue: ${waiting}${min ? `/${min}` : ''} players`;
+        if (max) text += ` (max ${max})`;
+        if (msg?.countdown_active && remaining != null) {
+            text += ` — starting in ${Math.ceil(Number(remaining) / 1000)}s…`;
+        } else {
+            text += min && waiting < min
+                ? ` — waiting for ${min - waiting} more…`
+                : ' — waiting…';
+        }
+        this.uiController.setStatus(text);
+        this.uiController.setStatusError(false);
+    }
+
+    handleTeamQueueStatus(msg) {
+        this._clearMatchStartingStatusTimer();
+        const waiting = Number(msg?.players_waiting ?? msg?.playersWaiting ?? 0);
+        const teams = msg?.teams_possible ?? msg?.teamsPossible ?? Math.floor(waiting / 2);
+        const remaining = msg?.countdown_remaining ?? msg?.countdownRemaining ?? null;
+        const mode = msg?.mode === 'team-sitngo' ? 'Team Sit-n-Go' : 'Team';
+        let text = `${mode} queue: ${waiting} players (${teams} team${Number(teams) === 1 ? '' : 's'})`;
+        if (msg?.countdown_active && remaining != null) {
+            text += ` — starting in ${Math.ceil(Number(remaining) / 1000)}s…`;
+        } else {
+            text += ' — waiting…';
+        }
+        this.uiController.setStatus(text);
+        this.uiController.setStatusError(false);
     }
 
     handleState(msg) {
