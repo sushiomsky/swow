@@ -1,15 +1,39 @@
+{
+	# ACME account mail for real domains. Localhost/dev names
+	# automatically get internal (self-signed) certs instead.
+	email {$ACME_EMAIL}
+}
+
 {$DOMAIN} {
-    encode gzip
+	encode gzip
 
-    @multiplayer_ws path /multiplayer /multiplayer/* /spectate /spectate/* /minimap /minimap/*
-    reverse_proxy @multiplayer_ws multiplayer:5001
+	# Edge health probe (Compose healthcheck + monitoring). Never proxied.
+	handle /healthz {
+		respond "ok" 200
+	}
 
-    @community_api path /api/community* /socket.io*
-    reverse_proxy @community_api community-api:7000
+	log {
+		output stdout
+		format console
+	}
 
-    @community_web path /community* /admin* /_next*
-    reverse_proxy @community_web community-web:3000
+	# ── Multiplayer: HTTP (lobby/spectate pages + JSON) AND WebSocket ──
+	# The game client connects same-origin to /multiplayer (WS) and
+	# /multiplayer/active-games (HTTP). Caddy reverse_proxy upgrades
+	# WS automatically — no extra config needed, just don't split the path.
+	@multiplayer_ws path /multiplayer /multiplayer/* /spectate /spectate/* /minimap /minimap/*
+	reverse_proxy @multiplayer_ws multiplayer:5001
 
-    # Everything else goes to the classic game / platform server
-    reverse_proxy web:8080
+	# ── Community API: REST + socket.io (polling + WS upgrade) ──
+	@community_api path /api/community* /socket.io*
+	reverse_proxy @community_api community-api:7000
+
+	# ── Community Web (Next.js): pages, _next assets, admin, SEO files ──
+	@community_web path /community* /admin* /_next* /robots.txt /sitemap.xml /favicon.ico
+	reverse_proxy @community_web community-web:3000
+
+	# ── Everything else: classic game / platform server (:18080) ──
+	# Serves /, /play, /mp, /index.html + static assets. Also proxies
+	# /multiplayer WS upgrades itself (server.js) for local dev.
+	reverse_proxy web:8080
 }

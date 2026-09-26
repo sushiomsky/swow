@@ -36,8 +36,47 @@ That brings up:
 - `multiplayer` → authoritative server on `http://localhost:${MULTIPLAYER_PUBLIC_PORT:-15001}`
 - `community-api` → community backend on `http://localhost:${COMMUNITY_API_PUBLIC_PORT:-17000}`
 - `community-web` → Next.js frontend on `http://localhost:${COMMUNITY_WEB_PUBLIC_PORT:-13000}`
-- `edge` (Caddy) is optional via `docker compose --profile edge up -d --build` and defaults to `http://localhost:${EDGE_HTTP_PORT:-10080}` / `https://localhost:${EDGE_HTTPS_PORT:-10443}`
-- Healthchecks are enabled for app/data services; `depends_on` waits for healthy upstreams before starting dependents.
+- `edge` (Caddy) is optional via `docker compose --profile edge up -d` and binds host `:80`/`:443` by default (override with `EDGE_HTTP_PORT`/`EDGE_HTTPS_PORT`, e.g. `10080`/`10443` in dev)
+- Healthchecks are enabled for app/data services AND the edge (`/healthz`); `depends_on` waits for healthy upstreams before starting dependents.
+
+### Public HTTPS on wizardofwor.duckdns.org (edge path)
+
+Route map (single origin `https://wizardofwor.duckdns.org`, all same-origin):
+
+| Public route | Upstream |
+|---|---|
+| `/`, `/play`, `/mp`, `/index.html`, static | `web:8080` (game platform :18080) |
+| `/multiplayer`, `/multiplayer/*`, `/spectate*`, `/minimap*` (HTTP **+ WS upgrade**) | `multiplayer:5001` (:15001) |
+| `/api/community*`, `/socket.io*` (REST **+ WS upgrade**) | `community-api:7000` (:17000) |
+| `/community*`, `/admin*`, `/_next*`, `/robots.txt`, `/sitemap.xml` | `community-web:3000` (:13000) |
+| `/healthz` | edge itself (monitoring probe) |
+
+Deploy on the host (requires DNS → host IP, ports 80/443 free):
+
+```bash
+# 1. DNS must resolve to this host:
+dig +short wizardofwor.duckdns.org   # expect 85.17.116.220
+# If stale, update via DuckDNS token (see "Offen" in lane/live notes):
+# curl "https://www.duckdns.org/update?domains=wizardofwor&token=$DUCKDNS_TOKEN&ip=85.17.116.220"
+
+# 2. Production env (never commit secrets):
+cat >/opt/wizard-of-wor/.env.production <<'EOF'
+DOMAIN=wizardofwor.duckdns.org
+ACME_EMAIL=<ops-mail>
+COMMUNITY_JWT_SECRET=<strong-random>
+COMMUNITY_ALLOW_DEV_AUTH=false
+EOF
+
+# 3. Start stack + edge, enable autostart:
+cd /opt/wizard-of-wor
+docker compose --env-file .env.production --profile edge up -d
+sudo install -m 0644 infra/systemd/wizard-of-wor-compose.service infra/systemd/wizard-of-wor-edge.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now wizard-of-wor-compose.service wizard-of-wor-edge.service
+
+# 4. Verify (Caddy fetches the Let's Encrypt cert automatically on first TLS handshake):
+scripts/edge-smoke.sh https://wizardofwor.duckdns.org
+```
 
 ### Optional auto-start on reboot (systemd, codified)
 
@@ -49,7 +88,7 @@ Service definition is versioned in `infra/systemd/wizard-of-wor-compose.service`
 
 ### Native host fallback (no Docker)
 
-If the host is running the Node services directly instead of Docker Compose, the versioned systemd unit `infra/systemd/wizard-of-wor-edge.service` exposes the same public route map on `:80` and `:443` and proxies to:
+If the host is running the Node services directly instead of Docker Compose, the legacy Node edge script `scripts/edge-proxy.js` exposes the same public route map on `:80` and `:443` (see `scripts/install-systemd-service.sh` history). The supported path is the Compose `edge` profile + `infra/systemd/wizard-of-wor-edge.service` above; the Node script remains only as a no-Docker fallback and proxies to:
 
 - classic platform on `127.0.0.1:3000`
 - multiplayer on `127.0.0.1:5001`
