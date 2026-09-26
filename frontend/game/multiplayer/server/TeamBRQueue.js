@@ -15,8 +15,11 @@
 
 'use strict';
 
-const MIN_TEAMS_SITNGO = 2;
-const COUNTDOWN_MS = 20000;  // 20 seconds for team mode
+const WebSocket = require('ws');
+const { queues } = require('./serverConstants');
+
+const MIN_TEAMS_SITNGO = queues.teamSitngo.minTeams;
+const COUNTDOWN_MS = queues.teamSitngo.countdownMs; // 20 seconds for team mode
 const MATCH_STARTING_EVENT = 'match_starting';
 
 class TeamBRQueue {
@@ -127,7 +130,7 @@ class TeamBRQueue {
         const waiting = this.waitingPlayers.size;
         
         // Check if we can form teams (need at least 2 players per team, min 2 teams)
-        const minPlayers = CONFIG.minTeamsSitNGo * 2;
+        const minPlayers = MIN_TEAMS_SITNGO * 2;
         
         if (waiting >= minPlayers && !this.countdownTimer) {
             this._startCountdown();
@@ -146,12 +149,12 @@ class TeamBRQueue {
     _startCountdown() {
         if (this.countdownTimer) return;
         
-        console.log(`[TeamBRQueue] Starting countdown: ${CONFIG.countdownMs}ms`);
+        console.log(`[TeamBRQueue] Starting countdown: ${COUNTDOWN_MS}ms`);
         this.countdownStartedAt = Date.now();
         
         this.countdownTimer = setTimeout(() => {
             this._launchTeamGame();
-        }, CONFIG.countdownMs);
+        }, COUNTDOWN_MS);
         
         this._broadcastQueueStatus();
     }
@@ -176,7 +179,7 @@ class TeamBRQueue {
     _launchTeamGame() {
         const players = Array.from(this.waitingPlayers.entries());
         
-        if (players.length < CONFIG.minTeamsSitNGo * 2) {
+        if (players.length < MIN_TEAMS_SITNGO * 2) {
             console.warn('[TeamBRQueue] Not enough players to launch');
             this.metrics.launch_failures += 1;
             return;
@@ -291,6 +294,10 @@ class TeamBRQueue {
             expires_ms: 4000,
         });
     }
+
+    _isConnectionOpen(conn) {
+        return !!conn && !!conn.ws && conn.ws.readyState === WebSocket.OPEN;
+    }
     
     /**
      * Broadcast queue status
@@ -303,7 +310,7 @@ class TeamBRQueue {
             teams_possible: Math.floor(this.waitingPlayers.size / 2),
             countdown_active: !!this.countdownTimer,
             countdown_remaining: this.countdownTimer ? 
-                Math.max(0, CONFIG.countdownMs - (Date.now() - this.countdownStartedAt)) : null
+                Math.max(0, COUNTDOWN_MS - (Date.now() - this.countdownStartedAt)) : null
         };
         
         for (const { conn } of this.waitingPlayers.values()) {

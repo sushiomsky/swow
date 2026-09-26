@@ -426,6 +426,11 @@ export class MultiplayerMessageEffectsController {
         this.uiController.setStatus('');
     }
 
+    _dismissMatchStartingStatus({ clearText = true } = {}) {
+        this._clearMatchStartingStatusTimer();
+        if (clearText) this.uiController.setStatus('');
+    }
+
     _clearMatchStartingStatusTimer() {
         if (this._matchStartingStatusTimer) {
             clearTimeout(this._matchStartingStatusTimer);

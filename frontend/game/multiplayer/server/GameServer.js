@@ -19,6 +19,10 @@ const { TeamBRQueue } = require('./TeamBRQueue');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
+// M-07: cap queued bytes per socket for state snapshots. If a client lags,
+// its ws buffer would otherwise pile up ~50 states/s; stale snapshots are
+// worthless (client only needs the newest), so drop instead of buffering.
+const MAX_STATE_BUFFERED_BYTES = 256 * 1024;
 const BOT_SEED_INITIAL_DELAY_MS = 15 * 1000;
 const BOT_SEED_INTERVAL_MS = 60 * 1000;
 const TARGET_DUNGEONS_PER_MODE = 4;
@@ -566,8 +570,16 @@ class GameServer {
 
     _sendSerializedState(conn, serializedStateWithoutBrace) {
         const myPlayerId = conn.player ? conn.player.id : null;
+        const ws = conn.ws;
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        // M-07: stale snapshots are worthless - drop the tick instead of
+        // queuing behind a lagging client (buffer only the newest state).
+        if (typeof ws.bufferedAmount === 'number' && ws.bufferedAmount > MAX_STATE_BUFFERED_BYTES) {
+            conn.droppedStates = (conn.droppedStates || 0) + 1;
+            return;
+        }
         this._sendRaw(
-            conn.ws,
+            ws,
             `{"type":"state","state":${serializedStateWithoutBrace},"myPlayerId":${JSON.stringify(myPlayerId)}}}`
         );
     }
