@@ -28,6 +28,7 @@ import { MultiplayerMessageEffectsController } from './MultiplayerMessageEffects
 import { MultiplayerShareController } from './MultiplayerShareController.js';
 import { MultiplayerSessionController } from './MultiplayerSessionController.js';
 import { MultiplayerAppBootstrapController } from './MultiplayerAppBootstrapController.js';
+import { MultiplayerInterpolator } from './MultiplayerInterpolator.js';
 import {
     SharedControlsRuntime,
     createKeyboardBinding,
@@ -42,6 +43,8 @@ class MultiplayerApp {
     constructor() {
         this.session = { playerId: null, playerNum: null, dungeonId: null };
         this.lastState = null;
+        // WIRE-2: interpolates 20 Hz snapshots to smooth 60 fps frames.
+        this.interpolator = new MultiplayerInterpolator();
         this.socketClient = null;
         this.sessionController = null;
         this.renderer = null;
@@ -71,7 +74,15 @@ class MultiplayerApp {
             options: this.options,
             onRendererReady: (renderer) => { this.renderer = renderer; },
             initializeModules: () => this._initializeModules(),
-            getLastState: () => this.lastState,
+            // WIRE-2: render the interpolated frame (smooth 60 fps from
+            // 20 Hz snapshots); fall back to the newest raw snapshot.
+            getLastState: () => {
+                try {
+                    const frame = this.interpolator.getFrame();
+                    if (frame) return frame;
+                } catch (_) { /* fall through to raw state */ }
+                return this.lastState;
+            },
         });
         await this.bootstrapController.bootstrap();
     }
@@ -197,6 +208,7 @@ class MultiplayerApp {
             setHasJoinedGame: (value) => this.sessionController?.setHasJoinedGame(value),
             setLastState: (state) => { this.lastState = state; },
             onCopyPrivateLink: (msg) => this.shareController.copyPrivateLink(msg),
+            getInterpolator: () => this.interpolator,
         });
         this.messageController = new MultiplayerMessageController({
             effectsController: this.messageEffectsController,
@@ -216,6 +228,7 @@ class MultiplayerApp {
         if (this.bootstrapController) this.bootstrapController.stopRenderLoop();
         if (this.controlsRuntime) this.controlsRuntime.detach();
         if (this.audio) this.audio.stopAll();
+        if (this.interpolator) this.interpolator.reset();
         this.lastState = null;
     }
 }

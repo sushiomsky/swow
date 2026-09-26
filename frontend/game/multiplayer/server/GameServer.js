@@ -19,6 +19,12 @@ const { TeamBRQueue } = require('./TeamBRQueue');
 
 const SCAN_FPS = 50;
 const TICK_MS = 1000 / SCAN_FPS;
+// WIRE-2: decouple simulation tick (50 Hz) from network broadcast.
+// Snapshots go out at BROADCAST_FPS; the client interpolates between them
+// (see MultiplayerInterpolator) so motion stays smooth at any frame rate
+// while bandwidth drops ~60%.
+const BROADCAST_FPS = 20;
+const BROADCAST_EVERY_N_TICKS = Math.round(SCAN_FPS / BROADCAST_FPS);
 // M-07: cap queued bytes per socket for state snapshots. If a client lags,
 // its ws buffer would otherwise pile up ~50 states/s; stale snapshots are
 // worthless (client only needs the newest), so drop instead of buffering.
@@ -59,6 +65,11 @@ class GameServer {
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
+        // WIRE-1/2: per-dungeon wire state — last layout digest sent (cache),
+        // tick counter for broadcast decimation, last broadcast payload for
+        // delta-unchanged heartbeats.
+        // { layout: string|null, tickCount: number, lastWalls: array|null }
+        this._wireByDungeon = new Map(); // dungeonId → wire state
         this._scheduleBackgroundBattleRoyaleBots();
         console.log(`[GameServer] started at ${TICK_MS}ms/tick`);
         console.log(`[GameServer] Battle Royale mode: ${this.battleRoyaleMode ? 'ENABLED' : 'DISABLED'}`);
@@ -331,6 +342,7 @@ class GameServer {
     onDungeonDestroyed(dungeonId) {
         this.removeBotsFromDungeon(dungeonId);
         this.dungeons.delete(dungeonId);
+        if (this._wireByDungeon) this._wireByDungeon.delete(dungeonId);
         
         // NEW: Remove from graph if battle royale mode
         if (this.battleRoyaleMode) {
@@ -532,11 +544,20 @@ class GameServer {
         // Tick all dungeons and serialize each dungeon state once.
         // N-02: isolate a faulty dungeon — one bad serialize() must not kill
         // the process (and with it every session on this server).
+        // WIRE-2: simulate every tick (50 Hz) but broadcast only every Nth
+        // tick (20 Hz). The client interpolates between snapshots.
         const serializedByDungeon = new Map();
         for (const [dungeonId, dungeon] of this.dungeons) {
             try {
                 dungeon.tick(inputsMap);
-                serializedByDungeon.set(dungeonId, this._prepareSerializedDungeonState(dungeon));
+                let wire = this._wireByDungeon.get(dungeonId);
+                if (!wire) {
+                    wire = { layout: null, tickCount: 0, lastWalls: null };
+                    this._wireByDungeon.set(dungeonId, wire);
+                }
+                wire.tickCount++;
+                if (wire.tickCount % BROADCAST_EVERY_N_TICKS !== 0) continue;
+                serializedByDungeon.set(dungeonId, this._prepareWireDungeonState(dungeon, wire));
             } catch (err) {
                 console.error(`[GameServer] Tick/serialize failed for dungeon ${dungeonId}:`, err.message);
             }
@@ -610,6 +631,50 @@ class GameServer {
         return serializedState.slice(0, -1);
     }
 
+    /**
+     * WIRE-1: build the wire-optimized broadcast fragment for a dungeon.
+     * Sends full innerWalls only when the layout digest changed since the
+     * last broadcast (client caches by digest); otherwise sends the digest
+     * and null walls. Sounds are drained every broadcast tick so audio
+     * cues are never lost by decimation.
+     */
+    _prepareWireDungeonState(dungeon, wire) {
+        const digest = dungeon.layoutDigest();
+        const includeLayout = wire.layout !== digest;
+        const state = dungeon.serializeWire(includeLayout);
+        if (includeLayout) {
+            wire.layout = digest;
+            if (Array.isArray(state.innerWalls) && state.innerWalls.length) wire.lastWalls = state.innerWalls;
+            // Fresh dungeon without parsed walls: keep digest open so the
+            // first real layout is sent as soon as nextDungeon() parses it.
+            if (!state.innerWalls || state.innerWalls.length === 0) wire.layout = null;
+        }
+        state.sounds = dungeon.drainSounds();
+        return JSON.stringify(state).slice(0, -1);
+    }
+
+    /** WIRE-1: full snapshot for late joiners / transfers (always with layout). */
+    _prepareWireDungeonStateFull(dungeon) {
+        const state = dungeon.serializeWire(true);
+        state.sounds = [];
+        // A fresh dungeon (title/getReady, dungeonNumber -1) has no parsed
+        // walls yet; the client would render a wall-less maze. Rehydrate
+        // from the last broadcast layout when digest matches, else send the
+        // live (possibly empty) list — the first layout broadcast repairs it.
+        if ((!state.innerWalls || state.innerWalls.length === 0) && state.layout) {
+            const wire = this._wireByDungeon.get(dungeon.id);
+            if (wire && wire.layout === state.layout && wire.lastWalls) {
+                state.innerWalls = wire.lastWalls;
+            }
+        }
+        const wire = this._wireByDungeon.get(dungeon.id);
+        if (wire) {
+            wire.layout = dungeon.layoutDigest();
+            if (Array.isArray(state.innerWalls) && state.innerWalls.length) wire.lastWalls = state.innerWalls;
+        }
+        return state;
+    }
+
     _sendSerializedState(conn, serializedStateWithoutBrace) {
         const myPlayerId = conn.player ? conn.player.id : null;
         const ws = conn.ws;
@@ -635,6 +700,9 @@ class GameServer {
             playerNum: conn.player.num,
             dungeonId: dungeon.id,
             matchMode: dungeon.matchMode || null,
+            // WIRE-1: late joiners get the full layout with init so the first
+            // decimated snapshots (innerWalls: null) render immediately.
+            state: this._prepareWireDungeonStateFull(dungeon),
         });
     }
 

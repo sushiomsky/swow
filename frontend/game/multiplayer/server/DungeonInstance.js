@@ -645,6 +645,83 @@ class DungeonInstance {
     // ─── State Serialization ──────────────────────────────────────────────────
 
     /**
+     * Schema version for the wire snapshot (see serializeWire()).
+     * Bump when the wire field set changes; client gates on major compat.
+     */
+    static WIRE_SCHEMA_VERSION = 1;
+
+    /**
+     * Digest of the static maze layout (dungeonType:dungeonNumber).
+     * WIRE-1: the client caches layouts by digest instead of receiving
+     * full innerWalls (2 KB) on every snapshot.
+     */
+    layoutDigest() {
+        return `${this.dungeonType}:${this.dungeonNumber}`;
+    }
+
+    /**
+     * Wire-optimized snapshot for the 20 Hz broadcast path.
+     * Drops server-only render/debug fields vs. serialize():
+     *   - innerWalls (client caches by layoutDigest, full list only on change)
+     *   - animateSkip (client resets every frame anyway — always all-false)
+     *   - scanFrameCounter (monotonic tick id replaced by compact tick below)
+     *   - dungeonType/dungeonNumber (folded into layoutDigest)
+     *   - doubleScoreNow/afterLastThorwor (derived client-side / unused)
+     * Keeps everything the renderer, HUD, audio and lifecycle need.
+     * @param {boolean} includeLayout - force full innerWalls (layout change)
+     */
+    serializeWire(includeLayout = false) {
+        return {
+            v: DungeonInstance.WIRE_SCHEMA_VERSION,
+            dungeonId: this.id,
+            tick: this.scanFrameCounter,
+            lifecycleState: this.lifecycleState,
+            scene: this.scene,
+            level: this.level,
+            wallType: this.wallType,
+            teleportStatus: this.teleportStatus,
+            borderColor: this.borderColor,
+            radarText: this.radarText,
+            radarTextColor: this.radarTextColor,
+            layout: this.layoutDigest(),
+            innerWalls: includeLayout ? this.innerWalls : null,
+            animationFrameCounter: this.animationFrameCounter,
+            frameCounters: { ...this.frameCounters },
+            doubleScoreNext: this.doubleScoreNext,
+            collapseUntil: this.collapseUntil,
+            leftTunnelTarget: this.leftTunnelTarget,
+            rightTunnelTarget: this.rightTunnelTarget,
+            players: this.players.filter(p => p).map(p => ({
+                id: p.id,
+                num: p.num,
+                // colorNum stays fixed to the player's home slot so their sprite colour
+                // doesn't change when they visit a foreign dungeon and get a different num.
+                colorNum: p._homeSlot !== undefined ? p._homeSlot : (p.homeSlot ?? p.num),
+                x: p.x, y: p.y,
+                col: p.col, row: p.row,
+                d: p.d,
+                status: p.status,
+                animationSequence: p.animationSequence,
+                frameCounters: { ...p.frameCounters },
+                lives: p.lives,
+                score: p.score,
+                hasBullet: !!p.bullet,
+                isHome: p.homeDungeonId === this.id,
+            })),
+            monsters: this.monsters.map(m => ({
+                type: m.type,
+                x: m.x, y: m.y,
+                col: m.col, row: m.row,
+                d: m.d,
+                status: m.status,
+                visible: m.visible,
+                animationSequence: m.animationSequence,
+            })),
+            bullets: this._collectBullets(),
+        };
+    }
+
+    /**
      * Returns a plain-object snapshot of all game state needed by the client renderer.
      * Called once per tick per active dungeon and reused for all viewers in that dungeon.
      */

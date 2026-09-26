@@ -8,6 +8,7 @@ export class MultiplayerMessageEffectsController {
         setHasJoinedGame,
         setLastState,
         onCopyPrivateLink,
+        getInterpolator,
     }) {
         this.session = session;
         this.uiController = uiController;
@@ -17,6 +18,7 @@ export class MultiplayerMessageEffectsController {
         this.setHasJoinedGame = setHasJoinedGame;
         this.setLastState = setLastState;
         this.onCopyPrivateLink = onCopyPrivateLink;
+        this.getInterpolator = getInterpolator;
     }
 
     handleConnected(msg) {
@@ -86,6 +88,11 @@ export class MultiplayerMessageEffectsController {
         this.session.playerNum = msg.playerNum;
         this.session.dungeonId = msg.dungeonId;
         this.session.matchMode = msg.matchMode || this.session.matchMode || null;
+        // WIRE-1/2: prime the interpolator with the full layout from init.
+        try {
+            const interp = typeof this.getInterpolator === 'function' ? this.getInterpolator() : null;
+            if (interp && msg.state) interp.seedFromInit(msg);
+        } catch (_) { /* interpolation is best-effort */ }
         this.uiController.hideOverlay();
         this.uiController.showGameSurface();
         this.uiController.setStatus('');
@@ -159,6 +166,13 @@ export class MultiplayerMessageEffectsController {
     }
 
     handleState(msg) {
+        // WIRE-2: feed the interpolator; the render loop pulls the
+        // interpolated frame. Keep lastState = newest raw snapshot so HUD,
+        // audio and automation hooks keep working unchanged.
+        try {
+            const interp = typeof this.getInterpolator === 'function' ? this.getInterpolator() : null;
+            if (interp && msg.state) interp.push(msg.state);
+        } catch (_) { /* interpolation is best-effort */ }
         this.setLastState(msg.state);
         this.session.dungeonId = msg.state.dungeonId;
         this.audio.processSounds(msg.state.sounds, this.options.sound === 'on');
