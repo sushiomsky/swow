@@ -1,4 +1,13 @@
 export default function LeaderboardTable({ rows }) {
+  if (!rows || rows.length === 0) {
+    return (
+      <section className="card p-8 text-center">
+        <p className="text-2xl">🏆</p>
+        <p className="mt-2 text-base font-semibold">Noch keine Scores — sei der Erste!</p>
+        <p className="mt-1 text-sm text-zinc-400">Spiele eine Runde und sichere dir Platz 1.</p>
+      </section>
+    );
+  }
   return (
     <section className="card overflow-x-auto">
       <table className="min-w-full text-sm">
