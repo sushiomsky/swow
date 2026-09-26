@@ -2,7 +2,7 @@ import ForumBoard from '../../../components/ForumBoard';
 
 export const metadata = {
   title: 'Forum',
-  description: 'Join discussions, share tactics, and connect with other Wizard of Wor players.'
+  description: 'Diskutieren, Taktiken teilen und andere Wizard-of-Wor-Spieler treffen.'
 };
 
 export default function ForumPage() {

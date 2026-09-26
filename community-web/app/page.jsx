@@ -53,7 +53,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Auth + Global Chat */}
+      {/* Anmeldung + Globaler Chat */}
       <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <AuthPanel />
         <div className="card">

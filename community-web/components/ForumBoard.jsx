@@ -42,14 +42,14 @@ export default function ForumBoard() {
   const createThread = async (e) => {
     e.preventDefault();
     if (!title.trim() || !body.trim()) {
-      setError('Title and message are required.');
+      setError('Titel und Nachricht sind erforderlich.');
       return;
     }
     setError('');
     setBusy(true);
     try {
       if (!isAuthenticated) {
-        setError('Sign in required to create a thread.');
+        setError('Melde dich an, um ein Thema zu erstellen.');
         return;
       }
       await api.createForumThread({
@@ -62,7 +62,7 @@ export default function ForumBoard() {
       const refreshed = await apiGet(threadQuery);
       setThreads(refreshed.rows || []);
     } catch (err) {
-      setError(toUserErrorMessage(err, 'Failed to create thread.'));
+      setError(toUserErrorMessage(err, 'Thema konnte nicht erstellt werden.'));
     } finally {
       setBusy(false);
     }
@@ -71,7 +71,7 @@ export default function ForumBoard() {
   return (
     <div className="grid gap-4 md:grid-cols-[280px_1fr]">
       <section className="card">
-        <h2 className="mb-3 text-lg font-semibold">Categories</h2>
+        <h2 className="mb-3 text-lg font-semibold">Kategorien</h2>
         <div className="space-y-2">
           {categories.map((category) => (
             <button
@@ -85,7 +85,7 @@ export default function ForumBoard() {
             >
               <p className="font-semibold">{category.name}</p>
               <p className="mt-1 text-xs text-zinc-400">{category.description}</p>
-              <p className="mt-1 text-xs text-zinc-500">{category.thread_count} threads</p>
+              <p className="mt-1 text-xs text-zinc-500">{category.thread_count} Themen</p>
             </button>
           ))}
         </div>
@@ -93,30 +93,32 @@ export default function ForumBoard() {
 
       <div className="space-y-4">
         <section className="card">
-          <h2 className="text-lg font-semibold">New Thread</h2>
-          <p className="mt-1 text-xs text-zinc-400">Sign in to create a thread.</p>
+          <h2 className="text-lg font-semibold">Neues Thema</h2>
+          <p className="mt-1 text-xs text-zinc-400">Melde dich an, um ein Thema zu erstellen.</p>
           <form onSubmit={createThread} className="mt-3 space-y-2">
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-              placeholder="Thread title"
+              placeholder="Themen-Titel"
+              aria-label="Themen-Titel"
             />
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               className="min-h-24 w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-              placeholder="What do you want to discuss?"
+              placeholder="Worüber möchtest du diskutieren?"
+              aria-label="Themen-Text"
             />
             <ErrorText message={error} />
             <button disabled={busy} className="rounded bg-indigo-600 px-4 py-2 text-sm disabled:opacity-60">
-              {busy ? 'Posting...' : 'Create Thread'}
+              {busy ? 'Wird erstellt…' : 'Thema erstellen'}
             </button>
           </form>
         </section>
 
         <section className="card">
-          <h2 className="mb-3 text-lg font-semibold">Threads</h2>
+          <h2 className="mb-3 text-lg font-semibold">Themen</h2>
           <div className="space-y-3">
             {threads.map((thread) => (
               <article key={thread.thread_id} className="rounded border border-zinc-800 bg-zinc-950/70 p-3">
@@ -125,16 +127,16 @@ export default function ForumBoard() {
                 </Link>
                 <p className="mt-1 line-clamp-2 text-sm text-zinc-300">{thread.body}</p>
                 <p className="mt-2 text-xs text-zinc-500">
-                  by {thread.author_name} • {thread.reply_count} replies
+                  von {thread.author_name} • {thread.reply_count} Antworten
                 </p>
               </article>
             ))}
-            {!threads.length && <p className="text-sm text-zinc-500">No threads yet in this category.</p>}
+            {!threads.length && <p className="text-sm text-zinc-500">Noch keine Themen in dieser Kategorie.</p>}
           </div>
           <div className="mt-4 flex items-center gap-2 text-sm">
-            <button className="rounded border border-zinc-700 px-3 py-1" onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</button>
-            <span>Page {page}</span>
-            <button className="rounded border border-zinc-700 px-3 py-1" onClick={() => setPage((p) => p + 1)}>Next</button>
+            <button className="rounded border border-zinc-700 px-3 py-1" onClick={() => setPage((p) => Math.max(1, p - 1))}>Zurück</button>
+            <span>Seite {page}</span>
+            <button className="rounded border border-zinc-700 px-3 py-1" onClick={() => setPage((p) => p + 1)}>Weiter</button>
           </div>
         </section>
       </div>
