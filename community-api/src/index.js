@@ -78,6 +78,18 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+// Edge-tauglicher Health-Pfad (Caddy routet /api/community* zur API;
+// /health allein ist von außen nicht erreichbar).
+app.get('/api/community/health', async (_req, res) => {
+  try {
+    const dbOk = await healthcheckDb();
+    const redisOk = redis.isOpen;
+    return res.json({ ok: dbOk && redisOk, db: dbOk, redis: redisOk });
+  } catch (e) {
+    return res.status(500).json({ ok: false });
+  }
+});
+
 app.use('/api/community/users', usersRoutes);
 app.use('/api/community/auth', authRateLimiter, authRoutes);
 app.use('/api/community/friends', friendsRoutes);
