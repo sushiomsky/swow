@@ -22,6 +22,21 @@
     <link rel="preload" href="/frontend/app/play.css" as="style">
 </head>
 <body>
+    <!-- Mobile-Hinweis (kein Touch-Umbau): Banner "Desktop empfohlen",
+         eingeblendet auf Touch-/Coarse-Pointer-Geräten (keine Tastatur). -->
+    <div id="swow-desktop-hint" class="swow-desktop-hint" role="note">🖥️ Desktop empfohlen — dieses Spiel braucht eine Tastatur.</div>
+    <script>
+        (function () {
+            try {
+                var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+                var hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                if (coarse || hasTouch) {
+                    var el = document.getElementById('swow-desktop-hint');
+                    if (el) el.classList.add('show');
+                }
+            } catch (e) { /* Hinweis optional — nie blockieren */ }
+        })();
+    </script>
     <!-- Live game background (spectator view) -->
     <canvas id="background-game-canvas"></canvas>
     
@@ -86,11 +101,13 @@
         </div>
         
         <div class="play-hint">SPACE · 2 · M · B · P</div>
-        <div class="play-footer"><a href="/platform">← Full Site</a></div>
+        <div class="play-footer"><a href="/platform">← Full Site</a> · <a data-community-link="/community" href="/community" target="_blank" rel="noopener">💬 Community: Leaderboards, Clans &amp; Forum</a></div>
     </div>
 
     <!-- Game root — mode DOM injected here -->
     <div id="game-root"></div>
+
+    <script src="/frontend/app/communityLink.js"></script>
 
     <script>window.__SWOW_PLATFORM__ = true;</script>
     <script type="module" src="/frontend/app/EngineController.js"></script>
