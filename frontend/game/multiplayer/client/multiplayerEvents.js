@@ -3,6 +3,7 @@ export const CLIENT_EVENTS = Object.freeze({
     JOIN_PRIVATE_PAIR: 'join_private_pair',
     INPUT: 'input',
     RESUME_SESSION: 'resume_session',
+    CHAT_SEND: 'chat_send',
     // Battle Royale modes
     JOIN_ENDLESS_BR: 'join_endless_br',
     JOIN_SITNGO_BR: 'join_sitngo_br',
@@ -19,6 +20,8 @@ export const SERVER_EVENTS = Object.freeze({
     PRIVATE_ROOM_STATUS: 'private_room_status',
     RESUMED: 'resumed',
     RESUME_ERROR: 'resume_error',
+    CHAT_MSG: 'chat_msg',
+    CHAT_ERROR: 'chat_error',
     JOIN_ERROR: 'join_error',
     // Battle Royale: Cross-dungeon events
     PLAYER_LEFT_VIA_TUNNEL: 'player_left_via_tunnel',

@@ -25,6 +25,10 @@ const PRIVATE_ROOM_MAX_PLAYERS = 4;
 // this long before the dungeon treats them as gone.
 const RESUME_GRACE_MS = 60 * 1000;
 const RESUME_TOKEN_BYTES = 16;
+// CHAT-1: lobby chat limits.
+const CHAT_MAX_LEN = 140;
+const CHAT_HISTORY = 30;
+const CHAT_RATE_PER_SEC = 3;
 // WIRE-2: decouple simulation tick (50 Hz) from network broadcast.
 // Snapshots go out at BROADCAST_FPS; the client interpolates between them
 // (see MultiplayerInterpolator) so motion stays smooth at any frame rate
@@ -76,6 +80,9 @@ class GameServer {
         // starting a new dungeon.
         this._resumeTokens = new Map(); // token → resume record
         this._playerToken = new Map(); // playerId → token
+        // CHAT-1: dungeonId → [{ from, text, at }] (last CHAT_HISTORY).
+        this._chatHistory = new Map();
+        this._chatRate = new Map(); // playerId → [timestamps ms]
         // WIRE-1/2: per-dungeon wire state — last layout digest sent (cache),
         // tick counter for broadcast decimation, last broadcast payload for
         // delta-unchanged heartbeats.
@@ -182,10 +189,53 @@ class GameServer {
             case 'resume_session':
                 this._resumeSession(playerId, conn, msg.token);
                 break;
+            case 'chat_send':
+                this._chatSend(playerId, conn, msg.text);
+                break;
             case 'input':
                 conn.inputs = msg.keys || {};
                 break;
         }
+    }
+
+    // ─── Lobby Chat (CHAT-1) ────────────────────────────────────────────────
+
+    /**
+     * Broadcast a short chat message to everyone in the sender's dungeon
+     * (lobby + match). Rate-limited, length-capped, history replayed to
+     * late joiners via chat_history on init.
+     */
+    _chatSend(playerId, conn, rawText) {
+        if (!conn.player || !conn.dungeonId) {
+            this._send(conn.ws, { type: 'chat_error', message: 'Join a match before chatting.' });
+            return;
+        }
+        const text = (rawText || '').toString().trim().slice(0, CHAT_MAX_LEN);
+        if (!text) return;
+        const now = Date.now();
+        const stamps = (this._chatRate.get(playerId) || []).filter((t) => now - t < 1000);
+        if (stamps.length >= CHAT_RATE_PER_SEC) {
+            this._send(conn.ws, { type: 'chat_error', message: 'Slow down — too many messages.' });
+            return;
+        }
+        stamps.push(now);
+        this._chatRate.set(playerId, stamps);
+        const dungeon = this.dungeons.get(conn.dungeonId);
+        if (!dungeon) return;
+        const msg = { type: 'chat_msg', from: playerId, slot: conn.player.num, text, at: now };
+        let hist = this._chatHistory.get(conn.dungeonId);
+        if (!hist) {
+            hist = [];
+            this._chatHistory.set(conn.dungeonId, hist);
+        }
+        hist.push({ from: playerId, text, at: now });
+        if (hist.length > CHAT_HISTORY) hist.splice(0, hist.length - CHAT_HISTORY);
+        this._broadcastToDungeon(dungeon, msg);
+    }
+
+    /** CHAT-1: recent history for late joiners (attached to init). */
+    _chatHistoryFor(dungeonId) {
+        return (this._chatHistory.get(dungeonId) || []).slice(-CHAT_HISTORY);
     }
 
     // ─── Session Resume (RESUME-1) ────────────────────────────────────────────
@@ -579,6 +629,7 @@ class GameServer {
         this.removeBotsFromDungeon(dungeonId);
         this.dungeons.delete(dungeonId);
         if (this._wireByDungeon) this._wireByDungeon.delete(dungeonId);
+        if (this._chatHistory) this._chatHistory.delete(dungeonId);
         
         // NEW: Remove from graph if battle royale mode
         if (this.battleRoyaleMode) {
@@ -941,6 +992,8 @@ class GameServer {
             state: this._prepareWireDungeonStateFull(dungeon),
             // RESUME-1: token for reconnecting to this slot after a drop.
             resumeToken: this._tokenForPlayer(conn.player.id, dungeon.id, conn.player.num, conn.mode),
+            // CHAT-1: recent lobby history for late joiners.
+            chatHistory: this._chatHistoryFor(dungeon.id),
         });
     }
 

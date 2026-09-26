@@ -33,6 +33,14 @@ export class MultiplayerMessageController {
                 this.effectsController.handleResumeError(msg);
                 break;
 
+            case SERVER_EVENTS.CHAT_MSG:
+                this.effectsController.handleChatMsg(msg);
+                break;
+
+            case SERVER_EVENTS.CHAT_ERROR:
+                this.effectsController.handleChatError(msg);
+                break;
+
             case SERVER_EVENTS.JOIN_ERROR:
                 this.effectsController.handleJoinError(msg);
                 break;

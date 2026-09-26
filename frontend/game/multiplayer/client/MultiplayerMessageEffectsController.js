@@ -9,6 +9,7 @@ export class MultiplayerMessageEffectsController {
         setLastState,
         onCopyPrivateLink,
         getInterpolator,
+        getChatController,
     }) {
         this.session = session;
         this.uiController = uiController;
@@ -19,6 +20,7 @@ export class MultiplayerMessageEffectsController {
         this.setLastState = setLastState;
         this.onCopyPrivateLink = onCopyPrivateLink;
         this.getInterpolator = getInterpolator;
+        this.getChatController = getChatController;
     }
 
     handleConnected(msg) {
@@ -89,9 +91,6 @@ export class MultiplayerMessageEffectsController {
     // plus a status note. The full state arrives inline (msg.state).
     handleResumed(msg) {
         this.handleInit(msg);
-        try {
-            sessionStorage.setItem('swow_resume_token', msg.resumeToken || '');
-        } catch (_) { /* storage may be unavailable */ }
         this.uiController.setStatus('Reconnected — back in the match.');
         this.uiController.setStatusError(false);
     }
@@ -104,6 +103,21 @@ export class MultiplayerMessageEffectsController {
         this.uiController.setStatusError(true);
         this.uiController.setButtonState(false);
         if (typeof this.setIsConnecting === 'function') this.setIsConnecting(false);
+    }
+
+    // CHAT-1: incoming lobby message / chat error.
+    handleChatMsg(msg) {
+        try {
+            const chat = typeof this.getChatController === 'function' ? this.getChatController() : null;
+            if (chat) chat.pushMessage(msg);
+        } catch (_) { /* chat is best-effort */ }
+    }
+
+    handleChatError(msg) {
+        try {
+            const chat = typeof this.getChatController === 'function' ? this.getChatController() : null;
+            if (chat) chat.showError(msg.message);
+        } catch (_) { /* chat is best-effort */ }
     }
 
     handleJoinError(msg) {
@@ -132,6 +146,14 @@ export class MultiplayerMessageEffectsController {
                 sessionStorage.setItem('swow_resume_token', msg.resumeToken);
             } catch (_) { /* storage may be unavailable */ }
         }
+        // CHAT-1: show the chat UI once seated; replay history for late joiners.
+        try {
+            const chat = typeof this.getChatController === 'function' ? this.getChatController() : null;
+            if (chat) {
+                chat.ensureUi();
+                if (Array.isArray(msg.chatHistory)) chat.replayHistory(msg.chatHistory);
+            }
+        } catch (_) { /* chat is best-effort */ }
         // WIRE-1/2: prime the interpolator with the full layout from init.
         try {
             const interp = typeof this.getInterpolator === 'function' ? this.getInterpolator() : null;

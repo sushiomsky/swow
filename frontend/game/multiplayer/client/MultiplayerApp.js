@@ -29,6 +29,7 @@ import { MultiplayerShareController } from './MultiplayerShareController.js';
 import { MultiplayerSessionController } from './MultiplayerSessionController.js';
 import { MultiplayerAppBootstrapController } from './MultiplayerAppBootstrapController.js';
 import { MultiplayerInterpolator } from './MultiplayerInterpolator.js';
+import { MultiplayerChatController } from './MultiplayerChatController.js';
 import {
     SharedControlsRuntime,
     createKeyboardBinding,
@@ -45,6 +46,11 @@ class MultiplayerApp {
         this.lastState = null;
         // WIRE-2: interpolates 20 Hz snapshots to smooth 60 fps frames.
         this.interpolator = new MultiplayerInterpolator();
+        // CHAT-1: lobby/match chat panel.
+        this.chatController = new MultiplayerChatController({
+            getSocketClient: () => this.socketClient,
+            getPlayerId: () => this.session.playerId,
+        });
         this.socketClient = null;
         this.sessionController = null;
         this.renderer = null;
@@ -209,6 +215,7 @@ class MultiplayerApp {
             setLastState: (state) => { this.lastState = state; },
             onCopyPrivateLink: (msg) => this.shareController.copyPrivateLink(msg),
             getInterpolator: () => this.interpolator,
+            getChatController: () => this.chatController,
         });
         this.messageController = new MultiplayerMessageController({
             effectsController: this.messageEffectsController,
