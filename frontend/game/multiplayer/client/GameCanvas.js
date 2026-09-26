@@ -9,7 +9,10 @@ export class GameCanvas {
         this.canvas.imageSmoothingEnabled = false;
         this.sprite = spriteCanvas;
         this.scale = SCALE;
-        this.options = options;  // { palette, visualFilter }
+        // M-04: options may lack palette when constructed before settings init
+        // (m.colors[undefined] would throw and poison the render loop).
+        this.options = { palette: 'default', visualFilter: 'none', ...(options || {}) };
+        if (!m.colors[this.options.palette]) this.options.palette = 'default';
         this.lastColor = null;
 
         // Visual filter canvas
@@ -88,8 +91,13 @@ export class GameCanvas {
         }
     }
 
+    _color(idx) {
+        const pal = m.colors[this.options?.palette] || m.colors.default;
+        return '#' + (pal[idx] ?? pal[0]);
+    }
+
     _drawGetReady(app, state) {
-        this.canvas.fillStyle = '#' + m.colors[this.options.palette][0];
+        this.canvas.fillStyle = this._color(0);
         const fc = state.frameCounters.getReady;
         for (let a = 0; a < 3; a++) { t(app, 31 + 32 * a, 48, 24, 40, false); }
         for (let a = 0; a < 5; a++) { t(app, 143 + 32 * a, 48, 24, 40, false); }
@@ -102,7 +110,7 @@ export class GameCanvas {
     }
 
     _drawGameOver(app, state) {
-        this.canvas.fillStyle = '#' + m.colors[this.options.palette][0];
+        this.canvas.fillStyle = this._color(0);
         for (let a = 0; a < 4; a++) { t(app, 23 + 32 * a, 56, 24, 40, false); t(app, 191 + 32 * a, 56, 24, 40, false); }
         let a = m.sprite.texts.game; l(app, a.x, a.y, a.w, a.h, 23, 58);
         a = m.sprite.texts.over; l(app, a.x, a.y, a.w, a.h, 191, 58);
@@ -319,7 +327,7 @@ export class GameCanvas {
         vfc.clearRect(0, 0, this.visualFilter.width, this.visualFilter.height);
         const vf = this.options.visualFilter;
         if ('none' === vf) return;
-        vfc.fillStyle = '#' + m.colors[this.options.palette][0];
+        vfc.fillStyle = this._color(0);
         if ('scanlines' === vf || 'bwTv' === vf || 'greenC64monitor' === vf) {
             for (let a = 0; a < this.visualFilter.height; a += 3)
                 vfc.fillRect(0, a, this.visualFilter.width, 1);

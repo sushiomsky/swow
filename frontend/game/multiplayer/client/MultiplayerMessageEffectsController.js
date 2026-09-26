@@ -90,11 +90,12 @@ export class MultiplayerMessageEffectsController {
         this.uiController.showGameSurface();
         this.uiController.setStatus('');
         this.uiController.setStatusError(false);
-        const playerColor = this.session.playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
+        const playerColor = this._playerColorLabel(this.session.playerNum);
         const isTeamMode = typeof this.session.matchMode === 'string' && this.session.matchMode.startsWith('team_');
         if (isTeamMode) {
-            const teammateColor = this.session.playerNum === 0 ? '🔵 Blue' : '🟡 Yellow';
-            this.uiController.setHudDungeonText(`Team BR • You: ${playerColor} • Teammate: ${teammateColor}`);
+            // Teammates share the player's home slot colour (server: colorNum =
+            // homeSlot). Slot 1 (Blue) is the opponent side, never the teammate.
+            this.uiController.setHudDungeonText(`Team BR • You: ${playerColor} • Teammate: ${playerColor}`);
         } else {
             this.uiController.setHudDungeonText(`You: ${playerColor}`);
         }
@@ -128,6 +129,7 @@ export class MultiplayerMessageEffectsController {
         if (window.engine?._setMultiplayerState) {
             window.engine._setMultiplayerState(msg.state);
         }
+        this._refreshTeamHudFromState(msg.state);
 
         // Detect game-over scene and dispatch event (once per game)
         if (msg.state.scene === 'gameOver' && !this._gameOverDispatched) {
@@ -421,11 +423,37 @@ export class MultiplayerMessageEffectsController {
         } catch (_) { /* ignore */ }
     }
 
+    _playerColorLabel(playerNum) {
+        return playerNum === 0 ? '🟡 Yellow' : '🔵 Blue';
+    }
+
+    // Derive the teammate colour from live server team data (players sharing
+    // our colorNum are teammates) instead of assuming the opposite slot.
+    _refreshTeamHudFromState(state) {
+        try {
+            const isTeamMode = typeof this.session.matchMode === 'string'
+                && this.session.matchMode.startsWith('team_');
+            if (!isTeamMode || !state || !Array.isArray(state.players)) return;
+            const me = state.players.find((p) => p && p.id === this.session.playerId)
+                ?? state.players[this.session.playerNum];
+            if (!me) return;
+            const mate = state.players.find((p) => p && p !== me
+                && p.id && !String(p.id).startsWith('bot-')
+                && (p.colorNum ?? p.num) === (me.colorNum ?? me.num));
+            const myLabel = this._playerColorLabel(me.colorNum ?? me.num ?? this.session.playerNum);
+            const mateLabel = mate
+                ? this._playerColorLabel(mate.colorNum ?? mate.num)
+                : myLabel;
+            this.uiController.setHudDungeonText(`Team BR • You: ${myLabel} • Teammate: ${mateLabel}`);
+        } catch (_) { /* HUD hint is best-effort; never break state handling */ }
+    }
+
     _clearMatchStartingStatus() {
         this._clearMatchStartingStatusTimer();
         this.uiController.setStatus('');
     }
 
+    // Alias kept for call sites using the dismiss-with-options naming.
     _dismissMatchStartingStatus({ clearText = true } = {}) {
         this._clearMatchStartingStatusTimer();
         if (clearText) this.uiController.setStatus('');
