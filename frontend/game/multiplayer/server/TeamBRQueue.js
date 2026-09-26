@@ -89,6 +89,10 @@ class TeamBRQueue {
         
         // Create dungeon for this team
         const dungeon = this.gameServer._createDungeon();
+        if (!dungeon) {
+            this.gameServer._send(conn.ws, { type: 'server_full', message: 'Server is full, try again later' });
+            return;
+        }
         dungeon.matchMode = 'team_endless_br';
         
         // Add real player in slot 0
@@ -208,6 +212,10 @@ class TeamBRQueue {
             
             // Create dungeon for this team
             const dungeon = this.gameServer._createDungeon();
+            if (!dungeon) {
+                console.log(`[TeamBRQueue] Server full, skipping team: ${player1Id}`);
+                continue;
+            }
             dungeon.matchMode = 'team_sitngo_br';
             
             // Add player 1 (slot 0)

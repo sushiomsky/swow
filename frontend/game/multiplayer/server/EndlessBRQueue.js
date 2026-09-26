@@ -31,9 +31,13 @@ class EndlessBRQueue {
         }
         
         console.log('[EndlessBRQueue] Player joining:', playerId);
-        
-        // Create new dungeon
+
+        // Create new dungeon (kann null sein bei vollem Server — s. _serverFull)
         const dungeon = this.gameServer._createDungeon();
+        if (!dungeon) {
+            this.gameServer._send(conn.ws, { type: 'server_full', message: 'Server is full, try again later' });
+            return;
+        }
         dungeon.matchMode = 'endless_br';
         
         // Add real player in slot 0
