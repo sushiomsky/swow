@@ -567,17 +567,34 @@ class GameServer {
     }
     
     _broadcastToSpectators(serializedByDungeon) {
+        // N-06: spectators expect a state OBJECT (msg.state.players), not the
+        // M-07 serialized string fragment used for the player fast path.
+        // Parse once per dungeon so multiple spectators share the object.
+        const parsedByDungeon = new Map();
+        const getStateObject = (dungeonId) => {
+            if (parsedByDungeon.has(dungeonId)) return parsedByDungeon.get(dungeonId);
+            const serializedState = serializedByDungeon.get(dungeonId);
+            if (!serializedState) return null;
+            try {
+                const state = JSON.parse(`${serializedState}}`);
+                parsedByDungeon.set(dungeonId, state);
+                return state;
+            } catch (err) {
+                console.error(`[GameServer] Failed to parse state for spectators of dungeon ${dungeonId}:`, err.message);
+                return null;
+            }
+        };
         for (const [playerId, spectator] of this.spectators) {
             const { dungeonId, ws } = spectator;
-            const serializedState = serializedByDungeon.get(dungeonId);
-            if (!serializedState) continue;
-            
+            const state = getStateObject(dungeonId);
+            if (!state) continue;
+
             // Send spectator-specific state (read-only)
             try {
                 this._send(ws, {
                     type: 'spectate_state',
                     dungeonId,
-                    state: serializedState
+                    state
                 });
             } catch (err) {
                 console.error(`[GameServer] Failed to send to spectator ${playerId}:`, err);
