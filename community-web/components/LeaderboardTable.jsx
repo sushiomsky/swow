@@ -2,7 +2,7 @@
 
 import { useLocale } from '../providers/LocaleProvider';
 
-const TEXTS = {
+const T = {
   de: {
     emptyTitle: 'Noch keine Scores — sei der Erste!',
     emptySub: 'Spiele eine Runde und sichere dir Platz 1.',
@@ -23,7 +23,7 @@ const TEXTS = {
 
 export default function LeaderboardTable({ rows }) {
   const { locale } = useLocale();
-  const t = TEXTS[locale] || TEXTS.de;
+  const t = T[locale] || T.de;
   if (!rows || rows.length === 0) {
     return (
       <section className="card p-8 text-center">

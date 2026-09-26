@@ -10,12 +10,20 @@ const LocaleContext = createContext({ locale: 'de', setLocale: () => {} });
 function readInitialLocale() {
   if (typeof window === 'undefined') return 'de';
   try {
+    // 1. Explizite Wahl des Users gewinnt immer.
     const stored = window.localStorage.getItem(LOCALE_KEY);
     if (SUPPORTED.includes(stored)) return stored;
   } catch {
     // ignore storage errors
   }
-  return 'de';
+  // 2. Sonst Browser-Sprache auto-erkennen: alles außer Deutsch → Englisch.
+  try {
+    const nav = (window.navigator.language || window.navigator.languages?.[0] || '').toLowerCase();
+    if (nav.startsWith('de')) return 'de';
+    return 'en';
+  } catch {
+    return 'de';
+  }
 }
 
 export function LocaleProvider({ children }) {

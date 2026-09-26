@@ -49,6 +49,15 @@ export function CommunitySessionProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
   const [sessionError, setSessionError] = useState('');
+  // Locale für Session-Fehlermeldungen (liest localStorage direkt — kein
+  // useLocale-Hook, um zirkuläre Provider-Abhängigkeit zu vermeiden).
+  const readLocale = () => {
+    try {
+      return window.localStorage.getItem('communityLocale') === 'en' ? 'en' : 'de';
+    } catch {
+      return 'de';
+    }
+  };
 
   const clearSession = useCallback((message = '') => {
     clearPersistedSession();
@@ -88,7 +97,7 @@ export function CommunitySessionProvider({ children }) {
         }
       } catch {
         if (!cancelled) {
-          clearSession('Session expired. Please sign in again.');
+          clearSession(readLocale() === 'en' ? 'Session expired. Please sign in again.' : 'Sitzung abgelaufen. Bitte melde dich erneut an.');
         }
       } finally {
         if (!cancelled) setReady(true);
@@ -103,7 +112,7 @@ export function CommunitySessionProvider({ children }) {
 
   const api = useMemo(() => createCommunityApiClient({
     getToken: () => token,
-    onUnauthorized: () => clearSession('Session expired. Please sign in again.')
+    onUnauthorized: () => clearSession(readLocale() === 'en' ? 'Session expired. Please sign in again.' : 'Sitzung abgelaufen. Bitte melde dich erneut an.')
   }), [token, clearSession]);
 
   const login = useCallback(async (payload) => {

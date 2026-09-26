@@ -2,7 +2,7 @@
 
 import { useLocale } from '../providers/LocaleProvider';
 
-const TEXTS = {
+const T = {
   de: {
     title: 'Erfolge & Titel',
     badges: 'Saison-Abzeichen',
@@ -19,7 +19,7 @@ const TEXTS = {
 
 export default function AchievementList({ achievements = [], badges = [] }) {
   const { locale } = useLocale();
-  const t = TEXTS[locale] || TEXTS.de;
+  const t = T[locale] || T.de;
   return (
     <section className="card">
       <h3 className="mb-3 text-lg font-semibold">{t.title}</h3>

@@ -1,9 +1,11 @@
 'use client';
 
 import { useCommunitySession } from '../providers/CommunitySessionProvider';
+import { useLocale } from '../providers/LocaleProvider';
 
 export default function SessionNotice() {
   const { sessionError, clearSessionError } = useCommunitySession();
+  const { locale } = useLocale();
   if (!sessionError) return null;
 
   return (
@@ -13,7 +15,7 @@ export default function SessionNotice() {
         className="rounded border border-amber-300/60 px-2 py-1 text-xs"
         onClick={clearSessionError}
       >
-        Dismiss
+        {locale === 'en' ? 'Dismiss' : 'Schließen'}
       </button>
     </div>
   );

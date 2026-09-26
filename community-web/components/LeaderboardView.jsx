@@ -7,7 +7,7 @@ import { useCommunitySession } from '../providers/CommunitySessionProvider';
 import { useRealtime, useRealtimeEvent } from '../providers/RealtimeProvider';
 import { useLocale } from '../providers/LocaleProvider';
 
-const TEXTS = {
+const T = {
   de: {
     scope: 'Bereich',
     global: 'Global',
@@ -34,7 +34,7 @@ const TEXTS = {
 
 export default function LeaderboardView() {
   const { locale } = useLocale();
-  const t = TEXTS[locale] || TEXTS.de;
+  const t = T[locale] || T.de;
   const [rows, setRows] = useState([]);
   const [scope, setScope] = useState('global');
   const [season, setSeason] = useState('current');

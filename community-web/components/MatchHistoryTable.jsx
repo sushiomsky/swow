@@ -2,7 +2,7 @@
 
 import { useLocale } from '../providers/LocaleProvider';
 
-const TEXTS = {
+const T = {
   de: {
     title: 'Letzte Spiele',
     date: 'Datum',
@@ -23,7 +23,7 @@ const TEXTS = {
 
 export default function MatchHistoryTable({ rows = [] }) {
   const { locale } = useLocale();
-  const t = TEXTS[locale] || TEXTS.de;
+  const t = T[locale] || T.de;
   return (
     <section className="card overflow-x-auto">
       <h3 className="mb-3 text-lg font-semibold">{t.title}</h3>

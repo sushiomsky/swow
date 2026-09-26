@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,25 +11,25 @@
 <body>
     <div id="spectator-container">
         <div id="spectator-header">
-            <span class="spectator-label">👁 SPECTATING</span>
+            <span class="spectator-label">👁 ZUSCHAUEN</span>
             <span id="dungeon-info"></span>
-            <a href="/play" class="back-btn">← BACK TO LOBBY</a>
+            <a href="/play" class="back-btn">← ZURÜCK ZUR LOBBY</a>
         </div>
         
         <canvas id="spectator-canvas"></canvas>
         
         <div id="spectator-overlay" class="overlay">
             <div class="overlay-content">
-                <p id="overlay-message">Loading live games…</p>
+                <p id="overlay-message">Live-Spiele werden geladen…</p>
             </div>
         </div>
 
         <!-- Game browser (shown when no dungeon ID specified) -->
         <div id="game-browser" class="hide">
-            <h2>LIVE GAMES</h2>
-            <p class="browser-subtitle">Select a game to spectate</p>
+            <h2>LIVE-SPIELE</h2>
+            <p class="browser-subtitle">Wähle ein Spiel zum Zuschauen</p>
             <div id="game-list"></div>
-            <p id="no-games" class="hide" style="color:#666; margin-top:20px;">No games running. Check back soon.</p>
+            <p id="no-games" class="hide" style="color:#666; margin-top:20px;">Keine Spiele aktiv. Schau bald wieder rein.</p>
         </div>
     </div>
     
@@ -67,7 +67,7 @@
             const players = Array.isArray(state.players) ? state.players.filter(p => p && p.id) : [];
             const playerCount = players.length;
             const level = state.level || 0;
-            info.textContent = `Dungeon ${dungeonId} • ${playerCount} players • Level ${level}`;
+            info.textContent = `Dungeon ${dungeonId} • ${playerCount} Spieler • Level ${level}`;
         }
 
         function render(state) {
@@ -108,12 +108,12 @@
                         render(msg.state);
                         overlay?.classList.add('hidden');
                     } else if (msg.type === 'spectate_error') {
-                        showMessage(`❌ ${msg.message || 'Failed to spectate game'}`);
+                        showMessage(`❌ ${msg.message || 'Zuschauen fehlgeschlagen'}`);
                     }
                 } catch (_) { /* ignore malformed frames */ }
             };
-            ws.onclose = () => showMessage('Disconnected. Reconnecting...');
-            ws.onerror = () => showMessage('Connection error. Retrying...');
+            ws.onclose = () => showMessage('Getrennt. Verbinde erneut…');
+            ws.onerror = () => showMessage('Verbindungsfehler. Versuche erneut…');
         }
 
         if (dungeonId) {
@@ -152,11 +152,11 @@
                             <span class="game-mode" style="color:${color}">${(g.mode || '').toUpperCase()}</span>
                             <span class="game-level">Level ${g.level || 0}</span>
                             <span class="game-players">${humans}👤 ${bots}🤖</span>
-                            <span class="game-watch">WATCH →</span>
+                            <span class="game-watch">ZUSCHAUEN →</span>
                         </a>`;
                 }).join('');
             } catch (e) {
-                list.innerHTML = '<p style="color:#f55">Failed to load games.</p>';
+                list.innerHTML = '<p style="color:#f55">Spiele konnten nicht geladen werden.</p>';
             }
             // Auto-refresh every 10s
             setTimeout(loadGameBrowser, 10000);

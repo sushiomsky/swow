@@ -38,7 +38,7 @@ const MODE_BADGE_COLOR = {
   private: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',
 };
 
-const TEXTS = {
+const T = {
   de: {
     title: 'Live-Spiele',
     loading: 'Live-Spiele werden geladen…',
@@ -89,7 +89,7 @@ function badgeClass(mode) {
 
 export default function ActiveGamesPanel() {
   const { locale } = useLocale();
-  const t = TEXTS[locale] || TEXTS.de;
+  const t = T[locale] || T.de;
   const [snapshot, setSnapshot] = useState({
     total_games: 0,
     total_players: 0,

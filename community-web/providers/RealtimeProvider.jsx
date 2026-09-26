@@ -6,6 +6,15 @@ import { useCommunitySession } from './CommunitySessionProvider';
 
 const RealtimeContext = createContext(null);
 
+// Locale für Verbindungs-Fehler (localStorage direkt — kein useLocale,
+// RealtimeProvider ist Geschwister des LocaleProviders).
+function readLocale() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage.getItem('communityLocale') === 'en') return 'en';
+  } catch { /* ignore */ }
+  return 'de';
+}
+
 function roomKey(roomType, roomId) {
   return `${roomType}:${roomId}`;
 }
@@ -46,7 +55,9 @@ export function RealtimeProvider({ children }) {
 
     const onConnectError = (error) => {
       setConnected(false);
-      setConnectionError(error?.message || 'Realtime connection failed.');
+      // Backend/Netzwerk-Fehler bleiben im Original (meist EN) — nur der
+      // Fallback wird lokalisiert.
+      setConnectionError(error?.message || (readLocale() === 'en' ? 'Realtime connection failed.' : 'Echtzeit-Verbindung fehlgeschlagen.'));
     };
 
     communitySocket.on('connect', onConnect);
@@ -73,7 +84,7 @@ export function RealtimeProvider({ children }) {
     const didConnect = connectCommunitySocket(token);
     if (!didConnect) {
       setConnected(false);
-      setConnectionError('Sign in to enable realtime features.');
+      setConnectionError(readLocale() === 'en' ? 'Sign in to enable realtime features.' : 'Melde dich an für Echtzeit-Funktionen.');
     }
   }, [token]);
 
