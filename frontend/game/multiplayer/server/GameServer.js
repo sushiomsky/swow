@@ -391,7 +391,10 @@ class GameServer {
     }
 
     _checkDungeonEmpty(dungeon) {
-        const hasRealPlayers = dungeon.players.some(p => p && p.id !== null);
+        // Hardening (Leak): Bots zählen NICHT als echte Spieler — sonst werden
+        // Bot-only-Dungeons (Seeds, verlassene BR-Dungeons) nie abgeräumt und
+        // der Server füllt sich bis zum Dungeon-Cap.
+        const hasRealPlayers = dungeon.players.some(p => p && p.id !== null && !this.bots.has(p.id));
         if (!hasRealPlayers && dungeon.lifecycleState !== STATE.DESTROYED) {
             this._removePrivateLobbyByDungeonId(dungeon.id);
             this.onDungeonDestroyed(dungeon.id);
