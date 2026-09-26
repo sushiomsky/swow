@@ -8,9 +8,9 @@ export const metadata = {
 export default function ForumPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Community Forum</h1>
+      <h1 className="text-2xl font-bold">Forum</h1>
       <p className="text-sm text-zinc-400">
-        Discuss strategy, share match stories, and find teammates.
+        Diskutiere Strategien, teile Spielgeschichten und finde Mitspieler.
       </p>
       <ForumBoard />
     </div>

@@ -2,31 +2,18 @@ import Link from 'next/link';
 import AuthPanel from '../components/AuthPanel';
 import ChatRoom from '../components/ChatRoom';
 import ActiveGamesPanel from '../components/ActiveGamesPanel';
-import { GAME_URLS, multiplayerModeUrl } from '../lib/gameLinks';
-
-const MULTIPLAYER_MODES = [
-  { title: 'Endless BR', mode: 'endless', description: 'Drop in and battle across connected dungeons, anytime.' },
-  { title: 'Sit-n-Go BR', mode: 'sitngo', description: 'Queue up and launch once enough players are ready.' },
-  { title: 'Team Endless BR', mode: 'team', description: 'Gold vs Blue team battles across linked dungeons.' },
-  { title: 'Team Sit-n-Go BR', mode: 'team-sitngo', description: 'Organized team match — queue, fill, fight.' },
-  { title: 'Private Room', mode: 'pair-host', description: 'Create a private classic room and share the code.' },
-];
-
-const CLASSIC_MODES = [
-  { title: 'Classic Solo', href: GAME_URLS.classic, description: 'Original arcade action for one player.' },
-  { title: 'Classic Local 2P', href: GAME_URLS.classic, description: 'Two players on one keyboard (press 2 on title screen).' },
-];
+import { GAME_URLS } from '../lib/gameLinks';
 
 const COMMUNITY_LINKS = [
-  { title: 'Leaderboards', href: '/community/leaderboards', description: 'Global and friends rankings.' },
-  { title: 'Challenges', href: '/community/challenges', description: 'Daily and seasonal goals.' },
-  { title: 'Forum', href: '/community/forum', description: 'Strategy, teammates, discussion.' },
-  { title: 'Social', href: '/community/social', description: 'Friends, notifications, activity.' },
+  { title: 'Bestenlisten', href: '/community/leaderboards', description: 'Globale und Freundes-Ranglisten.' },
+  { title: 'Clans', href: '/community/clans', description: 'Teams gründen und gemeinsam aufsteigen.' },
+  { title: 'Forum', href: '/community/forum', description: 'Strategie, Mitspieler, Diskussion.' },
+  { title: 'Sozial', href: '/community/social', description: 'Freunde, Mitteilungen, Aktivität.' },
 ];
 
 export const metadata = {
-  title: 'Home',
-  description: 'Wizard of Wor platform with classic gameplay, community features, account access, and live global chat.'
+  title: 'Start',
+  description: 'Wizard of Wor Plattform: klassisches Gameplay, Community-Funktionen, Konto und Live-Chat.'
 };
 
 export default function HomePage() {
@@ -36,79 +23,41 @@ export default function HomePage() {
       {/* Hero */}
       <section className="hero rounded-2xl border border-zinc-800 p-8 md:p-10">
         <p className="mb-3 inline-flex rounded-full border border-indigo-400/40 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200">
-          Classic dungeons · Live competition · Community platform
+          Klassische Dungeons · Live-Wettkampf · Community-Plattform
         </p>
         <h1 className="max-w-3xl text-4xl font-extrabold leading-tight md:text-5xl">
           Wizard of Wor Platform
         </h1>
         <p className="mt-3 max-w-2xl text-zinc-300">
-          Gameplay, profiles, leaderboards, clans, forum, challenges, and real-time social — all in one place.
+          Gameplay, Profile, Bestenlisten, Clans, Forum, Herausforderungen und Echtzeit-Chat — alles an einem Ort.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Play Multiplayer</a>
-          <a href={GAME_URLS.classic} className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">Play Classic</a>
-          <Link href="/community/leaderboards" className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">Leaderboards</Link>
+          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Jetzt spielen</a>
+          <Link href="/community/leaderboards" className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">Bestenlisten</Link>
         </div>
       </section>
 
-      {/* Live Games — prominent, action-oriented */}
+      {/* Live Games — prominent */}
       <ActiveGamesPanel />
 
-      {/* Game modes + community features side by side */}
-      <div className="grid gap-6 lg:grid-cols-2">
-
-        {/* Multiplayer modes */}
-        <section>
-          <h2 className="mb-3 text-lg font-bold">Multiplayer Modes</h2>
-          <div className="space-y-2">
-            {MULTIPLAYER_MODES.map((m) => (
-              <a key={m.title} href={multiplayerModeUrl(m.mode)} className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/60 px-4 py-3 hover:bg-zinc-800">
-                <div>
-                  <p className="text-sm font-semibold">{m.title}</p>
-                  <p className="text-xs text-zinc-400">{m.description}</p>
-                </div>
-                <span className="ml-4 shrink-0 text-xs text-zinc-500">Play →</span>
-              </a>
-            ))}
-          </div>
-
-          <h2 className="mb-3 mt-6 text-lg font-bold">Classic Modes</h2>
-          <div className="space-y-2">
-            {CLASSIC_MODES.map((m) => (
-              <a key={m.title} href={m.href} className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/60 px-4 py-3 hover:bg-zinc-800">
-                <div>
-                  <p className="text-sm font-semibold">{m.title}</p>
-                  <p className="text-xs text-zinc-400">{m.description}</p>
-                </div>
-                <span className="ml-4 shrink-0 text-xs text-zinc-500">Play →</span>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* Community features */}
-        <section>
-          <h2 className="mb-3 text-lg font-bold">Community</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {COMMUNITY_LINKS.map((l) => (
-              <Link key={l.title} href={l.href} className="card">
-                <h3 className="text-sm font-semibold">{l.title}</h3>
-                <p className="mt-1 text-xs text-zinc-400">{l.description}</p>
-              </Link>
-            ))}
-            <Link href="/community/forum" className="card col-span-2">
-              <h3 className="text-sm font-semibold">Forum &amp; Chat</h3>
-              <p className="mt-1 text-xs text-zinc-400">Discuss, find teammates, and stay connected with the community.</p>
+      {/* Community-Bereiche */}
+      <section>
+        <h2 className="mb-3 text-lg font-bold">Community</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {COMMUNITY_LINKS.map((l) => (
+            <Link key={l.title} href={l.href} className="card">
+              <h3 className="text-sm font-semibold">{l.title}</h3>
+              <p className="mt-1 text-xs text-zinc-400">{l.description}</p>
             </Link>
-          </div>
-        </section>
-      </div>
+          ))}
+        </div>
+      </section>
 
       {/* Auth + Global Chat */}
       <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <AuthPanel />
         <div className="card">
-          <h2 className="mb-3 text-lg font-semibold">Global Chat</h2>
+          <h2 className="mb-3 text-lg font-semibold">Globaler Chat</h2>
           <ChatRoom roomType="global" roomId="lobby" />
         </div>
       </section>
