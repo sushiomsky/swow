@@ -8,7 +8,7 @@ import { apiGet } from '../../../../lib/api';
 export default async function ProfilePage({ params }) {
   const profile = await apiGet(`/users/profile/${params.username}`).catch(() => ({
     username: params.username,
-    display_name: 'Unknown',
+    display_name: params.username,
     xp: 0,
     level: 1
   }));
