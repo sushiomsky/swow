@@ -26,7 +26,7 @@ import { startLeaderboardWorker } from './services/leaderboardService.js';
 
 const CORS_ALLOWED_ORIGINS = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
-  : ['http://localhost:3000', 'http://localhost:5001', 'https://wizardofwor.duckdns.org'];
+  : ['http://localhost:3000', 'http://localhost:5001', 'http://localhost:13000', 'https://wizardofwor.duckdns.org'];
 
 // Community API host: profile, ranking, social, moderation and challenge endpoints.
 const app = express();
