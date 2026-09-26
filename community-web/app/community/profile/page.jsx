@@ -21,7 +21,7 @@ export default function OwnProfilePage() {
   if (!ready) {
     return (
       <section className="card">
-        <p className="text-sm text-zinc-400">Loading…</p>
+        <p className="text-sm text-zinc-400">Wird geladen…</p>
       </section>
     );
   }
@@ -30,16 +30,16 @@ export default function OwnProfilePage() {
 
   return (
     <section className="card border-indigo-500/30 bg-indigo-500/5">
-      <h1 className="text-lg font-semibold">Sign in to view your profile</h1>
+      <h1 className="text-lg font-semibold">Melde dich an für dein Profil</h1>
       <p className="mt-1 text-sm text-zinc-300">
-        Your profile lives at your username page. Sign in on the home page first,
-        then come back here — you will be forwarded automatically.
+        Dein Profil liegt auf deiner Benutzerseite. Melde dich zuerst auf der Startseite an —
+        danach wirst du automatisch weitergeleitet.
       </p>
       <Link
         href="/"
         className="mt-3 inline-block rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
       >
-        Go to sign-in →
+        Zur Anmeldung →
       </Link>
     </section>
   );

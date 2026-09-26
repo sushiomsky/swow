@@ -10,16 +10,16 @@ export default function SocialSignInHint() {
   if (!ready || isAuthenticated) return null;
   return (
     <section className="card border-indigo-500/30 bg-indigo-500/5 md:col-span-2">
-      <h2 className="text-lg font-semibold">Sign in to use Social</h2>
+      <h2 className="text-lg font-semibold">Melde dich an für Sozial</h2>
       <p className="mt-1 text-sm text-zinc-300">
-        Friends, friend requests, and notifications require an account.
-        Sign in on the home page, then come back here to connect with other players.
+        Freunde, Anfragen und Mitteilungen brauchen ein Konto.
+        Melde dich auf der Startseite an und komm dann hierher zurück.
       </p>
       <Link
         href="/"
         className="mt-3 inline-block rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
       >
-        Go to sign-in →
+        Zur Anmeldung →
       </Link>
     </section>
   );
