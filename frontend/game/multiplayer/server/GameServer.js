@@ -33,6 +33,15 @@ const MAX_DUNGEONS = Number(process.env.MP_MAX_DUNGEONS || 200);
 // Hardening (Leak): keine Bot-Seeds bei vollem Haus — sonst kämpft der
 // Seeder gegen den Dungeon-Cap und der Log läuft voll.
 const BOT_SEED_PAUSE_AT = Math.floor(MAX_DUNGEONS * 0.8);
+// Stale-Bot-Spiele (P0): Bot-only-Dungeons ohne echte Spieler werden nach
+// BOT_ONLY_TTL_MS Idle automatisch abgeräumt; das Listing blendet solche
+// Karteileichen schon nach STALE_LISTING_MS aus. Per ENV übersteuerbar.
+const BOT_ONLY_TTL_MS = Number(process.env.MP_BOT_ONLY_TTL_MS || 10 * 60 * 1000);
+const STALE_LISTING_MS = Number(process.env.MP_STALE_LISTING_MS || 30 * 60 * 1000);
+// Harter Seeder-Cap: max. so viele Bot-only-Seeds gleichzeitig (unabhängig
+// vom Dungeon-Cap), damit der Seeder nie wieder das Haus füllt.
+const MAX_BOT_ONLY_SEEDED = Number(process.env.MP_MAX_BOT_ONLY_SEEDED || 8);
+const STALE_SWEEP_INTERVAL_MS = Number(process.env.MP_STALE_SWEEP_MS || 60 * 1000);
 const MAX_MSG_BYTES = 64 * 1024;
 
 // Hardening: Input-Schema — nur diese Boolean-Keys erreichen die Simulation.
@@ -77,6 +86,12 @@ class GameServer {
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
         this._scheduleBackgroundBattleRoyaleBots();
+        // Stale-Sweep: räumt Bot-only-Dungeons nach TTL ab (periodisch) +
+        // einmalig beim Start (Karteileichen aus vorherigem Run / Altzustand).
+        this._sweepStaleBotOnlyDungeons('startup');
+        this._staleSweep = setInterval(
+            () => this._sweepStaleBotOnlyDungeons('interval'),
+            STALE_SWEEP_INTERVAL_MS);
         console.log(`[GameServer] started at ${TICK_MS}ms/tick`);
         console.log(`[GameServer] Battle Royale mode: ${this.battleRoyaleMode ? 'ENABLED' : 'DISABLED'}`);
         console.log('[GameServer] BR Queues initialized: Endless, Sit-n-Go, Team Endless, Team Sit-n-Go');
@@ -352,6 +367,9 @@ class GameServer {
         if (this.dungeons.size >= MAX_DUNGEONS) return null;
         const d = new DungeonInstance(this);
         this.dungeons.set(d.id, d);
+        // Stale-TTL-Anker: ab hier läuft die Bot-only-Uhr (wird bei jedem
+        // Sweep aufgefrischt, solange echte Spieler anwesend sind).
+        d.lastRealPlayerAt = Date.now();
         
         // NEW: Add to dungeon graph if battle royale mode
         if (this.battleRoyaleMode) {
@@ -743,10 +761,21 @@ class GameServer {
 
     getActiveGamesSnapshot() {
         const games = [];
+        const now = Date.now();
         for (const [dungeonId, dungeon] of this.dungeons.entries()) {
             if (dungeon.lifecycleState === STATE.DESTROYED) continue;
             const players = dungeon.players.filter((player) => player && player.id !== null);
             if (!players.length) continue;
+            const hasReal = players.some((p) => !this.bots.has(p.id));
+            // Karteileichen-Filter (P0): Bot-only ohne echte Spieler, älter
+            // als STALE_LISTING_MS, erscheint nicht mehr im Listing — auch
+            // wenn der Sweep sie noch nicht physisch abgeräumt hat.
+            if (!hasReal) {
+                const age = dungeon.lastRealPlayerAt
+                    ? now - dungeon.lastRealPlayerAt
+                    : (dungeon.createdAt ? now - new Date(dungeon.createdAt).getTime() : 0);
+                if (age > STALE_LISTING_MS) continue;
+            }
             const waitingPrivateLobby = this._hasWaitingPrivateLobby(dungeonId);
             const mode = this._toSnapshotMode(dungeon.matchMode);
             games.push({
@@ -814,8 +843,13 @@ class GameServer {
     }
 
     _seedBotOnlyMatch(matchMode) {
+        // Harter Seeder-Cap (P0): auch unterhalb des Dungeon-Caps nie mehr
+        // als MAX_BOT_ONLY_SEEDED reine Bot-Seeds gleichzeitig.
+        if (this._countBotOnlySeeded() >= MAX_BOT_ONLY_SEEDED) return;
         const dungeon = this._createDungeon();
+        if (!dungeon) return;
         dungeon.matchMode = matchMode;
+        dungeon.seededBotOnly = true;
         this.spawnBot(dungeon.id, 0);
         this.spawnBot(dungeon.id, 1);
         dungeon.startGame();
@@ -829,6 +863,50 @@ class GameServer {
             if (dungeon.matchMode === matchMode) count++;
         }
         return count;
+    }
+
+    // ─── Stale Bot-only TTL (P0) ────────────────────────────────────────────
+    // Bot-only-Dungeons (Seeder-Matches, verlassene Dungeons) laufen sonst
+    // ewig: Bots halten sich gegenseitig am Leben, _checkDungeonEmpty greift
+    // nur bei Disconnects, und die Lifecycle-Logik kennt keinen Zeitbegriff.
+
+    _hasRealPlayers(dungeon) {
+        return dungeon.players.some(p => p && p.id !== null && !this.bots.has(p.id));
+    }
+
+    _countBotOnlySeeded() {
+        let count = 0;
+        for (const dungeon of this.dungeons.values()) {
+            if (dungeon.lifecycleState === STATE.DESTROYED) continue;
+            if (dungeon.seededBotOnly && !this._hasRealPlayers(dungeon)) count++;
+        }
+        return count;
+    }
+
+    _dungeonAgeMs(dungeon) {
+        const t = dungeon.lastRealPlayerAt
+            ?? (dungeon.createdAt ? new Date(dungeon.createdAt).getTime() : Date.now());
+        return Date.now() - t;
+    }
+
+    _sweepStaleBotOnlyDungeons(reason) {
+        let swept = 0;
+        for (const [dungeonId, dungeon] of [...this.dungeons.entries()]) {
+            if (dungeon.lifecycleState === STATE.DESTROYED) continue;
+            if (this._hasRealPlayers(dungeon)) {
+                // Echte Spieler anwesend → TTL-Uhr zurücksetzen.
+                dungeon.lastRealPlayerAt = Date.now();
+                continue;
+            }
+            if (this._dungeonAgeMs(dungeon) < BOT_ONLY_TTL_MS) continue;
+            this._removePrivateLobbyByDungeonId(dungeonId);
+            this.onDungeonDestroyed(dungeonId);
+            swept++;
+        }
+        if (swept > 0 || reason === 'startup') {
+            console.log(`[GameServer] stale-sweep (${reason}): ${swept} bot-only dungeon(s) removed`);
+        }
+        return swept;
     }
 
     _toSnapshotMode(matchMode) {
@@ -971,6 +1049,7 @@ class GameServer {
     /** Stops the game loop and closes the WebSocket server. */
     stop() {
         clearInterval(this._loop);
+        if (this._staleSweep) clearInterval(this._staleSweep);
         this._backgroundTimers.forEach((timerId) => clearTimeout(timerId));
         this._backgroundTimers = [];
         this.wss.close();
