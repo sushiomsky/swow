@@ -69,8 +69,12 @@ const server = http.createServer((req, res) => {
     fs.readFile(filePath, (err, data) => {
         if (err) {
             console.log(`404: ${urlPath}`);
-            res.writeHead(404);
-            res.end('Not Found');
+            // App-Fallback: gebrandetes Retro-Arcade-404 (DE). Hinter Caddy
+            // ersetzt zusätzlich handle_response den 404-Body.
+            fs.readFile(path.join(ROOT, 'infra/caddy/404/404.html'), (e2, notFound) => {
+                res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(e2 ? 'Nicht gefunden — zurück zur Lobby: /' : notFound);
+            });
             return;
         }
 

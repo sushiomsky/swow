@@ -162,6 +162,7 @@ services:
       ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/caddy/404:/srv/404:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
