@@ -7,6 +7,10 @@ certs/
 .env
 *.pg.sql.gz
 
+# Laufzeit-Logs (nie committen)
+ci-logs/
+qa-reports/
+
 # Monorepo build artifacts
 **/node_modules/
 **/.next/
