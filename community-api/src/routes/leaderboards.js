@@ -19,7 +19,7 @@ const scoreSubmitSchema = z.object({
 
 const leaderboardQuerySchema = z.object({
   season: z.string().trim().min(1).max(40).default('current'),
-  scope: z.enum(LEADERBOARD_SCOPES),
+  scope: z.enum(LEADERBOARD_SCOPES).default('global'),
   region: z.string().trim().min(1).max(64).optional(),
   userId: z.string().trim().min(1).max(120).optional(),
   page: z.coerce.number().int().min(1).max(10000).default(1),

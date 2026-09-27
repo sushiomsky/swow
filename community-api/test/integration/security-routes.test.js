@@ -12,6 +12,7 @@ const chatRoutes = (await import('../../src/routes/chat.js')).default;
 const forumRoutes = (await import('../../src/routes/forum.js')).default;
 const adminRoutes = (await import('../../src/routes/admin.js')).default;
 const leaderboardRoutes = (await import('../../src/routes/leaderboards.js')).default;
+const feedbackRoutes = (await import('../../src/routes/feedback.js')).default;
 const clansRoutes = (await import('../../src/routes/clans.js')).default;
 const { createApiRateLimiter } = await import('../../src/middleware/rateLimit.js');
 const { db } = await import('../../src/db.js');
@@ -73,18 +74,58 @@ after(async () => {
   await db.end();
 });
 
-test('auth login returns structured validation errors', async () => {
+test('auth login returns 401 for any invalid credentials (no policy oracle)', async () => {
+  const { pbkdf2Sync } = await import('node:crypto');
+  const salt = 'ab'.repeat(16);
+  const goodHash = pbkdf2Sync('correct-password-123', Buffer.from(salt, 'hex'), 210000, 32, 'sha256').toString('hex');
+  db.query = async (text, params = []) => {
+    const sql = String(text);
+    if (sql.includes('FROM users u') && sql.includes('JOIN auth_credentials')) {
+      if (params[0] === 'realuser') {
+        return {
+          rows: [{
+            user_id: 'user-1', username: 'realuser', role: 'user',
+            display_name: 'Real', region: null, level: 1, xp: 0,
+            email: 'r@x.de', email_verified: false,
+            password_hash: goodHash, password_salt: salt
+          }],
+          rowCount: 1
+        };
+      }
+      return { rows: [], rowCount: 0 };
+    }
+    if (sql.includes('UPDATE users SET last_active')) return { rows: [], rowCount: 1 };
+    return { rows: [], rowCount: 0 };
+  };
   await withServer(
     (app) => app.use('/api/community/auth', authRoutes),
     async (baseUrl) => {
-      const response = await apiRequest(baseUrl, '/api/community/auth/login', {
+      // Kurzes falsches Passwort: früher 400 (Policy-Leak), jetzt 401.
+      const shortPw = await apiRequest(baseUrl, '/api/community/auth/login', {
         method: 'POST',
-        body: { username: 'ab', password: '123' }
+        body: { username: 'realuser', password: '123' }
       });
-      assert.equal(response.status, 400);
-      assert.equal(response.body.error, 'Validation failed');
-      assert.ok(Array.isArray(response.body.details));
-      assert.ok(response.body.details.length > 0);
+      assert.equal(shortPw.status, 401);
+      assert.equal(shortPw.body.error, 'Invalid credentials');
+      // Unbekannter User: 401.
+      const unknown = await apiRequest(baseUrl, '/api/community/auth/login', {
+        method: 'POST',
+        body: { username: 'nosuchuser', password: 'some-long-password-1' }
+      });
+      assert.equal(unknown.status, 401);
+      // Falsches langes Passwort: 401.
+      const wrong = await apiRequest(baseUrl, '/api/community/auth/login', {
+        method: 'POST',
+        body: { username: 'realuser', password: 'wrong-password-123' }
+      });
+      assert.equal(wrong.status, 401);
+      // Richtiges Passwort: 200.
+      const ok = await apiRequest(baseUrl, '/api/community/auth/login', {
+        method: 'POST',
+        body: { username: 'realuser', password: 'correct-password-123' }
+      });
+      assert.equal(ok.status, 200);
+      assert.ok(ok.body.token);
     }
   );
 });
@@ -427,6 +468,56 @@ test('clans index lists clans without auth', async () => {
       assert.equal(response.status, 200);
       assert.ok(Array.isArray(response.body.rows));
       assert.equal(response.body.rows[0].name, 'TestClan');
+    }
+  );
+});
+
+test('leaderboard defaults to global scope when scope is omitted', async () => {
+  db.query = async (text, params = []) => {
+    assert.ok(String(text).includes('FROM leaderboards l'));
+    assert.equal(params[0], 'current');
+    return { rows: [], rowCount: 0 };
+  };
+  await withServer(
+    (app) => app.use('/api/community/leaderboards', leaderboardRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/leaderboards', {
+        token: createToken('user', 'user-1')
+      });
+      assert.equal(response.status, 200);
+      assert.ok(Array.isArray(response.body.rows));
+    }
+  );
+});
+
+test('forum root returns category overview', async () => {
+  db.query = async () => ({
+    rows: [{ category_id: 'c1', slug: 'general', name: 'General', description: '', created_at: new Date().toISOString(), thread_count: 3 }],
+    rowCount: 1
+  });
+  await withServer(
+    (app) => app.use('/api/community/forum', forumRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/forum');
+      assert.equal(response.status, 200);
+      assert.ok(Array.isArray(response.body.categories));
+      assert.equal(response.body.categories[0].slug, 'general');
+    }
+  );
+});
+
+test('feedback without GitHub token returns honest 503 (no fake 201)', async () => {
+  await withServer(
+    (app) => app.use('/api/community/feedback', feedbackRoutes),
+    async (baseUrl) => {
+      const response = await apiRequest(baseUrl, '/api/community/feedback', {
+        method: 'POST',
+        token: createToken('user', 'user-1'),
+        body: { type: 'bug', title: 'Echter Bugtitel', description: 'Ausführliche Beschreibung hier.' }
+      });
+      // Ohne GITHUB_FEEDBACK_TOKEN in der Testumgebung: ehrliches 503.
+      assert.equal(response.status, 503);
+      assert.equal(response.body.code, 'feedback_unavailable');
     }
   );
 });
