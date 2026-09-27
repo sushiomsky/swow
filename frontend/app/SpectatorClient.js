@@ -136,7 +136,7 @@ export class SpectatorClient {
         
         const playerCount = this.state.players?.length || 0;
         const level = this.state.level || 0;
-        this.info.textContent = `Dungeon ${this.dungeonId} • ${playerCount} players • Level ${level}`;
+        this.info.textContent = `Dungeon ${this.dungeonId} • ${playerCount} Spieler • Stufe ${level}`;
     }
     
     render() {
@@ -150,18 +150,18 @@ export class SpectatorClient {
         this.ctx.fillStyle = '#fff';
         this.ctx.font = '20px monospace';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('SPECTATOR MODE', this.canvas.width / 2, 50);
+        this.ctx.fillText('ZUSCHAUER-MODUS', this.canvas.width / 2, 50);
         this.ctx.font = '14px monospace';
         this.ctx.fillText(`Dungeon ${this.dungeonId}`, this.canvas.width / 2, 80);
         
         // Render basic state info
         if (this.state.players) {
             let y = 120;
-            this.ctx.fillText(`Players: ${this.state.players.length}`, this.canvas.width / 2, y);
+            this.ctx.fillText(`Spieler: ${this.state.players.length}`, this.canvas.width / 2, y);
             y += 30;
-            
+
             this.state.players.forEach((player, i) => {
-                const text = `P${i + 1}: Score ${player.score || 0} | Lives ${player.lives || 3}`;
+                const text = `S${i + 1}: Punkte ${player.score || 0} | Leben ${player.lives || 3}`;
                 this.ctx.fillText(text, this.canvas.width / 2, y);
                 y += 25;
             });
@@ -169,7 +169,7 @@ export class SpectatorClient {
         
         if (this.state.monsters) {
             const y = 240;
-            this.ctx.fillText(`Monsters: ${this.state.monsters.length}`, this.canvas.width / 2, y);
+            this.ctx.fillText(`Monster: ${this.state.monsters.length}`, this.canvas.width / 2, y);
         }
         
         // NOTE: Full rendering would require importing GameRenderer

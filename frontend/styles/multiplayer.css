@@ -288,13 +288,19 @@ body.match-results-open {
     margin: 0 0 12px;
     font-weight: normal;
 }
+/* Einheitliche Lobby-Buttons: gleiche Mindesthöhe, gleiche Typo.
+   3-Farben-System: Rot = Schnellstart/Primär, Grün/Blau = Alternativen,
+   Dunkel = privat/sekundär. Modus-Labels white-space:nowrap (kein
+   Wort-Umbruch à la „13 / hours"). */
 .mode-group .btn {
     display: block;
     width: 100%;
+    min-height: 52px;
     margin: 6px 0;
     padding: 12px 8px;
     font-size: 13px;
     box-sizing: border-box;
+    white-space: nowrap;
 }
 .mode-hint {
     font-size: 9px;
@@ -329,10 +335,11 @@ body.match-results-open {
     margin-top: 24px;
     display: flex;
     gap: 20px;
-    font-size: 11px;
+    font-size: 12px;
+    line-height: 1.8;
 }
 .lobby-footer a {
-    color: #6c5eb5;
+    color: #999;
     text-decoration: none;
     letter-spacing: 1px;
 }

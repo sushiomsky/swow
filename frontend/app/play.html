@@ -8,15 +8,15 @@
     <link rel="stylesheet" href="/frontend/app/play.css">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preload" href="/images/v3.0/sprite.png" as="image">
-    <title>Wizard Of Wor — PLAY</title>
-    <meta property="og:title" content="Wizard Of Wor — Play Now">
+    <title>Wizard Of Wor — SPIELEN</title>
+    <meta property="og:title" content="Wizard Of Wor — Jetzt spielen">
     <meta property="og:type" content="game">
     <meta property="og:url" content="https://wizardofwor.duckdns.org/">
     <meta property="og:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
-    <meta property="og:description" content="Play the legendary 1983 arcade game in your browser — no install, no signup, just play!">
+    <meta property="og:description" content="Der Arcade-Klassiker von 1983 im Browser — ohne Installation, ohne Anmeldung, einfach spielen!">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Wizard Of Wor — Play Now">
-    <meta name="twitter:description" content="Score big in this classic 1983 arcade game. Click and play instantly!">
+    <meta name="twitter:title" content="Wizard Of Wor — Jetzt spielen">
+    <meta name="twitter:description" content="Der Arcade-Klassiker von 1983 im Browser. Einfach klicken und losspielen!">
     <meta name="twitter:image" content="https://wizardofwor.duckdns.org/images/v2.0/wizard-of-wor-icon.png">
     <link rel="preload" href="/frontend/styles/shared.css" as="style">
     <link rel="preload" href="/frontend/app/play.css" as="style">
@@ -39,69 +39,89 @@
     </script>
     <!-- Live game background (spectator view) -->
     <canvas id="background-game-canvas"></canvas>
-    
-    <!-- Active Games Panel (sidebar) -->
+
+    <!-- Active Games Panel (sidebar): VOR dem Overlay im DOM, damit sie bei
+         schmalen Viewports (statisches Layout) ÜBER dem Titel steht statt
+         dahinter. Auf Desktop (>=1101px) per CSS rechts fixiert. -->
     <div id="active-games-container" aria-label="Live-Spiele" role="region">
         <h2 class="sr-only">Live-Spiele</h2>
     </div>
 
     <!-- Arcade title overlay — shown until player starts -->
     <div id="play-overlay">
-        <h1 class="play-title">WIZARD<br>OF WOR</h1>
-        <div class="play-insert">MÜNZE EINWERFEN</div>
+        <div class="play-column">
+            <h1 class="play-title">WIZARD<br>OF WOR</h1>
+            <div class="play-insert">MÜNZE EINWERFEN</div>
 
-        <!-- Classic Modes -->
-        <div class="play-mode-section">
-            <div class="play-mode-label">KLASSIK</div>
+            <!-- Primary CTA: genau EIN Haupt-Button -->
             <button class="play-btn play-btn-primary" id="btn-play">▶ SPIELEN</button>
-            <div class="play-secondary-row">
-                <button class="play-btn-sm green" id="btn-2p">2 SPIELER</button>
+
+            <!-- P0-Onboarding: So geht's direkt unter dem Haupt-CTA -->
+            <div class="play-howto" aria-label="So geht's">
+                <div class="play-howto-title">SO GEHT'S</div>
+                <ol class="play-howto-list">
+                    <li><b>Bewegen</b> — Pfeiltasten</li>
+                    <li><b>Schießen</b> — STRG-Taste</li>
+                    <li><b>Tunnel</b> — gelbe Tore führen in verbundene Dungeons</li>
+                </ol>
+                <p class="play-howto-tip">Empfehlung: Erste Runde <b>Endlos-BR</b> — jederzeit einsteigen, Bots inklusive.</p>
             </div>
-        </div>
 
-        <!-- Battle Royale Modes — Multiplayer Modes -->
-        <div class="play-mode-section" aria-label="Mehrspieler-Modi">
-            <div class="play-mode-label">BATTLE ROYALE</div>
-            <p class="mode-desc">Verbundene Dungeons. Dringe durch Tunnel ein. Überlebe am längsten.</p>
-
-            <button class="play-btn-br" id="btn-br-endless">
-                <span class="btn-icon">⚔</span>
-                <span class="btn-label">ENDLESS BR</span>
-                <span class="btn-hint">Jederzeit einsteigen • Solo + Bot</span>
-            </button>
-
-            <button class="play-btn-br-sm" id="btn-br-sitngo">
-                <span class="btn-icon">⏱</span>
-                <span class="btn-label">SIT-N-GO</span>
-                <span class="btn-hint">Start aus Queue • 2–8 Spieler</span>
-            </button>
-
-            <div class="play-br-team-row">
-                <button class="play-btn-br-sm purple" id="btn-team-endless">
-                    <span class="btn-icon">🛡</span>
-                    <span class="btn-label">TEAM ENDLESS</span>
-                    <span class="btn-hint">2 Spieler teilen Dungeon</span>
-                </button>
-                <button class="play-btn-br-sm blue" id="btn-team-sitngo">
-                    <span class="btn-icon">🛡</span>
-                    <span class="btn-label">TEAM SIT-N-GO</span>
-                    <span class="btn-hint">Teamstart aus Queue</span>
-                </button>
+            <!-- Classic Modes -->
+            <div class="play-mode-section">
+                <div class="play-mode-label">KLASSIK</div>
+                <div class="play-secondary-grid">
+                    <button class="play-btn-sec join" id="btn-2p">
+                        <span class="btn-label">2 SPIELER</span>
+                        <span class="btn-hint">Koop an einer Tastatur</span>
+                    </button>
+                    <button class="play-btn-sec info" id="btn-multi">
+                        <span class="btn-icon" aria-hidden="true">🔗</span>
+                        <span class="btn-label">RAUM ERSTELLEN</span>
+                        <span class="btn-hint">Klassik-Koop per teilbarem Link</span>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- Private Match -->
-        <div class="play-mode-section">
-            <div class="play-mode-label">PRIVAT</div>
-            <p class="mode-desc">Klassik-Koop für 2 Spieler mit teilbarem Link.</p>
-            <button class="play-btn-private" id="btn-multi">
-                <span class="btn-icon">🔗</span>
-                <span class="btn-label">RAUM ERSTELLEN</span>
-            </button>
-        </div>
+            <!-- Battle Royale Modes — Multiplayer Modes -->
+            <div class="play-mode-section" aria-label="Mehrspieler-Modi">
+                <div class="play-mode-label">BATTLE ROYALE</div>
+                <p class="mode-desc">Verbundene Dungeons. Dringe durch Tunnel ein. Überlebe am längsten.</p>
 
-        <div class="play-hint">LEERTASTE · 2 · M · B · P</div>
-        <div class="play-footer"><a href="/platform">← Ganze Seite</a> · <a data-community-link="/community" href="/community" target="_blank" rel="noopener">💬 Community: Bestenlisten, Clans &amp; Forum</a></div>
+                <div class="play-secondary-grid play-br-grid">
+                    <button class="play-btn-sec join" id="btn-br-endless"
+                        title="Endlos-BR: Solo + Bots • jederzeit einsteigen • Sieg: am längsten überleben">
+                        <span class="btn-icon" aria-hidden="true">⚔</span>
+                        <span class="btn-label">ENDLOS-BR</span>
+                        <span class="btn-hint">Jederzeit einsteigen • Solo + Bots</span>
+                    </button>
+
+                    <button class="play-btn-sec info" id="btn-br-sitngo"
+                        title="Turnier: 2–8 Spieler • Start aus der Warteschlange • Sieg: als Letzte/-r überleben">
+                        <span class="btn-icon" aria-hidden="true">⏱</span>
+                        <span class="btn-label">TURNIER</span>
+                        <span class="btn-hint">Start aus Warteschlange • 2–8 Spieler</span>
+                    </button>
+
+                    <button class="play-btn-sec join" id="btn-team-endless"
+                        title="Team-Endlos: 2 Spieler teilen einen Dungeon • jederzeit einsteigen • Sieg: Team überlebt am längsten">
+                        <span class="btn-icon" aria-hidden="true">🛡</span>
+                        <span class="btn-label">TEAM-ENDLOS</span>
+                        <span class="btn-hint">2 Spieler teilen einen Dungeon</span>
+                    </button>
+
+                    <button class="play-btn-sec info" id="btn-team-sitngo"
+                        title="Team-Turnier: Teams ab 2 Spielern • Start aus der Warteschlange • Sieg: letztes überlebendes Team">
+                        <span class="btn-icon" aria-hidden="true">🛡</span>
+                        <span class="btn-label">TEAM-TURNIER</span>
+                        <span class="btn-hint">Teamstart aus Warteschlange</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="play-hint">LEERTASTE · 2 · M · B · P</div>
+            <div class="play-footer"><a href="/platform">← Ganze Seite</a> · <a data-community-link="/community" href="/community" target="_blank" rel="noopener">💬 Community: Bestenlisten, Clans &amp; Forum</a></div>
+        </div>
     </div>
 
     <!-- Game root — mode DOM injected here -->

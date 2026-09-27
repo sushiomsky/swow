@@ -45,7 +45,9 @@ body {
 }
 
 a { text-decoration: none; }
-*:focus { outline: none; }
+
+/* P0-A11y: sichtbarer Tastatur-Fokus (Ersatz für entferntes *:focus{outline:none}) */
+*:focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }
 
 .hide { display: none !important; }
 

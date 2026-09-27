@@ -67,8 +67,8 @@ export class MiniMapView {
         }
         
         let html = '<div class="minimap-header">';
-        html += '<span class="minimap-title">🗺 DUNGEON MAP</span>';
-        html += `<span class="minimap-count">${this.topology.total_dungeons} dungeons</span>`;
+        html += '<span class="minimap-title">🗺 DUNGEON-KARTE</span>';
+        html += `<span class="minimap-count">${this.topology.total_dungeons} Dungeons</span>`;
         html += '</div>';
         
         html += '<div class="minimap-grid">';
@@ -89,7 +89,7 @@ export class MiniMapView {
         this.container.innerHTML = `
             <div class="minimap-empty">
                 <div class="empty-icon">🗺</div>
-                <div class="empty-text">No active dungeons</div>
+                <div class="empty-text">Keine aktiven Dungeons</div>
             </div>
         `;
     }
@@ -115,7 +115,7 @@ export class MiniMapView {
         html += `</div>`;
         html += `<div class="stat-row">`;
         html += `<span class="stat-icon">📊</span>`;
-        html += `<span class="stat-value">Lvl ${dungeon.level || 0}</span>`;
+        html += `<span class="stat-value">Stufe ${dungeon.level || 0}</span>`;
         html += `</div>`;
         html += '</div>';
         
@@ -124,7 +124,7 @@ export class MiniMapView {
             html += '<div class="dungeon-players">';
             dungeon.players.forEach(player => {
                 const status = player.status === 'alive' ? '✓' : '✗';
-                html += `<div class="player-mini" title="Score: ${player.score}">`;
+                html += `<div class="player-mini" title="Punkte: ${player.score}">`;
                 html += `${status} ${player.lives || 0}♥`;
                 html += `</div>`;
             });
@@ -134,15 +134,15 @@ export class MiniMapView {
         // Connections
         html += '<div class="dungeon-connections">';
         if (dungeon.connections.left) {
-            html += `<span class="conn-left" title="Connected to D${dungeon.connections.left}">←</span>`;
+            html += `<span class="conn-left" title="Verbunden mit D${dungeon.connections.left}">←</span>`;
         }
         if (dungeon.connections.right) {
-            html += `<span class="conn-right" title="Connected to D${dungeon.connections.right}">→</span>`;
+            html += `<span class="conn-right" title="Verbunden mit D${dungeon.connections.right}">→</span>`;
         }
         html += '</div>';
-        
+
         // Spectate button
-        html += `<button class="minimap-spectate-btn" data-dungeon-id="${dungeon.id}">👁</button>`;
+        html += `<button class="minimap-spectate-btn" data-dungeon-id="${dungeon.id}" title="Zuschauen">👁</button>`;
         
         html += '</div>';
         
@@ -160,10 +160,10 @@ export class MiniMapView {
     
     getStateLabel(lifecycleState) {
         switch (lifecycleState) {
-            case 'active': return 'ACTIVE';
-            case 'collapsing': return 'COLLAPSE';
-            case 'empty': return 'EMPTY';
-            default: return 'UNKNOWN';
+            case 'active': return 'AKTIV';
+            case 'collapsing': return 'SCHLIESST';
+            case 'empty': return 'LEER';
+            default: return 'UNBEKANNT';
         }
     }
     
