@@ -60,6 +60,18 @@ run_quality_agent() {
 
 run_smoke_agent() {
   log "Running smoke matrix"
+  # Smoke braucht Container-DNS-Namen (postgres/redis) + installierte Deps:
+  # läuft der Agent auf dem Edge-Host (nicht in Compose), werden Symlinks auf
+  # die Compose-node_modules gelegt, falls noch kein npm install lief.
+  # (Symlinks sind git-ignoriert und ändern nichts am Repo-Inhalt.)
+  for dep in community-api community-web; do
+    if [ ! -e "$root_dir/$dep/node_modules" ]; then
+      if [ -d "/opt/wizard-of-wor/$dep/node_modules" ]; then
+        ln -sfn "/opt/wizard-of-wor/$dep/node_modules" "$root_dir/$dep/node_modules"
+        log "Linked /opt/wizard-of-wor/$dep/node_modules for smoke"
+      fi
+    fi
+  done
   for surface in classic-web classic-multiplayer community-api community-web; do
     surface_log_dir="$run_dir/$surface"
     mkdir -p "$surface_log_dir"
@@ -67,6 +79,7 @@ run_smoke_agent() {
       community-api)
         : "${COMMUNITY_DATABASE_URL:?COMMUNITY_DATABASE_URL must be set for smoke agent}"
         : "${COMMUNITY_REDIS_URL:?COMMUNITY_REDIS_URL must be set for smoke agent}"
+        : "${COMMUNITY_JWT_SECRET:?COMMUNITY_JWT_SECRET must be set for smoke agent (API fail-fast)}"
         ;;
     esac
     bash "$root_dir/scripts/ci-smoke.sh" "$surface" "$surface_log_dir" | tee "$surface_log_dir/agent.log"
@@ -214,6 +227,7 @@ run_analytics_agent() {
     node "$root_dir/scripts/agents/analytics-check.mjs" | tee "$run_dir/analytics-check.log"
   log "Analytics report completed"
 }
+run_ops_agent() {
   log "Collecting ops diagnostics"
   {
     echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

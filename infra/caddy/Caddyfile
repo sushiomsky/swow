@@ -2,23 +2,46 @@
     encode gzip
 
     # Hardening: Security-Header für alle Responses.
+    # CSP bewusst kompatibel mit Classic-Game (inline <script>, ES-Module,
+    # Canvas, Audio, Fonts), Next.js (inline RSC-Scripts) und WebSocket
+    # (ws/wss, Upgrade-Header bleiben unangetastet — nur Header ergänzt).
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ws: wss:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
         -Server
     }
 
     @multiplayer_ws path /multiplayer /multiplayer/* /spectate /spectate/* /minimap /minimap/*
-    reverse_proxy @multiplayer_ws multiplayer:5001
+    handle @multiplayer_ws {
+        reverse_proxy multiplayer:5001
+    }
 
     @community_api path /api/community* /socket.io*
-    reverse_proxy @community_api community-api:7000
+    handle @community_api {
+        # API-404s (JSON) bewusst NICHT umschreiben — Clients erwarten JSON.
+        reverse_proxy community-api:7000
+    }
 
     @community_web path /community* /admin* /_next*
-    reverse_proxy @community_web community-web:3000
+    handle @community_web {
+        reverse_proxy community-web:3000
+    }
 
-    # Everything else goes to the classic game / platform server
-    reverse_proxy web:8080
+    # Everything else goes to the classic game / platform server.
+    # Gebrandetes Retro-Arcade-404 (DE): 404-Bodys von web:8080 werden durch
+    # die eigene Fehlerseite ersetzt, Header (CSP/HSTS) bleiben erhalten.
+    handle {
+        reverse_proxy web:8080 {
+            @fallback_404 status 404
+            handle_response @fallback_404 {
+                root * /srv/404
+                rewrite * /404.html
+                file_server
+            }
+        }
+    }
 }
