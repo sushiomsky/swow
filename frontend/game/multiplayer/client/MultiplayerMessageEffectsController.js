@@ -129,14 +129,14 @@ export class MultiplayerMessageEffectsController {
         const min = Number(msg?.min_players ?? msg?.minPlayers ?? 0);
         const max = Number(msg?.max_players ?? msg?.maxPlayers ?? 0);
         const remaining = msg?.countdown_remaining ?? msg?.countdownRemaining ?? null;
-        let text = `Sit-n-Go queue: ${waiting}${min ? `/${min}` : ''} players`;
-        if (max) text += ` (max ${max})`;
+        let text = `Turnier-Warteschlange: ${waiting}${min ? `/${min}` : ''} Spieler`;
+        if (max) text += ` (max. ${max})`;
         if (msg?.countdown_active && remaining != null) {
-            text += ` — starting in ${Math.ceil(Number(remaining) / 1000)}s…`;
+            text += ` — Start in ${Math.ceil(Number(remaining) / 1000)} Sek. …`;
         } else {
             text += min && waiting < min
-                ? ` — waiting for ${min - waiting} more…`
-                : ' — waiting…';
+                ? ` — warte auf ${min - waiting} weitere …`
+                : ' — warte …';
         }
         this.uiController.setStatus(text);
         this.uiController.setStatusError(false);
@@ -147,12 +147,12 @@ export class MultiplayerMessageEffectsController {
         const waiting = Number(msg?.players_waiting ?? msg?.playersWaiting ?? 0);
         const teams = msg?.teams_possible ?? msg?.teamsPossible ?? Math.floor(waiting / 2);
         const remaining = msg?.countdown_remaining ?? msg?.countdownRemaining ?? null;
-        const mode = msg?.mode === 'team-sitngo' ? 'Team Sit-n-Go' : 'Team';
-        let text = `${mode} queue: ${waiting} players (${teams} team${Number(teams) === 1 ? '' : 's'})`;
+        const mode = msg?.mode === 'team-sitngo' ? 'Team-Turnier' : 'Team';
+        let text = `${mode}-Warteschlange: ${waiting} Spieler (${teams} Team${Number(teams) === 1 ? '' : 's'})`;
         if (msg?.countdown_active && remaining != null) {
-            text += ` — starting in ${Math.ceil(Number(remaining) / 1000)}s…`;
+            text += ` — Start in ${Math.ceil(Number(remaining) / 1000)} Sek. …`;
         } else {
-            text += ' — waiting…';
+            text += ' — warte …';
         }
         this.uiController.setStatus(text);
         this.uiController.setStatusError(false);
@@ -216,7 +216,7 @@ export class MultiplayerMessageEffectsController {
             z-index: 10000;
             animation: fadeOut 3s forwards;
         `;
-        notification.textContent = `Player ${msg.playerId.substr(0, 4)} entered tunnel`;
+        notification.textContent = `Spieler ${msg.playerId.substr(0, 4)} betritt Tunnel`;
         document.body.appendChild(notification);
         
         setTimeout(() => notification.remove(), 3000);
@@ -245,7 +245,7 @@ export class MultiplayerMessageEffectsController {
             z-index: 10000;
             animation: fadeOut 3s forwards;
         `;
-        notification.textContent = `Player ${msg.playerId.substr(0, 4)} arrived from tunnel`;
+        notification.textContent = `Spieler ${msg.playerId.substr(0, 4)} kommt aus Tunnel`;
         document.body.appendChild(notification);
         
         setTimeout(() => notification.remove(), 3000);
@@ -266,11 +266,11 @@ export class MultiplayerMessageEffectsController {
         const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
         const modeLabels = {
-            endless_br: 'Endless Battle Royale',
-            sitngo_br: 'Sit-N-Go Battle Royale',
-            team_endless_br: 'Team Endless BR',
-            team_sitngo_br: 'Team Sit-N-Go BR',
-            classic_private_pair: 'Classic 2-Player',
+            endless_br: 'Endlos-Battle-Royale',
+            sitngo_br: 'Turnier-Battle-Royale',
+            team_endless_br: 'Team-Endlos-BR',
+            team_sitngo_br: 'Team-Turnier-BR',
+            classic_private_pair: 'Klassik 2-Spieler',
         };
         const modeLabel = modeLabels[mode] || mode;
         const modeToJoinType = {
@@ -280,10 +280,10 @@ export class MultiplayerMessageEffectsController {
             team_sitngo_br: 'join_team_sitngo_br',
         };
         const joinType = modeToJoinType[mode] || null;
-        const playAgainLabel = joinType ? '▶ PLAY AGAIN' : '↩ RETURN TO MENU';
+        const playAgainLabel = joinType ? '▶ NOCHMAL' : '↩ ZURÜCK ZUM MENÜ';
         const shortcutHints = joinType
-            ? 'Keys: Enter = Play Again · M or Esc = Menu'
-            : 'Keys: Enter/M/Esc = Menu';
+            ? 'Tasten: Enter = Nochmal · M oder Esc = Menü'
+            : 'Tasten: Enter/M/Esc = Menü';
 
         // Submit score to leaderboard API if user is logged in
         this._submitScore(score);
@@ -303,22 +303,22 @@ export class MultiplayerMessageEffectsController {
             : null;
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
-        overlay.setAttribute('aria-label', 'Match results');
+        overlay.setAttribute('aria-label', 'Spielergebnis');
         overlay.setAttribute('aria-labelledby', titleId);
         overlay.setAttribute('aria-describedby', hintsId);
 
         overlay.innerHTML = `
             <div class="match-results-card" tabindex="-1">
-                <h2 id="${titleId}">GAME OVER</h2>
+                <h2 id="${titleId}">SPIEL VORBEI</h2>
                 <div class="match-results-mode">${modeLabel}</div>
                 <div class="match-results-stats">
-                    <div class="stat"><span class="stat-value">${score.toLocaleString()}</span><span class="stat-label">SCORE</span></div>
+                    <div class="stat"><span class="stat-value">${score.toLocaleString('de-DE')}</span><span class="stat-label">PUNKTE</span></div>
                     <div class="stat"><span class="stat-value">${level}</span><span class="stat-label">LEVEL</span></div>
-                    <div class="stat"><span class="stat-value">${timeStr}</span><span class="stat-label">TIME</span></div>
+                    <div class="stat"><span class="stat-value">${timeStr}</span><span class="stat-label">ZEIT</span></div>
                 </div>
                 <div class="match-results-actions">
                     <button class="btn match-btn-play-again" id="match-play-again" aria-keyshortcuts="Enter">${playAgainLabel}</button>
-                    <button class="btn match-btn-menu" id="match-back-menu" aria-keyshortcuts="M Escape">☰ BACK TO MENU</button>
+                    <button class="btn match-btn-menu" id="match-back-menu" aria-keyshortcuts="M Escape">☰ ZUM MENÜ</button>
                 </div>
                 <div class="match-results-hints" id="${hintsId}">${shortcutHints}</div>
             </div>
@@ -334,7 +334,7 @@ export class MultiplayerMessageEffectsController {
             this._setMatchResultsBusy(true);
             this._hideMatchResultsOverlay();
             if (joinType) {
-                this.uiController.setStatus('Re-queueing…');
+                this.uiController.setStatus('Warte …');
                 this.uiController.setStatusError(false);
                 // Disconnect current socket and reconnect with same mode
                 this._requeue(joinType);

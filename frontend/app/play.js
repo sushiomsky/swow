@@ -149,15 +149,15 @@ function createMPDOM() {
     root.innerHTML = `
         <div id="overlay">
             <h1>WIZARD OF WOR</h1>
-            <p>2-Player Private Room</p>
+            <p>Privater Raum für 2 Spieler</p>
             <div style="margin-top:20px;">
-                <button class="btn blue" id="btnPairCreate">&#128279; CREATE ROOM</button>
+                <button class="btn blue" id="btnPairCreate">&#128279; RAUM ERSTELLEN</button>
                 <div style="margin-top: 12px;">
-                    <input id="pairCode" type="text" maxlength="12" placeholder="Room code"
+                    <input id="pairCode" type="text" maxlength="12" placeholder="Raum-Code"
                         style="padding: 10px 12px; font-family: inherit; width: 240px; text-transform: uppercase; letter-spacing: 2px;">
-                    <button class="btn" id="btnPairJoin">JOIN ROOM</button>
+                    <button class="btn" id="btnPairJoin">RAUM BETRETEN</button>
                 </div>
-                <button class="btn dark" id="btnBackToMenu" style="margin-top:12px; background:#333;">&#9664; BACK</button>
+                <button class="btn dark" id="btnBackToMenu" style="margin-top:12px; background:#333;">&#9664; ZURÜCK</button>
             </div>
             <div id="status" role="status" aria-live="polite"></div>
         </div>
@@ -170,7 +170,7 @@ function createMPDOM() {
         <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
-        <div id="controls-hint">ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back</div>
+        <div id="controls-hint">PFEILE + STRG zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück</div>
     `;
     return root;
 }
@@ -301,29 +301,29 @@ function buildGameOverOverlay(detail) {
     el.id = 'play-gameover';
 
     const gameUrl = window.location.origin + '/?challenge=' + topScore;
-    const shareText = `I scored ${topScore} in Wizard of Wor (Wave ${wave}) — beat me! ${gameUrl}`;
+    const shareText = `Ich habe ${topScore} Punkte in Wizard of Wor (Welle ${wave}) geholt — schlag mich! ${gameUrl}`;
     const twitterUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
 
     let html = '<div class="go-content">';
-    if (isNewHigh) html += '<div class="go-newhigh">★ NEW HIGH SCORE ★</div>';
+    if (isNewHigh) html += '<div class="go-newhigh">★ NEUER REKORD ★</div>';
     html += `<div class="go-score">${topScore}</div>`;
-    html += `<div class="go-wave">WAVE ${wave}</div>`;
-    if (numPlayers > 1) html += `<div class="go-detail">P1: ${p1Score}  P2: ${p2Score}</div>`;
+    html += `<div class="go-wave">WELLE ${wave}</div>`;
+    if (numPlayers > 1) html += `<div class="go-detail">S1: ${p1Score}  S2: ${p2Score}</div>`;
     html += '<div class="go-share">';
-    html += `<a class="go-share-btn go-share-twitter" href="${twitterUrl}" target="_blank" rel="noopener">𝕏 SHARE</a>`;
-    html += `<button class="go-share-btn go-share-copy" data-text="${shareText.replace(/"/g, '&quot;')}">📋 COPY</button>`;
+    html += `<a class="go-share-btn go-share-twitter" href="${twitterUrl}" target="_blank" rel="noopener">𝕏 TEILEN</a>`;
+    html += `<button class="go-share-btn go-share-copy" data-text="${shareText.replace(/"/g, '&quot;')}">📋 KOPIEREN</button>`;
     html += '</div>';
     html += '<div class="go-actions">';
-    html += '<button class="go-replay-btn" id="go-replay">▶ PLAY AGAIN</button>';
+    html += '<button class="go-replay-btn" id="go-replay">▶ NOCHMAL</button>';
     html += '</div>';
-    html += '<div class="go-hint">PRESS FIRE TO RESTART</div>';
+    html += '<div class="go-hint">FEUERN ZUM NEUSTART</div>';
     html += '</div>';
     el.innerHTML = html;
     gameRoot.appendChild(el);
 
     el.querySelector('.go-share-copy')?.addEventListener('click', (ev) => {
         navigator.clipboard?.writeText(ev.currentTarget.dataset.text).then(() => {
-            ev.currentTarget.textContent = '✓ COPIED';
+            ev.currentTarget.textContent = '✓ KOPIERT';
         });
     });
     el.querySelector('#go-replay')?.addEventListener('click', () => {
@@ -347,18 +347,18 @@ function buildMPPostMatchOverlay(detail) {
     const el = document.createElement('div');
     el.id = 'play-gameover';
 
-    const resultText = tied ? 'DRAW' : (won ? 'YOU WIN!' : 'YOU LOSE');
+    const resultText = tied ? 'UNENTSCHIEDEN' : (won ? 'GEWONNEN!' : 'VERLOREN');
     const resultClass = tied ? 'go-draw' : (won ? 'go-win' : 'go-lose');
 
     let html = '<div class="go-content">';
     html += `<div class="go-result ${resultClass}">${resultText}</div>`;
     html += `<div class="go-score">${myScore}</div>`;
     html += '<div class="go-detail">';
-    html += `P1: ${p1Score} &nbsp;|&nbsp; P2: ${p2Score}`;
+    html += `S1: ${p1Score} &nbsp;|&nbsp; S2: ${p2Score}`;
     html += '</div>';
     html += '<div class="go-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center;">';
-    html += '<button class="go-replay-btn" id="go-mp-newroom">⚔ NEW ROOM</button>';
-    html += '<button class="go-share-btn" id="go-mp-back" style="padding:8px 20px;">◀ BACK TO MENU</button>';
+    html += '<button class="go-replay-btn" id="go-mp-newroom">⚔ NEUER RAUM</button>';
+    html += '<button class="go-share-btn" id="go-mp-back" style="padding:8px 20px;">◀ ZURÜCK ZUM MENÜ</button>';
     html += '</div>';
     html += '</div>';
     el.innerHTML = html;
@@ -426,7 +426,7 @@ async function startMP(roomCode, options = {}) {
         // Show loading if auto-joining from URL
         if (roomCode && _state === 'loading') {
             showOverlay(true);
-            overlay.innerHTML = '<div class="play-loading">🎮 Connecting to multiplayer...</div>';
+            overlay.innerHTML = '<div class="play-loading">🎮 Verbinde mit Mehrspieler …</div>';
         }
 
         // Tear down existing mode (SP or MP)
@@ -481,7 +481,7 @@ async function startMP(roomCode, options = {}) {
         const banner = document.createElement('div');
         banner.className = 'play-challenge';
         banner.style.color = '#f44';
-        banner.innerHTML = '❌ Failed to connect to multiplayer. Please try again.';
+        banner.innerHTML = '❌ Mehrspieler-Verbindung fehlgeschlagen. Bitte erneut versuchen.';
         overlay.insertBefore(banner, overlay.firstChild);
         setTimeout(() => banner.remove(), 5000);
     }
@@ -582,7 +582,7 @@ function _setSpButtonsBusy(busy) {
         btn.disabled = busy;
         btn.setAttribute('aria-busy', busy ? 'true' : 'false');
         if (!btn.dataset.label) btn.dataset.label = btn.textContent;
-        btn.textContent = busy ? '… LOADING' : btn.dataset.label;
+        btn.textContent = busy ? '… LÄDT' : btn.dataset.label;
     }
 }
 function _spEngineReady() {

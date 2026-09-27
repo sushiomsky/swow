@@ -63,23 +63,23 @@ export class ActiveGamesList {
         
         let html = '<div class="active-games-panel">';
         html += '<div class="active-games-header">';
-        html += '<div class="active-games-title">🎮 ACTIVE GAMES</div>';
-        html += '<div class="active-games-count loading-pulse">Loading…</div>';
+        html += '<div class="active-games-title">🎮 LAUFENDE SPIELE</div>';
+        html += '<div class="active-games-count loading-pulse">Lädt…</div>';
         html += '</div>';
         html += '<div class="active-games-list loading-state">';
         
         // Render 3 placeholder game cards with skeleton buttons
         for (let i = 1; i <= 3; i++) {
             html += '<div class="game-card loading-card">';
-            html += '<div class="game-mode loading-pulse">ENDLESS BR</div>';
+            html += '<div class="game-mode loading-pulse">ENDLOS-BR</div>';
             html += '<div class="game-stats">';
-            html += '<span class="stat loading-pulse">2 players</span>';
+            html += '<span class="stat loading-pulse">2 Spieler</span>';
             html += '<span class="stat-sep">•</span>';
-            html += '<span class="stat loading-pulse">1 dungeon</span>';
+            html += '<span class="stat loading-pulse">1 Dungeon</span>';
             html += '</div>';
             html += '<div class="game-actions">';
-            html += `<button class="game-btn spectate-btn loading-pulse" data-dungeon-id="placeholder-${i}">👁 SPECTATE</button>`;
-            html += `<button class="game-btn join-btn loading-pulse" data-mode="endless">JOIN</button>`;
+            html += `<button class="game-btn spectate-btn loading-pulse" data-dungeon-id="placeholder-${i}">👁 ZUSCHAUEN</button>`;
+            html += `<button class="game-btn join-btn loading-pulse" data-mode="endless">MITMACHEN</button>`;
             html += '</div>';
             html += '</div>';
         }
@@ -99,12 +99,12 @@ export class ActiveGamesList {
         
         // Header
         html += '<div class="active-games-header">';
-        html += '<div class="active-games-title">🎮 ACTIVE GAMES</div>';
+        html += '<div class="active-games-title">🎮 LAUFENDE SPIELE</div>';
         if (hasGames) {
-            const gameWord = this.games.length === 1 ? 'game' : 'games';
-            const playerWord = this.totalPlayers === 1 ? 'player' : 'players';
+            const gameWord = this.games.length === 1 ? 'Spiel' : 'Spiele';
+            const playerWord = this.totalPlayers === 1 ? 'Spieler' : 'Spieler';
             html += `<div class="active-games-count">${this.games.length} ${gameWord} • ${this.totalPlayers} ${playerWord}</div>`;
-            html += '<a href="/minimap" class="minimap-link" title="View all dungeons">🗺</a>';
+            html += '<a href="/minimap" class="minimap-link" title="Alle Dungeons ansehen">🗺</a>';
         }
         html += '</div>';
         
@@ -118,8 +118,8 @@ export class ActiveGamesList {
         } else {
             html += '<div class="active-games-empty">';
             html += '<div class="empty-icon">⚔</div>';
-            html += '<div class="empty-text">No active games</div>';
-            html += '<div class="empty-hint">Be the first to start a Battle Royale!</div>';
+            html += '<div class="empty-text">Keine laufenden Spiele</div>';
+            html += '<div class="empty-hint">Sei der Erste — starte ein Battle Royale!</div>';
             html += '</div>';
         }
         
@@ -143,26 +143,26 @@ export class ActiveGamesList {
         let html = '<div class="game-card">';
         html += `<div class="game-mode">${modeIcon} ${modeLabel}</div>`;
         html += '<div class="game-stats">';
-        html += `<span class="stat">${playerCount} player${playerCount === 1 ? '' : 's'}</span>`;
+        html += `<span class="stat">${playerCount} Spieler</span>`;
         html += `<span class="stat-sep">•</span>`;
-        html += `<span class="stat">${dungeonCount} dungeon${dungeonCount === 1 ? '' : 's'}</span>`;
+        html += `<span class="stat">${dungeonCount} Dungeon${dungeonCount === 1 ? '' : 's'}</span>`;
         if (duration) {
             html += `<span class="stat-sep">•</span>`;
-            html += `<span class="stat">${duration}</span>`;
+            html += `<span class="stat stat-time">${duration}</span>`;
         }
         html += '</div>';
         
         // Action buttons
         html += '<div class="game-actions">';
         
-        // SPECTATE button (always show for active games)
+        // ZUSCHAUEN-Button (immer bei laufenden Spielen anzeigen)
         if (game.dungeon_id) {
-            html += `<button class="game-btn spectate-btn" data-dungeon-id="${game.dungeon_id}">👁 SPECTATE</button>`;
+            html += `<button class="game-btn spectate-btn" data-dungeon-id="${game.dungeon_id}">👁 ZUSCHAUEN</button>`;
         }
-        
-        // JOIN button (if joinable)
+
+        // MITMACHEN-Button (wenn beitretbar)
         if (game.joinable !== false && game.mode) {
-            html += `<button class="game-btn join-btn" data-mode="${game.mode}">JOIN</button>`;
+            html += `<button class="game-btn join-btn" data-mode="${game.mode}">MITMACHEN</button>`;
         }
         
         html += '</div>';
@@ -173,11 +173,11 @@ export class ActiveGamesList {
     
     getModeLabel(mode) {
         const labels = {
-            'endless': 'ENDLESS BR',
-            'sitngo': 'SIT-N-GO BR',
-            'team': 'TEAM BR',
-            'team-endless': 'TEAM ENDLESS',
-            'team-sitngo': 'TEAM SIT-N-GO'
+            'endless': 'ENDLOS-BR',
+            'sitngo': 'RUNDEN-BR',
+            'team': 'TEAM-BR',
+            'team-endless': 'TEAM-ENDLOS',
+            'team-sitngo': 'TEAM-RUNDEN'
         };
         return labels[mode] || mode.toUpperCase();
     }
@@ -194,20 +194,20 @@ export class ActiveGamesList {
     }
     
     formatDuration(createdAt) {
-        if (!createdAt) return 'just now';
-        
+        if (!createdAt) return 'gerade eben';
+
         const now = new Date();
         const created = new Date(createdAt);
         const diffMs = now - created;
         const diffMins = Math.floor(diffMs / 60000);
-        
-        if (diffMins < 1) return 'just now';
-        if (diffMins === 1) return '1 min';
-        if (diffMins < 60) return `${diffMins} mins`;
-        
+
+        if (diffMins < 1) return 'gerade eben';
+        if (diffMins === 1) return 'vor 1 Min.';
+        if (diffMins < 60) return `vor ${diffMins} Min.`;
+
         const diffHours = Math.floor(diffMins / 60);
-        if (diffHours === 1) return '1 hour';
-        return `${diffHours} hours`;
+        if (diffHours === 1) return 'vor 1 Std.';
+        return `vor ${diffHours} Std.`;
     }
     
     attachEventListeners() {

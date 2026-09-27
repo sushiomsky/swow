@@ -94,15 +94,15 @@ function createMultiplayerDOM() {
     root.innerHTML = `
         <div id="overlay">
             <h1>WIZARD OF WOR</h1>
-            <p>2-Player Private Room</p>
+            <p>Privater Raum für 2 Spieler</p>
             <div style="margin-top:20px;">
-                <button class="btn blue" id="btnPairCreate">&#128279; CREATE ROOM</button>
+                <button class="btn blue" id="btnPairCreate">&#128279; RAUM ERSTELLEN</button>
                 <div style="margin-top: 12px;">
-                    <input id="pairCode" type="text" maxlength="12" placeholder="Room code"
+                    <input id="pairCode" type="text" maxlength="12" placeholder="Raum-Code"
                         style="padding: 10px 12px; font-family: inherit; width: 240px; text-transform: uppercase; letter-spacing: 2px;">
-                    <button class="btn" id="btnPairJoin">JOIN ROOM</button>
+                    <button class="btn" id="btnPairJoin">RAUM BETRETEN</button>
                 </div>
-                <button class="btn dark" id="btnBackToMenu" style="margin-top:12px; background:#333;">&#9664; BACK TO MENU</button>
+                <button class="btn dark" id="btnBackToMenu" style="margin-top:12px; background:#333;">&#9664; ZURÜCK ZUM MENÜ</button>
             </div>
             <div id="status" role="status" aria-live="polite"></div>
         </div>
@@ -115,7 +115,7 @@ function createMultiplayerDOM() {
         <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
-        <div id="controls-hint">ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu</div>
+        <div id="controls-hint">PFEILE + STRG zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück zum Menü</div>
     `;
     return root;
 }
@@ -189,7 +189,7 @@ export class Platform {
         if (!challengeScore || isNaN(challengeScore)) return;
         const banner = document.createElement('div');
         banner.id = 'challenge-banner';
-        banner.innerHTML = `<span>🏆 Someone scored <strong>${challengeScore}</strong> — can you beat it?</span>`;
+        banner.innerHTML = `<span>🏆 Jemand hat <strong>${challengeScore}</strong> Punkte geholt — schaffst du mehr?</span>`;
         this._menuEl?.insertBefore(banner, this._menuEl.firstChild);
         // Clean URL without reload
         window.history.replaceState({}, '', window.location.pathname);
@@ -207,7 +207,7 @@ export class Platform {
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (data && data.total_players > 0) {
-                        badge.textContent = `${data.total_players} player${data.total_players > 1 ? 's' : ''} online`;
+                        badge.textContent = `${data.total_players} Spieler online`;
                         badge.classList.remove('hide');
                     } else {
                         badge.classList.add('hide');
