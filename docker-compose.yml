@@ -106,12 +106,25 @@ services:
     build:
       context: ./community-web
       dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* wird zur Build-Zeit eingebacken. Ohne explizite ARGs
+        # griffen die localhost-Fallbacks ins Prod-HTML (P0) — daher Defaults,
+        # die auf dem Edge (gleiche Origin) funktionieren:
+        #  - GAME_BASE leer => relative /multiplayer.html, /spectate.html, /index.html
+        #  - API/Socket relativ => Same-Origin (/api/community, /socket.io)
+        NEXT_PUBLIC_GAME_BASE: ${NEXT_PUBLIC_GAME_BASE:-}
+        NEXT_PUBLIC_COMMUNITY_API_BASE: ${NEXT_PUBLIC_COMMUNITY_API_BASE:-/api/community}
+        NEXT_PUBLIC_COMMUNITY_SOCKET_URL: ${NEXT_PUBLIC_COMMUNITY_SOCKET_URL:-}
+        NEXT_PUBLIC_ACTIVE_GAMES_URL: ${NEXT_PUBLIC_ACTIVE_GAMES_URL:-/multiplayer/active-games}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://wizardofwor.duckdns.org}
     environment:
       # Server-side Next rewrite target (container DNS). Local dev without
       # Docker can override with COMMUNITY_API_INTERNAL_BASE=http://localhost:17000/api/community
       COMMUNITY_API_INTERNAL_BASE: ${COMMUNITY_API_INTERNAL_BASE:-http://community-api:7000/api/community}
-      NEXT_PUBLIC_COMMUNITY_API_BASE: ${NEXT_PUBLIC_COMMUNITY_API_BASE:-http://localhost:17000/api/community}
-      NEXT_PUBLIC_COMMUNITY_SOCKET_URL: ${NEXT_PUBLIC_COMMUNITY_SOCKET_URL:-http://localhost:17000}
+      # Hinweis: NEXT_PUBLIC_* wird zur BUILD-Zeit eingebacken (siehe build.args
+      # oben) — Runtime-environment wirkt auf Client-Bundles NICHT. Deshalb hier
+      # keine NEXT_PUBLIC_*-Einträge (alte localhost-Werte aus .env griffen im
+      # Browser ins Leere und sind bewusst entkoppelt).
     ports:
       - "${COMMUNITY_WEB_PUBLIC_PORT:-13000}:3000"
     depends_on:
