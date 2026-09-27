@@ -24,8 +24,11 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  username: z.string().min(3).max(30),
-  password: z.string().min(8).max(120)
+  // Bewusst KEINE Policy-Minima (min 8 etc.): Validierung vor Auth würde
+  // sonst per 400 vs. 401 verraten, ob ein Passwort der Policy genügt
+  // (Policy-Orakel). Falsche Credentials geben daher immer 401.
+  username: z.string().min(1).max(30),
+  password: z.string().min(1).max(120)
 });
 
 const emailSchema = z.object({
@@ -179,7 +182,11 @@ router.post('/register', async (req, res, next) => {
 
 router.post('/login', async (req, res, next) => {
   try {
-    const payload = loginSchema.parse(req.body || {});
+    // Kein Policy-Orakel: Formfehler (leerer/falscher Typ) → generisches 401,
+    // nie 400 mit Policy-Details.
+    const parsed = loginSchema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(401).json({ error: 'Invalid credentials' });
+    const payload = parsed.data;
     const username = payload.username.trim();
     const { rows } = await db.query(
       `SELECT u.user_id, u.username, u.role, u.display_name, u.region, u.level, u.xp, u.email,
@@ -215,7 +222,6 @@ router.post('/login', async (req, res, next) => {
     const token = createToken(user);
     return res.json({ token, user });
   } catch (e) {
-    if (handleValidationError(res, e)) return;
     return next(e);
   }
 });

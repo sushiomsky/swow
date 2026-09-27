@@ -63,6 +63,26 @@ async function recordModerationAudit(client, { actorUserId, action, threadId = n
   );
 }
 
+/**
+ * GET / — Forum-Root: Übersicht aller Kategorien mit Thread-Zähler.
+ * Die /community/forum-Seite braucht einen Einstieg ohne category-Pflicht.
+ */
+router.get('/', async (_req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT c.category_id, c.slug, c.name, c.description, c.created_at,
+              COUNT(t.thread_id)::int AS thread_count
+       FROM forum_categories c
+       LEFT JOIN forum_threads t ON t.category_id = c.category_id
+       GROUP BY c.category_id
+       ORDER BY c.name ASC`
+    );
+    return res.json({ categories: rows });
+  } catch (e) {
+    return next(e);
+  }
+});
+
 router.get('/categories', async (_req, res, next) => {
   try {
     const { rows } = await db.query(

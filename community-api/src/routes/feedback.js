@@ -30,10 +30,25 @@ function getOctokit() {
 /**
  * POST /feedback — Submit feedback (creates a GitHub issue)
  * Requires authentication. Rate-limited separately.
+ *
+ * Ehrlichkeit: Ohne konfiguriertes GITHUB_FEEDBACK_TOKEN wird kein
+ * Fake-201 mit issue_url:null zurückgegeben, sondern 503 — die
+ * GitHub-Weiterleitung ist dann sauber deaktiviert. Schlägt die
+ * Issue-Erstellung trotz Token fehl, wird das Feedback lokal
+ * gespeichert und mit 502 geantwortet (fail-loud statt Fake-Erfolg).
  */
 router.post('/', requireAuth, async (req, res, next) => {
   const parsed = feedbackSchema.safeParse(req.body);
   if (!parsed.success) return handleValidationError(res, parsed.error);
+
+  const kit = getOctokit();
+  if (!kit) {
+    return res.status(503).json({
+      error: 'Feedback service unavailable',
+      code: 'feedback_unavailable',
+      message: 'Feedback forwarding to GitHub is not configured.'
+    });
+  }
 
   const { type, title, description, url, metadata } = parsed.data;
   const userId = req.user.sub;
@@ -59,8 +74,7 @@ router.post('/', requireAuth, async (req, res, next) => {
     let issueUrl = null;
     let issueNumber = null;
 
-    const kit = getOctokit();
-    if (kit) {
+    try {
       const [owner, repo] = config.githubRepo.split('/');
       const { data: issue } = await kit.issues.create({
         owner,
@@ -72,11 +86,21 @@ router.post('/', requireAuth, async (req, res, next) => {
       issueUrl = issue.html_url;
       issueNumber = issue.number;
       logInfo('feedback_github_issue_created', { issueNumber, issueUrl, userId });
-    } else {
-      logInfo('feedback_received_no_github', { type, title, userId });
+    } catch (e) {
+      logError('feedback_github_create_failed', { error: e.message, userId });
+      // Fail-loud: lokal speichern, aber ehrlich 502 statt Fake-201 ohne Issue.
+      await db.query(
+        `INSERT INTO feedback (user_id, type, title, description, url, github_issue_url, github_issue_number)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [userId, type, title, description, url || null, null, null]
+      );
+      return res.status(502).json({
+        error: 'Feedback stored but GitHub issue creation failed',
+        code: 'feedback_github_failed'
+      });
     }
 
-    // Store locally regardless of GitHub availability
+    // Store locally alongside the created issue
     await db.query(
       `INSERT INTO feedback (user_id, type, title, description, url, github_issue_url, github_issue_number)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
