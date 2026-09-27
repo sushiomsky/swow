@@ -1,14 +1,16 @@
 // Centralised Game-platform (classic/multiplayer HTML pages) links.
 //
-// The Game platform is served by a separate host (`web` service on :18080).
-// Use NEXT_PUBLIC_GAME_BASE to absolutise all classic/multiplayer links so
-// they never resolve to 404s on the community host.
+// Local dev serves the game platform on a separate host (`web` service on
+// :18080) — configure via NEXT_PUBLIC_GAME_BASE. In production the edge
+// serves game pages AND the community frontend from the SAME origin, so the
+// default is a relative path. Never fall back to localhost: a baked-in
+// localhost URL breaks every live button (P0).
 
 const RAW_GAME_BASE =
-  process.env.NEXT_PUBLIC_GAME_BASE || 'http://localhost:18080';
+  process.env.NEXT_PUBLIC_GAME_BASE || '';
 
 function normaliseBase(value) {
-  return String(value || '').replace(/\/+$/, '') || 'http://localhost:18080';
+  return String(value || '').replace(/\/+$/, '');
 }
 
 export const GAME_BASE = normaliseBase(RAW_GAME_BASE);
