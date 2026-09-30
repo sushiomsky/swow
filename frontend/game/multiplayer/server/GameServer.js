@@ -40,7 +40,7 @@ const BOT_ONLY_TTL_MS = Number(process.env.MP_BOT_ONLY_TTL_MS || 10 * 60 * 1000)
 const STALE_LISTING_MS = Number(process.env.MP_STALE_LISTING_MS || 30 * 60 * 1000);
 // Harter Seeder-Cap: max. so viele Bot-only-Seeds gleichzeitig (unabhängig
 // vom Dungeon-Cap), damit der Seeder nie wieder das Haus füllt.
-const MAX_BOT_ONLY_SEEDED = Number(process.env.MP_MAX_BOT_ONLY_SEEDED || 8);
+const MAX_BOT_ONLY_SEEDED = Number(process.env.MP_MAX_BOT_ONLY_SEEDED || 16);
 const STALE_SWEEP_INTERVAL_MS = Number(process.env.MP_STALE_SWEEP_MS || 60 * 1000);
 const MAX_MSG_BYTES = 64 * 1024;
 
