@@ -7,48 +7,77 @@
     <link rel="stylesheet" href="/frontend/styles/shared.css">
     <link rel="stylesheet" href="/frontend/styles/multiplayer.css">
     <link rel="shortcut icon" href="/favicon.ico">
+    <!-- UX-Lane LOBBY: 3-Schritt-Flow — SCHNELLSTART default-expanded, Rest details/summary -->
+    <style>
+        details.mode-group summary.mode-group-title { cursor: pointer; list-style: revert; }
+        details.mode-group summary.mode-group-title::marker { color: #888; }
+        details.mode-group:not([open]) summary.mode-group-title { margin-bottom: 0; }
+        .mode-value {
+            font-size: 10px;
+            color: #999;
+            margin: 10px 0 4px;
+            line-height: 1.5;
+        }
+        .mode-primary .btn-cta {
+            min-height: 60px;
+            font-size: 15px;
+            box-shadow: 0 0 18px rgba(255, 80, 80, 0.35);
+        }
+        .code-label {
+            display: block;
+            font-size: 10px;
+            color: #888;
+            letter-spacing: 2px;
+            text-align: left;
+            margin: 10px 0 4px;
+        }
+    </style>
 </head>
 <body>
     <div id="overlay">
         <h1>WIZARD OF WOR</h1>
         <p>Verbundene Dungeons — Mehrspieler</p>
 
-        <div class="lobby-modes">
-            <!-- Quick Play -->
-            <div class="mode-group">
-                <h3 class="mode-group-title">⚡ SCHNELLSTART</h3>
-                <button class="btn" id="btnSolo">▶ ENDLOS-BR</button>
+        <div class="lobby-modes lobby-flow">
+            <!-- Schritt 1: Schnellstart — default-expanded, ein CTA für Erstbesucher -->
+            <details class="mode-group mode-primary" open>
+                <summary class="mode-group-title">⚡ SCHNELLSTART</summary>
+                <p class="mode-value">Solo gegen alle — steig jederzeit in den laufenden Dungeon-Ring ein.</p>
+                <button class="btn btn-cta" id="btnSolo">▶ ENDLOS-BR</button>
+                <p class="mode-value">Gemeinsam punkten — kämpfe mit deinem Team im laufenden Ring.</p>
                 <button class="btn green" id="btnTeamBr">🛡 TEAM-ENDLOS</button>
-                <p class="mode-hint">Sofort einsteigen — tritt einem aktiven Dungeon-Ring bei</p>
-            </div>
+            </details>
 
-            <!-- Competitive -->
-            <div class="mode-group">
-                <h3 class="mode-group-title">🏆 WETTKAMPF</h3>
+            <!-- Wettkampf — eingeklappt -->
+            <details class="mode-group">
+                <summary class="mode-group-title">🏆 WETTKAMPF</summary>
+                <p class="mode-value">Fairer Start für alle — ab Runde eins zählt jeder Punkt.</p>
                 <button class="btn blue" id="btnSitNGo">⏱ TURNIER</button>
+                <p class="mode-value">Team gegen Team — fairer Turnierstart mit gemeinsamer Wertung.</p>
                 <button class="btn purple" id="btnTeamSitNGo">🛡 TEAM-TURNIER</button>
-                <p class="mode-hint">Start aus der Warteschlange — fairer Kampf ab Runde eins</p>
-            </div>
+            </details>
 
-            <!-- Private -->
-            <div class="mode-group">
-                <h3 class="mode-group-title">🔗 PRIVAT</h3>
+            <!-- Privat — eingeklappt -->
+            <details class="mode-group">
+                <summary class="mode-group-title">🔗 PRIVAT</summary>
+                <p class="mode-value">Nur mit Freunden — erstelle einen Raum und teile den Code.</p>
                 <button class="btn dark" id="btnPairCreate">KLASSIK-RAUM ERSTELLEN</button>
                 <div class="private-join">
-                    <input id="pairCode" type="text" maxlength="12" placeholder="Raum-Code" aria-label="Raum-Code"
-                        class="code-input">
+                    <label class="code-label" for="pairCode">Raum-Code</label>
+                    <input id="pairCode" type="text" maxlength="12" placeholder="z. B. X7K2Q9" aria-label="Raum-Code"
+                        class="code-input" autocomplete="off" spellcheck="false">
                     <button class="btn dark" id="btnPairJoin">BEITRETEN</button>
                 </div>
-            </div>
+            </details>
         </div>
 
         <button class="btn green hide" id="btnRetry">↻ LETZTEN MODUS WIEDERHOLEN</button>
         <div id="status" role="status" aria-live="polite"></div>
 
         <div class="lobby-footer">
+            <a href="/">🏠 Start</a>
             <a href="/spectate.html">👁 Zuschauen</a>
             <a href="/public/handbook.html" target="_blank">📖 Anleitung</a>
-            <a href="/">🏠 Start</a>
             <a id="mp-community-link" href="/community" target="_blank" rel="noopener">💬 Community</a>
         </div>
     </div>
@@ -79,47 +108,61 @@
         <span id="hud-dungeon"></span>
     </div>
     <div id="controls-hint">
-        ARROWS + CTRL to move/shoot &nbsp;|&nbsp; ESC: back to menu
+        PFEILE + STRG: bewegen/schießen &nbsp;|&nbsp; ESC: zurück zum Menü
     </div>
-    <button id="settingsToggler" type="button">⚙ Settings</button>
+    <button id="settingsToggler" type="button">⚙ Einstellungen</button>
     <section id="settingsPanel" class="hide">
-        <h2>Gameplay Settings</h2>
+        <h2>Spieleinstellungen</h2>
         <label>
-            Controls
+            Steuerung
             <select id="settingControls">
-                <option value="keyboard">Keyboard</option>
+                <option value="keyboard">Tastatur</option>
                 <option value="gamepad0">Gamepad #1</option>
                 <option value="gamepad1">Gamepad #2</option>
             </select>
         </label>
         <div class="control-grid">
-            <button type="button" id="settingControlUp">UP: -</button>
-            <button type="button" id="settingControlDown">DOWN: -</button>
-            <button type="button" id="settingControlLeft">LEFT: -</button>
-            <button type="button" id="settingControlRight">RIGHT: -</button>
-            <button type="button" id="settingControlFire">FIRE: -</button>
+            <button type="button" id="settingControlUp">HOCH: -</button>
+            <button type="button" id="settingControlDown">RUNTER: -</button>
+            <button type="button" id="settingControlLeft">LINKS: -</button>
+            <button type="button" id="settingControlRight">RECHTS: -</button>
+            <button type="button" id="settingControlFire">FEUER: -</button>
         </div>
         <label>
-            Visual filter
+            Bildfilter
             <select id="settingVisualFilter">
-                <option value="none">None</option>
-                <option value="scanlines">Scan lines</option>
-                <option value="bwTv">Black and white TV</option>
-                <option value="colorTv">Color TV</option>
-                <option value="greenC64monitor">Green C64 monitor</option>
+                <option value="none">Kein Filter</option>
+                <option value="scanlines">Scanlines</option>
+                <option value="bwTv">Schwarz-Weiß-TV</option>
+                <option value="colorTv">Farb-TV</option>
+                <option value="greenC64monitor">Grüner C64-Monitor</option>
             </select>
         </label>
         <label>
-            Sound
+            Ton
             <select id="settingSound">
-                <option value="on">On</option>
-                <option value="off">Off</option>
+                <option value="on">An</option>
+                <option value="off">Aus</option>
             </select>
         </label>
-        <p class="help">Settings apply immediately during gameplay and are saved for future sessions.</p>
+        <p class="help">Einstellungen wirken sofort im Spiel und werden für künftige Sitzungen gespeichert.</p>
     </section>
 
     <script type="module" src="/frontend/game/multiplayer/client/MultiplayerApp.js"></script>
+
+    <!-- UX-Lane LOBBY: Enter im Raum-Code-Feld löst BEITRETEN aus -->
+    <script>
+        (function () {
+            var codeEl = document.getElementById('pairCode');
+            if (!codeEl) return;
+            codeEl.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                var joinBtn = document.getElementById('btnPairJoin');
+                if (joinBtn) joinBtn.click();
+            });
+        })();
+    </script>
     
     <!-- Auto-start mode from URL parameter -->
     <script>
