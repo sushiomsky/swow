@@ -142,6 +142,7 @@
 }
 .mp-share-buttons .share-btn {
     display: inline-block; padding: 6px 14px;
+    min-height: 44px; line-height: 30px; box-sizing: border-box;
     font-family: 'C64Pro', monospace; font-size: 0.7rem;
     color: #fff; border: 1px solid #555; background: #222;
     cursor: pointer; text-decoration: none; letter-spacing: 0.1em;
@@ -245,9 +246,25 @@ body.match-results-open {
     background: #333 !important;
     font-size: 12px !important;
     padding: 10px 24px !important;
+    min-height: 44px !important;
 }
 .match-btn-menu:hover {
     background: #555 !important;
+}
+.match-btn-watch {
+    display: inline-block;
+    background: #222 !important;
+    border: 1px solid #444 !important;
+    font-size: 12px !important;
+    padding: 10px 24px !important;
+    min-height: 44px !important;
+    line-height: 24px;
+    text-decoration: none !important;
+    box-sizing: border-box;
+}
+.match-btn-watch:hover {
+    background: #333 !important;
+    border-color: #66a !important;
 }
 .match-results-hints {
     margin-top: 12px;
@@ -328,6 +345,7 @@ body.match-results-open {
 .private-join .btn {
     width: auto;
     margin: 0;
+    min-height: 44px;
     padding: 10px 14px;
     font-size: 12px;
 }

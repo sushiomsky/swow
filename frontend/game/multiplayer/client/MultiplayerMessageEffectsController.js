@@ -318,6 +318,7 @@ export class MultiplayerMessageEffectsController {
                 </div>
                 <div class="match-results-actions">
                     <button class="btn match-btn-play-again" id="match-play-again" aria-keyshortcuts="Enter">${playAgainLabel}</button>
+                    <a class="btn match-btn-watch" id="match-watch" href="/spectate.html">👁 ZUSCHAUEN</a>
                     <button class="btn match-btn-menu" id="match-back-menu" aria-keyshortcuts="M Escape">☰ ZUM MENÜ</button>
                 </div>
                 <div class="match-results-hints" id="${hintsId}">${shortcutHints}</div>

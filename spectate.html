@@ -16,7 +16,7 @@
             <a href="/play" class="back-btn">← ZURÜCK ZUR LOBBY</a>
         </div>
         
-        <canvas id="spectator-canvas"></canvas>
+        <canvas id="spectator-canvas" role="img" aria-label="Live-Spielansicht: Zuschauer-Modus. Der Spielstand wird als Text im Dungeon-Info-Bereich beschrieben.">Live-Spielansicht — Ihr Browser unterstützt kein Canvas. Nutzen Sie die Spiel-Browser-Liste unten, um ein Spiel zu wählen.</canvas>
         
         <div id="spectator-overlay" class="overlay">
             <div class="overlay-content">
@@ -28,8 +28,9 @@
         <div id="game-browser" class="hide">
             <h2>LIVE-SPIELE</h2>
             <p class="browser-subtitle">Wähle ein Spiel zum Zuschauen</p>
-            <div id="game-list"></div>
+            <div id="game-list" role="list"></div>
             <p id="no-games" class="hide" style="color:#666; margin-top:20px;">Keine Spiele aktiv. Schau bald wieder rein.</p>
+            <a href="/play" class="game-card game-card-cta" style="margin-top:12px; justify-content:center;"><span class="game-watch">🎮 SELBST SPIELEN →</span></a>
         </div>
     </div>
     
@@ -77,7 +78,7 @@
             ctx.fillStyle = '#fff';
             ctx.font = '20px monospace';
             ctx.textAlign = 'center';
-            ctx.fillText('SPECTATOR MODE', canvas.width / 2, 50);
+            ctx.fillText('ZUSCHAUER-MODUS', canvas.width / 2, 50);
             ctx.font = '14px monospace';
             ctx.fillText(`Dungeon ${dungeonId}`, canvas.width / 2, 80);
             if (state.players) {
@@ -85,18 +86,18 @@
                 // carry no score/lives and inflated the list before.
                 const visible = state.players.filter(p => p && p.id);
                 let y = 120;
-                ctx.fillText(`Players: ${visible.length}`, canvas.width / 2, y);
+                ctx.fillText(`Spieler: ${visible.length}`, canvas.width / 2, y);
                 y += 30;
                 visible.forEach((player, i) => {
-                    ctx.fillText(`P${i + 1}: Score ${player.score || 0} | Lives ${player.lives ?? 3}`, canvas.width / 2, y);
+                    ctx.fillText(`S${i + 1}: Punkte ${player.score || 0} | Leben ${player.lives ?? 3}`, canvas.width / 2, y);
                     y += 25;
                 });
             }
-            if (state.monsters) ctx.fillText(`Monsters: ${state.monsters.length}`, canvas.width / 2, 240);
+            if (state.monsters) ctx.fillText(`Monster: ${state.monsters.length}`, canvas.width / 2, 240);
         }
 
         function connectSpectate() {
-            showMessage('Connecting to game...');
+            showMessage('Verbinde mit Spiel…');
             const ws = new WebSocket(wsUrl);
             window.spectator = { dungeonId, ws, disconnect: () => ws.close() };
             ws.onopen = () => ws.send(JSON.stringify({ type: 'spectate', dungeonId }));
@@ -147,10 +148,11 @@
                     // every player as human.
                     const humans = (g.players || []).filter(p => !p.isBot && !p.is_bot).length;
                     const bots = (g.players || []).filter(p => p.isBot || p.is_bot).length;
+                    const level = g.level ?? 0;
                     return `
-                        <a class="game-card" href="/spectate.html?dungeon=${g.dungeon_id}">
+                        <a class="game-card" role="listitem" href="/spectate.html?dungeon=${g.dungeon_id}">
                             <span class="game-mode" style="color:${color}">${(g.mode || '').toUpperCase()}</span>
-                            <span class="game-level">Level ${g.level || 0}</span>
+                            <span class="game-level">Level ${level}</span>
                             <span class="game-players">${humans}👤 ${bots}🤖</span>
                             <span class="game-watch">ZUSCHAUEN →</span>
                         </a>`;
