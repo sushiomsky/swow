@@ -12,6 +12,8 @@ const T = {
     title: 'Wizard of Wor Community',
     intro: 'Spiele im klassischen Dungeon-Stil und baue dein Profil aus: Saison-Ranglisten, Clan-Wettkämpfe, tägliche Ziele und Echtzeit-Chat.',
     play: 'Jetzt spielen',
+    spectate: 'Zuschauen',
+    authCta: 'Konto erstellen und Fortschritt sichern →',
     boards: 'Bestenlisten ansehen',
     forum: 'Forum besuchen'
   },
@@ -20,6 +22,8 @@ const T = {
     title: 'Wizard of Wor Community',
     intro: 'Play classic-style dungeon action and grow your profile: season rankings, clan competitions, daily goals and realtime chat.',
     play: 'Play now',
+    spectate: 'Spectate',
+    authCta: 'Create an account and save progress →',
     boards: 'View leaderboards',
     forum: 'Visit forum'
   }
@@ -40,11 +44,15 @@ export default function CommunityLandingClient() {
         <p className="mt-4 max-w-2xl text-zinc-300">
           {t.intro}
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-5 py-3 text-sm font-semibold">{t.play}</a>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-6 py-3 text-base font-bold">{t.play}</a>
+          <a href={GAME_URLS.spectate} className="text-sm font-medium text-indigo-300 hover:text-indigo-200 hover:underline">{t.spectate} →</a>
           <Link href="/community/leaderboards" className="rounded border border-zinc-600 px-5 py-3 text-sm font-semibold">{t.boards}</Link>
           <Link href="/community/forum" className="rounded border border-zinc-600 px-5 py-3 text-sm font-semibold">{t.forum}</Link>
         </div>
+        <p className="mt-4 text-xs text-zinc-400">
+          <Link href="/" className="font-semibold text-indigo-300 hover:text-indigo-200 hover:underline">{t.authCta}</Link>
+        </p>
       </section>
 
       <FeatureGrid />

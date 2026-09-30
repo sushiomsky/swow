@@ -22,26 +22,36 @@ async function run() {
     failures.push(`/: expected 200, got ${home.status}`);
   } else {
     checks.push('home-status');
-    if (countOccurrences(home.body, 'class="card') < 6) {
+    if (countOccurrences(home.body, 'class=\\"card') < 6 && countOccurrences(home.body, 'class="card') < 6) {
       failures.push('/: expected at least 6 card surfaces for visual consistency');
     }
     checks.push('home-card-density');
-    if (!home.body.includes('class="hero')) {
+    if (!home.body.includes('class=\\"hero') && !home.body.includes('class="hero')) {
       failures.push('/: missing hero visual section');
     }
     checks.push('home-hero');
   }
 
-  const features = await get('/community/features');
-  if (features.status !== 200) {
-    failures.push(`/community/features: expected 200, got ${features.status}`);
+  // /community/features ist ein 307-Redirect-Alias auf /community
+  // (keine eigene Feature-Seite — FeatureGrid lebt auf /community).
+  // Next.js sendet bei redirect() keinen Location-Header an fetch
+  // (RSC/Cache-Verhalten), daher nur Status prüfen.
+  const featuresRedirect = await fetch(`${BASE}/community/features`, { redirect: 'manual' });
+  if (featuresRedirect.status !== 307 && featuresRedirect.status !== 308) {
+    failures.push(`/community/features: expected 307 redirect to /community, got ${featuresRedirect.status}`);
+  }
+  checks.push('features-redirect');
+
+  const community = await get('/community');
+  if (community.status !== 200) {
+    failures.push(`/community: expected 200, got ${community.status}`);
   } else {
-    checks.push('features-status');
-    const cardCount = countOccurrences(features.body, 'class="card');
+    checks.push('community-status');
+    const cardCount = countOccurrences(community.body, 'class=\\"card') + countOccurrences(community.body, 'class="card');
     if (cardCount < 6) {
-      failures.push('/community/features: expected at least 6 feature cards');
+      failures.push('/community: expected at least 6 feature cards');
     }
-    checks.push('features-cards');
+    checks.push('community-cards');
   }
 
   const forum = await get('/community/forum');

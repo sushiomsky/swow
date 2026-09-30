@@ -13,6 +13,9 @@ const T = {
     title: 'Wizard of Wor Platform',
     intro: 'Gameplay, Profile, Bestenlisten, Clans, Forum, Herausforderungen und Echtzeit-Chat — alles an einem Ort.',
     play: 'Jetzt spielen',
+    spectate: 'Zuschauen',
+    authHint: 'Neu hier?',
+    authCta: 'Kostenlos registrieren',
     leaderboards: 'Bestenlisten',
     community: 'Community',
     links: [
@@ -28,6 +31,9 @@ const T = {
     title: 'Wizard of Wor Platform',
     intro: 'Gameplay, profiles, leaderboards, clans, forum, challenges and realtime chat — all in one place.',
     play: 'Play now',
+    spectate: 'Spectate',
+    authHint: 'New here?',
+    authCta: 'Register for free',
     leaderboards: 'Leaderboards',
     community: 'Community',
     links: [
@@ -57,10 +63,15 @@ export default function HomePage() {
         <p className="mt-3 max-w-2xl text-zinc-300">
           {t.intro}
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">{t.play}</a>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <a href={GAME_URLS.multiplayer} className="rounded bg-indigo-600 px-6 py-3 text-base font-bold text-white hover:bg-indigo-500">{t.play}</a>
+          <a href={GAME_URLS.spectate} className="text-sm font-medium text-indigo-300 hover:text-indigo-200 hover:underline">{t.spectate} →</a>
           <Link href="/community/leaderboards" className="rounded border border-zinc-600 px-5 py-2.5 text-sm font-semibold hover:bg-zinc-800">{t.leaderboards}</Link>
         </div>
+        <p className="mt-4 text-xs text-zinc-400">
+          {t.authHint}{' '}
+          <a href="#konto" className="font-semibold text-indigo-300 hover:text-indigo-200 hover:underline">{t.authCta}</a>
+        </p>
       </section>
 
       {/* Live Games — prominent */}
@@ -80,7 +91,7 @@ export default function HomePage() {
       </section>
 
       {/* Anmeldung + Globaler Chat */}
-      <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
+      <section id="konto" className="grid scroll-mt-24 gap-4 lg:grid-cols-[360px_1fr]">
         <AuthPanel />
         <div className="card">
           <h2 className="mb-3 text-lg font-semibold">{t.chat}</h2>

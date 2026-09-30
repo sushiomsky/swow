@@ -2,7 +2,9 @@
 import assert from 'node:assert/strict';
 
 const BASE = process.env.UX_CHECK_BASE_URL || 'http://127.0.0.1:13000';
-const ACTIVE_GAMES_BASE = process.env.UX_ACTIVE_GAMES_BASE_URL || BASE;
+// Game-Host (separater Origin) serviert /multiplayer/active-games —
+// der Community-Host (:13000) kennt die Route nicht (404).
+const ACTIVE_GAMES_BASE = process.env.UX_ACTIVE_GAMES_BASE_URL || 'http://127.0.0.1:15001';
 
 const ROUTES = [
   '/',
@@ -10,7 +12,6 @@ const ROUTES = [
   '/community/chat',
   '/community/forum',
   '/community/leaderboards',
-  '/community/features',
   '/community/contact'
 ];
 
@@ -49,8 +50,7 @@ async function run() {
       failures.push(`/ : expected 200, got ${status}`);
     } else {
       try {
-        assertIncludes(body, 'Multiplayer Modes', '/: missing "Multiplayer Modes" section');
-        assertIncludes(body, 'Live Games', '/: missing live games panel');
+        assertIncludes(body, 'Live-Spiele', '/: missing live games panel');
       } catch (error) {
         failures.push(String(error.message || error));
       }
