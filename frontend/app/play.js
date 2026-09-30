@@ -358,6 +358,7 @@ function buildMPPostMatchOverlay(detail) {
     html += '</div>';
     html += '<div class="go-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center;">';
     html += '<button class="go-replay-btn" id="go-mp-newroom">⚔ NEUER RAUM</button>';
+    html += '<a class="go-share-btn" id="go-mp-watch" href="/spectate.html" style="padding:8px 20px; text-decoration:none;">👁 ZUSCHAUEN</a>';
     html += '<button class="go-share-btn" id="go-mp-back" style="padding:8px 20px;">◀ ZURÜCK ZUM MENÜ</button>';
     html += '</div>';
     html += '</div>';

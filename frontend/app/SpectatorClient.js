@@ -54,7 +54,7 @@ export class SpectatorClient {
     
     connect() {
         console.log('[SpectatorClient] Connecting to dungeon:', this.dungeonId);
-        this.showMessage('Connecting to game...');
+        this.showMessage('Verbinde mit Spiel…');
         
         // Determine WebSocket URL
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -91,7 +91,7 @@ export class SpectatorClient {
                     break;
                     
                 case 'spectate_error':
-                    this.showError(msg.message || 'Failed to spectate game');
+                    this.showError(msg.message || 'Zuschauen fehlgeschlagen');
                     break;
                     
                 default:
@@ -120,7 +120,7 @@ export class SpectatorClient {
     onClose() {
         console.log('[SpectatorClient] Disconnected');
         this.connected = false;
-        this.showMessage('Disconnected. Reconnecting...');
+        this.showMessage('Getrennt. Verbinde erneut…');
         
         // Attempt reconnection after 3 seconds
         setTimeout(() => this.connect(), 3000);
@@ -128,7 +128,7 @@ export class SpectatorClient {
     
     onError(error) {
         console.error('[SpectatorClient] WebSocket error:', error);
-        this.showError('Connection error. Retrying...');
+        this.showError('Verbindungsfehler. Versuche erneut…');
     }
     
     updateInfo() {
