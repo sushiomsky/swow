@@ -148,11 +148,12 @@
                     // every player as human.
                     const humans = (g.players || []).filter(p => !p.isBot && !p.is_bot).length;
                     const bots = (g.players || []).filter(p => p.isBot || p.is_bot).length;
-                    const level = g.level ?? 0;
+                    // active-games liefert kein level — Dungeon-Nr. als Orientierung.
+                    const dungeonNo = g.dungeon_id ?? '?';
                     return `
                         <a class="game-card" role="listitem" href="/spectate.html?dungeon=${g.dungeon_id}">
                             <span class="game-mode" style="color:${color}">${(g.mode || '').toUpperCase()}</span>
-                            <span class="game-level">Level ${level}</span>
+                            <span class="game-level">Dungeon ${dungeonNo}</span>
                             <span class="game-players">${humans}👤 ${bots}🤖</span>
                             <span class="game-watch">ZUSCHAUEN →</span>
                         </a>`;
