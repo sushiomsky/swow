@@ -40,6 +40,9 @@
 .btn {
     margin: 10px;
     padding: 14px 32px;
+    min-height: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
     font-family: inherit;
     font-size: 16px;
     font-weight: bold;
@@ -237,6 +240,7 @@ body.match-results-open {
     background: #1f8f1f !important;
     font-size: 18px !important;
     padding: 16px 48px !important;
+    min-height: 44px !important;
     letter-spacing: 3px !important;
 }
 .match-btn-play-again:hover {
@@ -332,6 +336,7 @@ body.match-results-open {
 }
 .code-input {
     flex: 1;
+    min-height: 44px;
     padding: 10px 8px;
     font-family: inherit;
     font-size: 13px;
@@ -363,6 +368,45 @@ body.match-results-open {
 }
 .lobby-footer a:hover {
     color: #9b8dd5;
+}
+
+/* ─── Settings-Panel: 44px Touch-Reihe ────────────────────────────────────
+   Das Panel hatte keinerlei CSS — Selects/Buttons waren Browser-Default
+   (~20-30px). Labels als Block-Reihen, alle Controls min. 44px hoch. */
+#settingsToggler {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 18px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+#settingsPanel label {
+    display: block;
+    margin: 10px 0;
+}
+#settingsPanel select {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    margin-top: 6px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 14px;
+}
+#settingsPanel .control-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+#settingsPanel .control-grid button {
+    flex: 1 1 140px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    cursor: pointer;
 }
 
 /* ─── Mobile Responsiveness ───────────────────────────────────────────────── */

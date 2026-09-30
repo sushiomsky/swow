@@ -815,7 +815,8 @@ html, body {
 
 .game-btn {
     flex: 1;
-    min-height: 40px;
+    min-height: 44px;
+    min-width: 44px;
     padding: 8px 12px;
     font-family: 'WizardOfWor', monospace;
     font-size: 11px;
@@ -1047,8 +1048,10 @@ html, body {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 28px;
-    height: 28px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     background: #224;
     border: 1px solid #446;
     border-radius: 50%;

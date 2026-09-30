@@ -140,7 +140,7 @@ body {
 #game-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     width: 90%;
     max-width: 500px;
 }
@@ -148,7 +148,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 44px;
+    gap: 12px;
+    min-height: 56px;
+    box-sizing: border-box;
     padding: 14px 18px;
     background: #111;
     border: 1px solid #333;
