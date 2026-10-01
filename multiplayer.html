@@ -109,6 +109,7 @@
     </div>
     <div id="controls-hint">
         PFEILE + STRG: bewegen/schießen &nbsp;|&nbsp; ESC: zurück zum Menü
+        <span class="controls-hint-touch"> · 📱 Touch: D-Pad + FEUER</span>
     </div>
     <button id="settingsToggler" type="button">⚙ Einstellungen</button>
     <section id="settingsPanel" class="hide">
@@ -117,6 +118,7 @@
             Steuerung
             <select id="settingControls">
                 <option value="keyboard">Tastatur</option>
+                <option value="touch">📱 Touch (D-Pad + Feuer)</option>
                 <option value="gamepad0">Gamepad #1</option>
                 <option value="gamepad1">Gamepad #2</option>
             </select>
@@ -128,6 +130,10 @@
             <button type="button" id="settingControlRight">RECHTS: -</button>
             <button type="button" id="settingControlFire">FEUER: -</button>
         </div>
+        <label class="touch-toggle">
+            <input type="checkbox" id="settingTouch" checked>
+            📱 Touch-Steuerung (D-Pad + Feuer)
+        </label>
         <label>
             Bildfilter
             <select id="settingVisualFilter">

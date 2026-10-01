@@ -1,0 +1,124 @@
+/* touch-controls.css — virtual D-Pad + fire button overlay (mobile).
+   Mounted by TouchControls.js only on coarse-pointer/touch devices.
+   Fixed above the canvas, thumb-reachable, safe-area aware. */
+
+#swow-touch-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2200;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    pointer-events: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'C64ProRegular', ui-monospace, monospace;
+}
+#swow-touch-controls.hide { display: none; }
+
+/* D-Pad: 3x3 grid, center cell empty */
+.swow-touch-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 4px;
+    pointer-events: none;
+}
+.swow-touch-up { grid-column: 2; grid-row: 1; }
+.swow-touch-left { grid-column: 1; grid-row: 2; }
+.swow-touch-right { grid-column: 3; grid-row: 2; }
+.swow-touch-down { grid-column: 2; grid-row: 3; }
+
+.swow-touch-btn {
+    pointer-events: auto;
+    touch-action: none;
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    border: 2px solid rgba(223, 246, 10, 0.55);
+    background: rgba(20, 20, 10, 0.55);
+    color: #dff60a;
+    font-size: 24px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(2px);
+    opacity: 0.85;
+}
+.swow-touch-btn.active,
+.swow-touch-btn:active {
+    background: rgba(223, 246, 10, 0.35);
+    opacity: 1;
+}
+
+/* Fire: big round button, right thumb */
+.swow-touch-fire {
+    pointer-events: auto;
+    touch-action: none;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 80, 80, 0.7);
+    background: rgba(60, 10, 10, 0.55);
+    color: #ff6b6b;
+    font-size: 30px;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+    margin-right: calc(env(safe-area-inset-right, 0px));
+    opacity: 0.9;
+}
+.swow-touch-fire.active,
+.swow-touch-fire:active {
+    background: rgba(255, 80, 80, 0.4);
+    opacity: 1;
+}
+.swow-touch-fire-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+/* Small phones (portrait): shrink so the dungeon stays visible */
+@media (max-width: 480px) {
+    .swow-touch-pad {
+        grid-template-columns: repeat(3, 54px);
+        grid-template-rows: repeat(3, 54px);
+    }
+    .swow-touch-btn { width: 54px; height: 54px; font-size: 20px; }
+    .swow-touch-fire { width: 84px; height: 84px; }
+}
+
+/* Landscape phones: overlay floats over the letterboxed sides — keep it
+   compact so it never covers the playfield center. */
+@media (max-height: 480px) and (orientation: landscape) {
+    #swow-touch-controls { padding-bottom: 8px; }
+    .swow-touch-pad {
+        grid-template-columns: repeat(3, 48px);
+        grid-template-rows: repeat(3, 48px);
+    }
+    .swow-touch-btn { width: 48px; height: 48px; font-size: 18px; }
+    .swow-touch-fire { width: 76px; height: 76px; margin-bottom: 0; }
+}
+
+/* When touch controls are visible, lift the game canvas a bit so the
+   dungeon isn't hidden behind the thumbs (SP + MP share #body/#border). */
+body.swow-touch-visible #body {
+    padding-bottom: 130px;
+    box-sizing: border-box;
+}
+@media (max-height: 480px) and (orientation: landscape) {
+    body.swow-touch-visible #body { padding-bottom: 60px; }
+}
+
+/* Respect reduced motion: no translucency animation side effects here,
+   just keep buttons static (they already are — no keyframes defined). */
+@media (prefers-reduced-motion: reduce) {
+    .swow-touch-btn { backdrop-filter: none; }
+}

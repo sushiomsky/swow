@@ -104,9 +104,9 @@ a { text-decoration: none; }
     border: 0;
 }
 
-/* Polish (Mobile-Hinweis): Banner "Desktop empfohlen" — nur sichtbar, wenn
-   kein Touch vorhanden ist (kein Full-Touch-Umbau). Eingeblendet per
-   .swow-desktop-hint-Element + matchMedia('(pointer: coarse)')-Skript. */
+/* Touch-Overlay aktiv: kurzer Hinweis statt "Desktop empfohlen".
+   Das alte Desktop-Banner wird nicht mehr per Skript eingeblendet —
+   auf Touch-Geräten erscheint das D-Pad + Feuer-Overlay. */
 .swow-desktop-hint {
     display: none;
     position: fixed;

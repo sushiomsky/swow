@@ -35,6 +35,12 @@ import {
     writeControlBinding,
     getDeviceValue,
 } from '../../shared/input/SharedControls.js';
+import {
+    mountTouchControls,
+    unmountTouchControls,
+    setTouchControlsEnabled,
+    isTouchControlsEnabled,
+} from '../../shared/input/TouchControls.js';
 
 const MULTIPLAYER_CONTROL_STORAGE_KEY = 'multiplayerControlBinding';
 
@@ -137,6 +143,11 @@ class MultiplayerApp {
         this.inputController.attach();
         document.getElementById('settingsToggler')?.addEventListener('click', () => this._toggleSettings());
         this._initSettingsPanel();
+        // Touch overlay (D-Pad + fire): inputController.getControls() polls
+        // the same runtime every 20ms for the WS input payload — touch holds
+        // ride along with zero protocol changes.
+        this._ensureTouchCss();
+        mountTouchControls(this.controlsRuntime);
     }
 
     _toggleSettings(visible) {
@@ -171,9 +182,26 @@ class MultiplayerApp {
         if (controlsSelect) {
             controlsSelect.value = this.options.controlDevice || 'keyboard';
             controlsSelect.addEventListener('change', () => {
+                // 📱 Touch ist kein Binding-Gerät — das Overlay läuft parallel
+                // zu Tastatur/Gamepad und wird hier nur ein-/ausgeschaltet.
+                if (controlsSelect.value === 'touch') {
+                    setTouchControlsEnabled(true);
+                    mountTouchControls(this.controlsRuntime);
+                    controlsSelect.value = this.options.controlDevice || 'keyboard';
+                    return;
+                }
                 this.options.controlDevice = controlsSelect.value;
                 this.options.controlBinding = createKeyboardBinding('arrows');
                 writeControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, this.options.controlBinding);
+            });
+        }
+        // Touch an/aus direkt aus dem Panel (falls Option vorhanden).
+        const touchToggle = document.getElementById('settingTouch');
+        if (touchToggle) {
+            touchToggle.checked = isTouchControlsEnabled();
+            touchToggle.addEventListener('change', () => {
+                const on = setTouchControlsEnabled(touchToggle.checked);
+                if (on) mountTouchControls(this.controlsRuntime);
             });
         }
     }
@@ -212,11 +240,21 @@ class MultiplayerApp {
     }
 
     destroy() {
+        unmountTouchControls(this.controlsRuntime);
         if (this.socketClient) this.socketClient.disconnect();
         if (this.bootstrapController) this.bootstrapController.stopRenderLoop();
         if (this.controlsRuntime) this.controlsRuntime.detach();
         if (this.audio) this.audio.stopAll();
         this.lastState = null;
+    }
+
+    _ensureTouchCss() {
+        if (document.querySelector('link[data-swow-touch-css]')) return;
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/frontend/styles/touch-controls.css';
+        link.setAttribute('data-swow-touch-css', '1');
+        document.head.appendChild(link);
     }
 }
 
