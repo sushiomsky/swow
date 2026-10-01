@@ -22,21 +22,11 @@
     <link rel="preload" href="/frontend/app/play.css" as="style">
 </head>
 <body>
-    <!-- Mobile-Hinweis (kein Touch-Umbau): Banner "Desktop empfohlen",
-         eingeblendet auf Touch-/Coarse-Pointer-Geräten (keine Tastatur). -->
-    <div id="swow-desktop-hint" class="swow-desktop-hint" role="note">🖥️ Desktop empfohlen — dieses Spiel braucht eine Tastatur.</div>
-    <script>
-        (function () {
-            try {
-                var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-                var hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-                if (coarse || hasTouch) {
-                    var el = document.getElementById('swow-desktop-hint');
-                    if (el) el.classList.add('show');
-                }
-            } catch (e) { /* Hinweis optional — nie blockieren */ }
-        })();
-    </script>
+    <!-- Touch-Steuerung: Auf Touch-Geräten erscheint im Spiel das D-Pad +
+         Feuer-Overlay (TouchControls.js). Der Hinweis bleibt als Fallback
+         für No-JS/No-Touch-Sonderfälle im DOM, wird aber nicht mehr per
+         Skript eingeblendet. -->
+    <div id="swow-desktop-hint" class="swow-desktop-hint" role="note">📱 Touch-Steuerung aktiv — D-Pad links, Feuer rechts.</div>
     <!-- Live game background (spectator view) -->
     <canvas id="background-game-canvas"></canvas>
 

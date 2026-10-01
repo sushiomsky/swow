@@ -12,6 +12,13 @@ import {
     toLegacyControlValue,
     writeControlBinding,
 } from '../shared/input/SharedControls.js';
+import {
+    mountTouchControls,
+    unmountTouchControls,
+    setTouchControlsEnabled,
+    isTouchControlsEnabled,
+    shouldShowTouchControls,
+} from '../shared/input/TouchControls.js';
 
 const YELLOW_CONTROL_STORAGE_KEY = 'yellowControlBinding';
 const BLUE_CONTROL_STORAGE_KEY = 'blueControlBinding';
@@ -111,6 +118,11 @@ class App {
         };
         this.controlsRuntime.shouldPreventDefault = () => !this.enableKeys;
         this.controlsRuntime.attach();
+        // Touch overlay (D-Pad + fire) on coarse-pointer devices. Action-level
+        // holds flow through SharedControlsRuntime — SP polls them via
+        // getControls() in the scan loop, so no engine changes needed.
+        this._ensureTouchCss();
+        mountTouchControls(this.controlsRuntime);
     }
 
     initEngine() {
@@ -182,9 +194,30 @@ class App {
             window.removeEventListener("resize", this._resizeHandler);
             this._resizeHandler = null;
         }
+        unmountTouchControls(this.controlsRuntime);
         this.controlsRuntime.detach();
         if (this.audio) this.audio.stopAllSound();
         if (this.engine) this.engine.resetGame();
+    }
+
+    // Touch overlay CSS (loaded once; standalone index.html has no loader —
+    // play.js/platform hosts load their own copy, _ensureTouchCss dedupes).
+    _ensureTouchCss() {
+        if (document.querySelector('link[data-swow-touch-css]')) return;
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/frontend/styles/touch-controls.css';
+        link.setAttribute('data-swow-touch-css', '1');
+        document.head.appendChild(link);
+    }
+
+    isTouchMode() {
+        return shouldShowTouchControls();
+    }
+
+    setTouchControlsEnabled(enabled) {
+        setTouchControlsEnabled(enabled);
+        return isTouchControlsEnabled();
     }
 
     changeGameSpriteColors(palette) {

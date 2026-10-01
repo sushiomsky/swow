@@ -265,6 +265,10 @@ export class SharedControlsRuntime {
 
         this.pressedKeys = {};
         this.heldGamepadInputs = new Set();
+        // Touch overlay state (virtual D-Pad + fire, see TouchControls.js).
+        // Action-level (not key-level): binding-agnostic, works with any
+        // keyboard layout. Cleared on blur like everything else.
+        this.touchHeld = { up: false, down: false, left: false, right: false, fire: false };
         this.capture = null;
         this.captureRafId = null;
 
@@ -291,6 +295,7 @@ export class SharedControlsRuntime {
         this._boundKeyDown = null;
         this._boundKeyUp = null;
         this._boundBlur = null;
+        this.clearTouchHolds();
         this.cancelCapture();
     }
 
@@ -301,6 +306,19 @@ export class SharedControlsRuntime {
             controls[action] = this._isActionPressed(normalized, action);
         }
         return controls;
+    }
+
+    // ─── Touch overlay API ──────────────────────────────────────────
+    // Virtual D-Pad + fire button write here (TouchControls.js calls these).
+    // _isActionPressed ORs touch into every binding, so touch works with
+    // any keyboard layout without remapping.
+    setTouchHold(action, held = true) {
+        if (!CONTROL_ACTIONS.includes(action)) return;
+        this.touchHeld[action] = !!held;
+    }
+
+    clearTouchHolds() {
+        for (const action of CONTROL_ACTIONS) this.touchHeld[action] = false;
     }
 
     setHold(binding, actionOrKeyCode) {
@@ -413,11 +431,13 @@ export class SharedControlsRuntime {
             if (!Number.isNaN(numericCode)) this.pressedKeys[numericCode] = false;
         }
         this.heldGamepadInputs.clear();
+        this.clearTouchHolds();
         this.cancelCapture();
         if (typeof this.onBlur === 'function') this.onBlur();
     }
 
     _isActionPressed(binding, action) {
+        if (this.touchHeld && this.touchHeld[action]) return true;
         const mapping = binding.actions[action];
         if (!mapping) return false;
         if (binding.device === 'keyboard') {

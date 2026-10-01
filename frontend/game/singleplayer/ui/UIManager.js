@@ -1,4 +1,11 @@
-import { x, q, F } from '../../shared/utils.js';
+import { x, q, F, z } from '../../shared/utils.js';
+import {
+    mountTouchControls,
+    unmountTouchControls,
+    setTouchControlsEnabled,
+    isTouchControlsEnabled,
+    shouldShowTouchControls,
+} from '../shared/input/TouchControls.js';
 import {
     createKeyboardBinding,
     getDeviceValue,
@@ -77,6 +84,7 @@ export class UIManager {
         });
 
         this.initControlConfigurators();
+        this.initTouchToggle();
         this.initSoundBadge();
     }
 
@@ -250,5 +258,27 @@ export class UIManager {
         const value = getDeviceValue(binding);
         const el = q(`${containerId} > div[data-value="${value}"]`);
         if (el) el.classList.add('active');
+    }
+
+    // Touch toggle inside the SP slide-out menu ("Yellow/Blue warrior
+    // control" sections). Touch runs parallel to keyboard/gamepad — this
+    // only shows/hides the overlay, never touches bindings.
+    initTouchToggle() {
+        if (document.getElementById('touchToggleRow')) return;
+        if (!shouldShowTouchControls()) return;
+        const menu = q('menu');
+        if (!menu) return;
+        const row = document.createElement('div');
+        row.className = 'l1 nosubmenu';
+        row.id = 'touchToggleRow';
+        row.innerHTML = `📱 Touch-Steuerung <span id="touchToggleState">${isTouchControlsEnabled() ? 'AN' : 'AUS'}</span>`;
+        row.onclick = () => {
+            const on = setTouchControlsEnabled(!isTouchControlsEnabled());
+            if (on) mountTouchControls(this.controlsRuntime);
+            else unmountTouchControls(this.controlsRuntime);
+            const state = document.getElementById('touchToggleState');
+            if (state) state.textContent = on ? 'AN' : 'AUS';
+        };
+        menu.appendChild(row);
     }
 }

@@ -170,7 +170,7 @@ function createMPDOM() {
         <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
-        <div id="controls-hint">PFEILE + STRG zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück</div>
+        <div id="controls-hint">PFEILE + STRG zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück <span class="controls-hint-touch">· 📱 Touch: D-Pad + FEUER</span></div>
     `;
     return root;
 }
@@ -183,6 +183,19 @@ function loadCSS(href) {
     document.head.appendChild(link);
     return link;
 }
+
+// Touch overlay CSS (deduped via data-attr — SP/MP-Apps rufen ihren eigenen
+// _ensureTouchCss auf, play.js lädt es für den play.html-Host vorab, damit
+// kein FOUC beim ersten Mount entsteht).
+function loadTouchCSS() {
+    if (document.querySelector('link[data-swow-touch-css]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/frontend/styles/touch-controls.css';
+    link.setAttribute('data-swow-touch-css', '1');
+    document.head.appendChild(link);
+}
+loadTouchCSS();
 
 // ─── Game event handlers (persistent while SP is alive) ───────────
 function registerHandlers() {
@@ -333,6 +346,14 @@ function buildGameOverOverlay(detail) {
         }
         void startGame(1);
     });
+    // Touch: Feuer-Tap auf dem Overlay startet neu (der Game-Over-Scan
+    // akzeptiert den Touch-Fire-Hold als getControls(0).fire — aber das
+    // Overlay fängt Pointer-Events ab, daher explizit verdrahten).
+    el.addEventListener('pointerdown', (ev) => {
+        if (ev.target.closest('button, a')) return;
+        if (window.engine) void window.engine.startNewGame(1);
+        else void startGame(1);
+    }, { once: true });
 }
 
 // ─── Build MP post-match overlay ──────────────────────────────────

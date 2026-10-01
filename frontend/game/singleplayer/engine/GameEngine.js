@@ -52,12 +52,15 @@ export class GameEngine {
         // the scan loop saw it and now marks it consumed (`true`) so a later
         // keyup can clear it while a physical hold stays visible via repeat
         // keydown events. Plain `false` would leave a stale 'hold' that
-        // re-triggers on the next scan (e.g. instant game-over restart).
+        // re-triggers on the next scan (e.g. instant game over restart).
         for (const key of Object.keys(rt.pressedKeys)) {
             if (rt.pressedKeys[key] === 'hold') rt.pressedKeys[key] = !0;
             else rt.pressedKeys[key] = !1;
         }
         rt.heldGamepadInputs && rt.heldGamepadInputs.clear && rt.heldGamepadInputs.clear();
+        // Touch holds are physical holds (finger still down), NOT latched
+        // taps — never clear them as a side effect. unmountTouchControls()
+        // and detach()/blur clear them explicitly on real exit/hide.
     }
 
     resetGame() {
