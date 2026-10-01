@@ -35,7 +35,7 @@ const ARIA = {
     fire: 'Feuer',
 };
 
-function isTouchDevice() {
+function hasTouchCapability() {
     try {
         if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
         if ('ontouchstart' in window) return true;
@@ -44,8 +44,41 @@ function isTouchDevice() {
     return false;
 }
 
+// Primär-Touch (Handy/Tablet): grober Zeiger als HAUPT-Eingabe, also kein
+// präziser Mauszeiger daneben. Hybrid-Laptops (coarse + fine) fallen raus —
+// dort wäre das Overlay falsch, weil Tastatur/Maus vorhanden sind.
+function isPrimaryTouchDevice() {
+    try {
+        const mq = window.matchMedia;
+        if (mq) {
+            const coarse = mq('(pointer: coarse)').matches;
+            const fine = mq('(pointer: fine)').matches;
+            if (coarse && !fine) return true;
+            // Ältere Browser ohne fine-Abfrage: auf kleine Screens + Touch
+            // eingrenzen (Handy-Portrait/Landscape), kein Desktop-Fenster.
+            if (coarse && !mq('(pointer: fine)').media.includes('fine')) {
+                return hasTouchCapability() && Math.min(screen.width, screen.height) <= 1024;
+            }
+            return false;
+        }
+    } catch (_) { /* fall through */ }
+    return hasTouchCapability() && Math.min(screen.width || 9999, screen.height || 9999) <= 1024;
+}
+
 export function shouldShowTouchControls() {
-    return isTouchDevice();
+    // Opt-in-Logik: automatisch NUR auf primären Touch-Geräten (mobil).
+    // Überall sonst (Desktop, Hybrid-Laptop) nur wenn der User es in den
+    // Einstellungen explizit eingeschaltet hat (swowTouchControls = 'on').
+    if (isPrimaryTouchDevice()) return readEnabled() !== false;
+    try {
+        return localStorage.getItem(STORAGE_KEY) === 'on';
+    } catch (_) {
+        return false;
+    }
+}
+
+export function isTouchDeviceAvailable() {
+    return hasTouchCapability();
 }
 
 function readEnabled() {
@@ -153,16 +186,21 @@ function buildOverlay(runtime) {
 }
 
 /**
- * Mount the touch overlay (no-op if already mounted or not a touch device).
+ * Mount the touch overlay.
+ * - Auf primären Touch-Geräten (mobil): automatisch (außer explizit aus).
+ * - Überall sonst: nur nach explizitem Opt-in — mountTouchControls(runtime,
+ *   { force: true }) aus dem Settings-Toggle. Reine Auto-Mounts ohne force
+ *   bleiben dort No-op.
  * Returns the overlay element or null.
  */
-export function mountTouchControls(runtime) {
+export function mountTouchControls(runtime, options = {}) {
     if (!runtime) return null;
     if (document.getElementById(OVERLAY_ID)) return document.getElementById(OVERLAY_ID);
-    if (!shouldShowTouchControls()) return null;
+    const forced = options && options.force === true;
+    if (!forced && !shouldShowTouchControls()) return null;
     const overlay = buildOverlay(runtime);
     document.body.appendChild(overlay);
-    if (readEnabled()) document.body.classList.add(BODY_CLASS);
+    if (readEnabled() || forced) document.body.classList.add(BODY_CLASS);
     return overlay;
 }
 

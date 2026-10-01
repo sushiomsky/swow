@@ -18,6 +18,7 @@ import {
     setTouchControlsEnabled,
     isTouchControlsEnabled,
     shouldShowTouchControls,
+    isTouchDeviceAvailable,
 } from '../shared/input/TouchControls.js';
 
 const YELLOW_CONTROL_STORAGE_KEY = 'yellowControlBinding';
@@ -118,9 +119,10 @@ class App {
         };
         this.controlsRuntime.shouldPreventDefault = () => !this.enableKeys;
         this.controlsRuntime.attach();
-        // Touch overlay (D-Pad + fire) on coarse-pointer devices. Action-level
-        // holds flow through SharedControlsRuntime — SP polls them via
-        // getControls() in the scan loop, so no engine changes needed.
+        // Touch overlay (D-Pad + fire): auto NUR auf primären Touch-Geräten
+        // (mobil). Auf Desktop/Hybrid kein Overlay — außer explizites Opt-in
+        // über shouldShowTouchControls(). Holds laufen action-level durch
+        // SharedControlsRuntime (Scan-Loop pollt via getControls()).
         this._ensureTouchCss();
         mountTouchControls(this.controlsRuntime);
     }
@@ -213,6 +215,10 @@ class App {
 
     isTouchMode() {
         return shouldShowTouchControls();
+    }
+
+    isTouchAvailable() {
+        return isTouchDeviceAvailable();
     }
 
     setTouchControlsEnabled(enabled) {
