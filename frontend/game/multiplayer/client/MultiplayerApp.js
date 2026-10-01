@@ -40,6 +40,7 @@ import {
     unmountTouchControls,
     setTouchControlsEnabled,
     isTouchControlsEnabled,
+    isTouchDeviceAvailable,
 } from '../../shared/input/TouchControls.js';
 
 const MULTIPLAYER_CONTROL_STORAGE_KEY = 'multiplayerControlBinding';
@@ -143,9 +144,9 @@ class MultiplayerApp {
         this.inputController.attach();
         document.getElementById('settingsToggler')?.addEventListener('click', () => this._toggleSettings());
         this._initSettingsPanel();
-        // Touch overlay (D-Pad + fire): inputController.getControls() polls
-        // the same runtime every 20ms for the WS input payload — touch holds
-        // ride along with zero protocol changes.
+        // Touch overlay (D-Pad + fire): auto NUR auf primären Touch-Geräten
+        // (mobil). Input-Payload läuft über dieselbe Runtime alle 20ms per
+        // WS — touch holds brauchen keine Protokoll-Änderung.
         this._ensureTouchCss();
         mountTouchControls(this.controlsRuntime);
     }
@@ -184,9 +185,10 @@ class MultiplayerApp {
             controlsSelect.addEventListener('change', () => {
                 // 📱 Touch ist kein Binding-Gerät — das Overlay läuft parallel
                 // zu Tastatur/Gamepad und wird hier nur ein-/ausgeschaltet.
+                // Auf Geräten ohne Touch steht die Option nicht zur Wahl.
                 if (controlsSelect.value === 'touch') {
                     setTouchControlsEnabled(true);
-                    mountTouchControls(this.controlsRuntime);
+                    mountTouchControls(this.controlsRuntime, { force: true });
                     controlsSelect.value = this.options.controlDevice || 'keyboard';
                     return;
                 }
@@ -194,15 +196,25 @@ class MultiplayerApp {
                 this.options.controlBinding = createKeyboardBinding('arrows');
                 writeControlBinding(MULTIPLAYER_CONTROL_STORAGE_KEY, this.options.controlBinding);
             });
+            // Touch-Option nur anbieten, wenn das Gerät Touch kann.
+            if (!isTouchDeviceAvailable()) {
+                controlsSelect.querySelector('option[value="touch"]')?.remove();
+            }
         }
         // Touch an/aus direkt aus dem Panel (falls Option vorhanden).
+        // Auf Geräten ohne Touch: ganze Zeile ausblenden.
         const touchToggle = document.getElementById('settingTouch');
         if (touchToggle) {
-            touchToggle.checked = isTouchControlsEnabled();
-            touchToggle.addEventListener('change', () => {
-                const on = setTouchControlsEnabled(touchToggle.checked);
-                if (on) mountTouchControls(this.controlsRuntime);
-            });
+            if (!isTouchDeviceAvailable()) {
+                touchToggle.closest('label')?.classList.add('hide');
+            } else {
+                touchToggle.checked = isTouchControlsEnabled();
+                touchToggle.addEventListener('change', () => {
+                    const on = setTouchControlsEnabled(touchToggle.checked);
+                    if (on) mountTouchControls(this.controlsRuntime, { force: true });
+                    else unmountTouchControls(this.controlsRuntime);
+                });
+            }
         }
     }
 

@@ -4,8 +4,8 @@ import {
     unmountTouchControls,
     setTouchControlsEnabled,
     isTouchControlsEnabled,
-    shouldShowTouchControls,
-} from '../shared/input/TouchControls.js';
+    isTouchDeviceAvailable,
+} from '../../shared/input/TouchControls.js';
 import {
     createKeyboardBinding,
     getDeviceValue,
@@ -260,12 +260,13 @@ export class UIManager {
         if (el) el.classList.add('active');
     }
 
-    // Touch toggle inside the SP slide-out menu ("Yellow/Blue warrior
-    // control" sections). Touch runs parallel to keyboard/gamepad — this
-    // only shows/hides the overlay, never touches bindings.
+    // Touch toggle inside the SP slide-out menu. Nur anzeigen, wenn das
+    // Gerät überhaupt Touch kann — auf reinem Desktop bleibt das Menü
+    // unverändert. Auf Mobilgeräten auto-an (Opt-out), auf Hybrid per
+    // Toggle opt-in (mount mit force).
     initTouchToggle() {
         if (document.getElementById('touchToggleRow')) return;
-        if (!shouldShowTouchControls()) return;
+        if (!isTouchDeviceAvailable()) return;
         const menu = q('menu');
         if (!menu) return;
         const row = document.createElement('div');
@@ -274,7 +275,7 @@ export class UIManager {
         row.innerHTML = `📱 Touch-Steuerung <span id="touchToggleState">${isTouchControlsEnabled() ? 'AN' : 'AUS'}</span>`;
         row.onclick = () => {
             const on = setTouchControlsEnabled(!isTouchControlsEnabled());
-            if (on) mountTouchControls(this.controlsRuntime);
+            if (on) mountTouchControls(this.controlsRuntime, { force: true });
             else unmountTouchControls(this.controlsRuntime);
             const state = document.getElementById('touchToggleState');
             if (state) state.textContent = on ? 'AN' : 'AUS';
