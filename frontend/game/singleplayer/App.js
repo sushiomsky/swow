@@ -303,6 +303,8 @@ class App {
                 this.refreshPressedKeysByGamepad();
                 this.scanFrameCounter++;
                 this.engine.scanRoutine();
+                // Consume spent tap latches so released keys can't stick.
+                this.controlsRuntime.endScanFrame();
                 this.audio.playQueue();
             }
         }, this.scanFrameTime);

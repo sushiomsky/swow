@@ -264,6 +264,11 @@ export class SharedControlsRuntime {
         this.shouldPreventDefault = shouldPreventDefault;
 
         this.pressedKeys = {};
+        // Physical key state (true while actually down). Lets endScanFrame()
+        // tell a released tap (consume once, then dead) apart from a real
+        // hold (stays pressed). Without this, keyup arriving before the next
+        // scan frame is lost and the latch sticks forever.
+        this.physicalKeys = {};
         this.heldGamepadInputs = new Set();
         // Touch overlay state (virtual D-Pad + fire, see TouchControls.js).
         // Action-level (not key-level): binding-agnostic, works with any
@@ -295,6 +300,7 @@ export class SharedControlsRuntime {
         this._boundKeyDown = null;
         this._boundKeyUp = null;
         this._boundBlur = null;
+        this.physicalKeys = {};
         this.clearTouchHolds();
         this.cancelCapture();
     }
@@ -319,6 +325,20 @@ export class SharedControlsRuntime {
 
     clearTouchHolds() {
         for (const action of CONTROL_ACTIONS) this.touchHeld[action] = false;
+    }
+
+    // End-of-scan-frame: consume one-shot tap latches. Must be called once
+    // per game tick after all getControls() readers ran. A 'hold' whose key
+    // is still physically down stays latched; a 'hold' whose keyup already
+    // arrived was a spent tap and clears to false — otherwise taps stick
+    // forever (permanent drift/autofire) and ghost across transitions.
+    endScanFrame() {
+        const pressed = this.pressedKeys;
+        for (const code of Object.keys(pressed)) {
+            if (pressed[code] === 'hold' && !this.physicalKeys[code]) {
+                pressed[code] = false;
+            }
+        }
     }
 
     setHold(binding, actionOrKeyCode) {
@@ -400,6 +420,7 @@ export class SharedControlsRuntime {
         if (this.pressedKeys[keyCode] !== 'hold') {
             this.pressedKeys[keyCode] = 'hold';
         }
+        this.physicalKeys[keyCode] = true;
 
         if (typeof this.onKeyDown === 'function') this.onKeyDown(event, keyCode);
         if (typeof this.shouldPreventDefault === 'function' && this.shouldPreventDefault(event, keyCode)) {
@@ -419,6 +440,7 @@ export class SharedControlsRuntime {
         if (this.pressedKeys[keyCode] !== 'hold') {
             this.pressedKeys[keyCode] = false;
         }
+        this.physicalKeys[keyCode] = false;
         if (typeof this.onKeyUp === 'function') this.onKeyUp(event, keyCode);
         if (typeof this.shouldPreventDefault === 'function' && this.shouldPreventDefault(event, keyCode)) {
             event.preventDefault();
@@ -430,6 +452,7 @@ export class SharedControlsRuntime {
             const numericCode = Number(code);
             if (!Number.isNaN(numericCode)) this.pressedKeys[numericCode] = false;
         }
+        this.physicalKeys = {};
         this.heldGamepadInputs.clear();
         this.clearTouchHolds();
         this.cancelCapture();

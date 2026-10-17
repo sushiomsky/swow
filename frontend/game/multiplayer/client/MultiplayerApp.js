@@ -116,10 +116,15 @@ class MultiplayerApp {
             },
             onClose: () => this.sessionController?.handleSocketClose(),
             onError: () => this.sessionController?.handleSocketError(),
-            getInputPayload: () => ({
-                type: CLIENT_EVENTS.INPUT,
-                keys: this.inputController ? this.inputController.getControls() : { up: false, down: false, left: false, right: false, fire: false },
-            }),
+            getInputPayload: () => {
+                const keys = this.inputController ? this.inputController.getControls() : { up: false, down: false, left: false, right: false, fire: false };
+                // Consume spent tap latches so released keys can't stick.
+                this.controlsRuntime?.endScanFrame?.();
+                return {
+                    type: CLIENT_EVENTS.INPUT,
+                    keys,
+                };
+            },
             inputIntervalMs: 20,
         });
     }

@@ -490,6 +490,11 @@ class EngineController {
         for (const key of Object.keys(runtime.pressedKeys || {})) {
             runtime.pressedKeys[key] = false;
         }
+        if (runtime.physicalKeys) {
+            for (const key of Object.keys(runtime.physicalKeys)) {
+                runtime.physicalKeys[key] = false;
+            }
+        }
         runtime.heldGamepadInputs?.clear?.();
     }
     

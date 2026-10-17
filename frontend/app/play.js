@@ -537,6 +537,7 @@ function _stopAttractDeterministic() {
     const rt = _spApp?.controlsRuntime;
     if (rt) {
         for (const key of Object.keys(rt.pressedKeys)) rt.pressedKeys[key] = false;
+        if (rt.physicalKeys) for (const key of Object.keys(rt.physicalKeys)) rt.physicalKeys[key] = false;
         rt.heldGamepadInputs?.clear?.();
     }
     document.getElementById('play-gameover')?.remove();
