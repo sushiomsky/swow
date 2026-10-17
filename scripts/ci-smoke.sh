@@ -83,13 +83,23 @@ case "$surface" in
     curl -fsS "http://127.0.0.1:${api_port}/health" >"$log_dir/health.json"
     grep -q '"ok":true' "$log_dir/health.json"
     curl -fsS "http://127.0.0.1:${api_port}/api/community/forum/categories" >"$log_dir/forum-categories.json"
+    # Login never leaks policy details: malformed credentials -> generic 401
+    # (no policy oracle; see community-api/src/routes/auth.js).
     assert_http_code \
-      "400" \
-      "$log_dir/auth-login-validation.json" \
+      "401" \
+      "$log_dir/auth-login-no-oracle.json" \
       "http://127.0.0.1:${api_port}/api/community/auth/login" \
       -X POST \
       -H "content-type: application/json" \
       --data '{"username":"ab","password":"123"}'
+    # Register still validates input shape -> 400 (missing email).
+    assert_http_code \
+      "400" \
+      "$log_dir/auth-register-validation.json" \
+      "http://127.0.0.1:${api_port}/api/community/auth/register" \
+      -X POST \
+      -H "content-type: application/json" \
+      --data '{"username":"smokeprobe","password":"12345678"}'
     ;;
 
   community-web)

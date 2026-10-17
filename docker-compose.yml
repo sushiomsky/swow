@@ -81,7 +81,7 @@ services:
       COMMUNITY_JWT_SECRET: ${COMMUNITY_JWT_SECRET:?COMMUNITY_JWT_SECRET must be set in .env}
       COMMUNITY_ALLOW_DEV_AUTH: ${COMMUNITY_ALLOW_DEV_AUTH:-false}
       COMMUNITY_EXPOSE_AUTH_FLOW_TOKENS: ${COMMUNITY_EXPOSE_AUTH_FLOW_TOKENS:-false}
-      COMMUNITY_DATABASE_URL: postgres://postgres:postgres@postgres:5432/wow_community
+      COMMUNITY_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/wow_community
       COMMUNITY_REDIS_URL: redis://redis:6379
     ports:
       - "${COMMUNITY_API_PUBLIC_PORT:-17000}:7000"
@@ -163,6 +163,8 @@ services:
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./infra/caddy/404:/srv/404:ro
+      - /var/www/woketoys:/var/www/woketoys:ro
+      - /var/www/duck-duckling:/var/www/duck-duckling:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
