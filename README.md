@@ -199,7 +199,7 @@ Agent runner:
 | Action | Yellow warrior (P1) | Blue warrior (P2) |
 |--------|--------------------|--------------------|
 | Move   | Arrow keys         | WASD               |
-| Fire   | Right Ctrl         | Left Shift         |
+| Fire   | Enter              | Left Shift         |
 
 Controls are configurable per-player from the in-game menu: **arrow keys**, **WASD**, or **gamepad**.
 
@@ -381,7 +381,7 @@ The server validates all movement, shooting, hits, scoring, tunnel transfers, re
 | Action | Yellow (P1) | Blue (P2) |
 |--------|-------------|-----------|
 | Move   | Arrow keys  | WASD      |
-| Fire   | Right Ctrl  | Left Shift |
+| Fire   | Enter       | Left Shift |
 
 Both players are controlled locally from the same browser tab. Open two tabs (or two browsers) for true network play.
 
