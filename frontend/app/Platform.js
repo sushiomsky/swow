@@ -115,7 +115,7 @@ function createMultiplayerDOM() {
         <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
-        <div id="controls-hint">PFEILE + STRG zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück zum Menü</div>
+        <div id="controls-hint">PFEILE + ENTER zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück zum Menü</div>
     `;
     return root;
 }

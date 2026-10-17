@@ -170,7 +170,7 @@ function createMPDOM() {
         <img src="/images/v4.0/noise.png" id="crtNoise" class="hide" alt="">
         <span style="font-family:WizardOfWor"></span>
         <div id="hud" class="hide"><span id="hud-dungeon"></span></div>
-        <div id="controls-hint">PFEILE + STRG zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück <span class="controls-hint-touch">· 📱 Touch: D-Pad + FEUER</span></div>
+        <div id="controls-hint">PFEILE + ENTER zum Bewegen/Schießen &nbsp;|&nbsp; ESC: zurück <span class="controls-hint-touch">· 📱 Touch: D-Pad + FEUER</span></div>
     `;
     return root;
 }
