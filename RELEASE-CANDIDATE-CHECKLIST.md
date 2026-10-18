@@ -85,3 +85,17 @@ post-freeze rule (P0/production only), each re-validated:
   full gate re-run before inclusion.
 - Known non-blocking dirt left in tree (other lanes, untouched):
   `infra/caddy/Caddyfile` + compose vhost mounts (woketoys etc.).
+
+## 9) v2.0.0 — first working release (bot-free multiplayer)
+
+- Tag: `v2.0.0` (commit `3be2414`, main pushed to origin).
+- Bots removed: background seeder deleted; no bot fill on join in any
+  mode (solo humans play vs monsters). `spawnBot` machinery stays
+  dormant for a future population feature; `bots` map stays empty.
+- Queue modes stay solo-playable: SitNGo 60s idle timeout, team-sitngo
+  45s solo-launch (replacing seeder-driven timeout launches).
+- Gates re-run green: gameplay 12/12 (human WS join probes per mode),
+  netcode 3/3, match-starting/session-reconnect/team-coordination
+  checks pass (2 stale assertions aligned: team-endless emits
+  match_starting before init; team launch sends it once via broadcast).
+- Live: active-games bot-free; solo endless join verified in browser.
