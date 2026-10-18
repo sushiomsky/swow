@@ -23,24 +23,15 @@ const TICK_MS = 1000 / SCAN_FPS;
 // its ws buffer would otherwise pile up ~50 states/s; stale snapshots are
 // worthless (client only needs the newest), so drop instead of buffering.
 const MAX_STATE_BUFFERED_BYTES = 256 * 1024;
-const BOT_SEED_INITIAL_DELAY_MS = 15 * 1000;
-const BOT_SEED_INTERVAL_MS = 60 * 1000;
-const TARGET_DUNGEONS_PER_MODE = 4;
 // Hardening (DoS): Caps gegen unbegrenzte Dungeon-/Verbindungs-Erzeugung.
 // Jede WS-Verbindung kann sonst Dungeons + 50-FPS-Ticks erzeugen.
 const MAX_CONNECTIONS = Number(process.env.MP_MAX_CONNECTIONS || 500);
 const MAX_DUNGEONS = Number(process.env.MP_MAX_DUNGEONS || 200);
-// Hardening (Leak): keine Bot-Seeds bei vollem Haus — sonst kämpft der
-// Seeder gegen den Dungeon-Cap und der Log läuft voll.
-const BOT_SEED_PAUSE_AT = Math.floor(MAX_DUNGEONS * 0.8);
 // Stale-Bot-Spiele (P0): Bot-only-Dungeons ohne echte Spieler werden nach
 // BOT_ONLY_TTL_MS Idle automatisch abgeräumt; das Listing blendet solche
 // Karteileichen schon nach STALE_LISTING_MS aus. Per ENV übersteuerbar.
 const BOT_ONLY_TTL_MS = Number(process.env.MP_BOT_ONLY_TTL_MS || 10 * 60 * 1000);
 const STALE_LISTING_MS = Number(process.env.MP_STALE_LISTING_MS || 30 * 60 * 1000);
-// Harter Seeder-Cap: max. so viele Bot-only-Seeds gleichzeitig (unabhängig
-// vom Dungeon-Cap), damit der Seeder nie wieder das Haus füllt.
-const MAX_BOT_ONLY_SEEDED = Number(process.env.MP_MAX_BOT_ONLY_SEEDED || 16);
 const STALE_SWEEP_INTERVAL_MS = Number(process.env.MP_STALE_SWEEP_MS || 60 * 1000);
 const MAX_MSG_BYTES = 64 * 1024;
 
@@ -85,7 +76,7 @@ class GameServer {
 
         this.wss.on('connection', (ws) => this._onConnect(ws));
         this._loop = setInterval(() => this._tick(), TICK_MS);
-        this._scheduleBackgroundBattleRoyaleBots();
+        // v2: no background bot seeding (removed); queues launch waiting humans.
         // Stale-Sweep: räumt Bot-only-Dungeons nach TTL ab (periodisch) +
         // einmalig beim Start (Karteileichen aus vorherigem Run / Altzustand).
         this._sweepStaleBotOnlyDungeons('startup');
@@ -799,61 +790,6 @@ class GameServer {
             queued_team_sitngo_players: this.teamSitNGoQueue ? (this.teamSitNGoQueue.waitingPlayers ? this.teamSitNGoQueue.waitingPlayers.size : 0) : 0,
             games,
         };
-    }
-
-    _scheduleBackgroundBattleRoyaleBots() {
-        const schedule = (delayMs, intervalMs, callback) => {
-            const timeoutId = setTimeout(() => {
-                callback();
-                const intervalId = setInterval(callback, intervalMs);
-                this._backgroundTimers.push(intervalId);
-            }, delayMs);
-            this._backgroundTimers.push(timeoutId);
-        };
-
-        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedEndlessBattleRoyaleBots());
-        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedSitNGoBattleRoyaleBots());
-        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedTeamEndlessBots());
-        schedule(BOT_SEED_INITIAL_DELAY_MS, BOT_SEED_INTERVAL_MS, () => this._seedTeamSitNGoBots());
-    }
-
-    _seedEndlessBattleRoyaleBots() {
-        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
-        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('endless_br');
-        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('endless_br');
-    }
-
-    _seedSitNGoBattleRoyaleBots() {
-        if (this.sitNGoQueue.getWaitingCount() > 0) this.sitNGoQueue.launchWithBots();
-        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
-        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('sitngo_br');
-        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('sitngo_br');
-    }
-
-    _seedTeamEndlessBots() {
-        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
-        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_endless_br');
-        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_endless_br');
-    }
-
-    _seedTeamSitNGoBots() {
-        if (this.dungeons.size >= BOT_SEED_PAUSE_AT) return;
-        const needed = TARGET_DUNGEONS_PER_MODE - this._countActiveMatchesByMode('team_sitngo_br');
-        for (let i = 0; i < needed; i++) this._seedBotOnlyMatch('team_sitngo_br');
-    }
-
-    _seedBotOnlyMatch(matchMode) {
-        // Harter Seeder-Cap (P0): auch unterhalb des Dungeon-Caps nie mehr
-        // als MAX_BOT_ONLY_SEEDED reine Bot-Seeds gleichzeitig.
-        if (this._countBotOnlySeeded() >= MAX_BOT_ONLY_SEEDED) return;
-        const dungeon = this._createDungeon();
-        if (!dungeon) return;
-        dungeon.matchMode = matchMode;
-        dungeon.seededBotOnly = true;
-        this.spawnBot(dungeon.id, 0);
-        this.spawnBot(dungeon.id, 1);
-        dungeon.startGame();
-        console.log(`[GameServer] Seeded background ${matchMode} match in dungeon ${dungeon.id}`);
     }
 
     _countActiveMatchesByMode(matchMode) {

@@ -110,7 +110,9 @@ function runTeamEndlessCheck() {
     const queue = new TeamBRQueue(gameServer, 'team-endless');
     const c1 = createConn('endless-1');
     queue._createTeamInstant('endless-1', c1);
-    assertNoMatchStarting(gameServer.eventLog, c1.ws);
+    // Instant team join emits match_starting before init (same ordering
+    // contract as queued launches; client shows transient state).
+    assertMatchStartingBeforeInit(gameServer.eventLog, c1.ws);
 }
 
 function runSitNGoCountdownCancelCheck() {

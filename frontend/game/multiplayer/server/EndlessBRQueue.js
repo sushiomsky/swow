@@ -3,8 +3,7 @@
  * 
  * Behavior:
  * - Players join instantly (no waiting)
- * - Each player gets their own dungeon
- * - Dungeon is auto-filled with a bot in slot 1
+ * - Each player gets their own dungeon (solo human vs monsters, no bots)
  * - Dungeon is connected to the graph (ring topology)
  * - Game starts immediately
  * 
@@ -22,7 +21,7 @@ class EndlessBRQueue {
     
     /**
      * Add player to endless BR
-     * Creates dungeon immediately, spawns bot partner, starts game
+     * Creates dungeon immediately, starts game
      */
     addPlayer(playerId, conn) {
         if (this.activePlayers.has(playerId)) {
@@ -50,8 +49,7 @@ class EndlessBRQueue {
         conn.mode = 'endless_br';
         dungeon.addPlayer(player);
         
-        // Spawn bot in slot 1
-        this.gameServer.spawnBot(dungeon.id, 1);
+        // v2: solo start, no bot fill.
         
         // Track player
         this.activePlayers.set(playerId, dungeon.id);
@@ -62,7 +60,7 @@ class EndlessBRQueue {
         // Send init to player
         this.gameServer._sendInit(conn, dungeon);
         
-        console.log(`[EndlessBRQueue] Player ${playerId} started in dungeon ${dungeon.id} with bot partner`);
+        console.log(`[EndlessBRQueue] Player ${playerId} started solo in dungeon ${dungeon.id}`);
     }
     
     /**

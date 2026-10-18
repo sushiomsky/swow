@@ -19,7 +19,7 @@ Run with `npm run agent:<name>` or `bash scripts/agents/run-agent.sh <name>`.
 | `ux` | `npm run agent:ux` | Route availability + landmark structure on community web |
 | `design` | `npm run agent:design` | Visual consistency (card density, hero section) |
 | `ops` | `npm run agent:ops` | systemd services + public domain health probes |
-| `gameplay` | `npm run agent:gameplay` | Bot seeding coverage across all 4 BR modes |
+| `gameplay` | `npm run agent:gameplay` | Human join+play probes across all 4 BR modes |
 | `netcode` | `npm run agent:netcode` | WebSocket handshake latency + HTTP endpoint health |
 | `analytics` | `npm run agent:analytics` | Live snapshot report: mode distribution, bot/human ratio |
 | `release` | `npm run agent:release` | Full composite pipeline (all of the above) |

@@ -1,15 +1,15 @@
 /**
  * TeamBRQueue — Team-based Battle Royale queue
  * 
- * Behavior:
+ * Behavior (v2: no bots):
  * - Players queue individually or as pre-formed teams
  * - System creates balanced teams (2 players per team)
  * - Teams share a dungeon (slot 0 + slot 1)
  * - Dungeons are connected via graph
- * - Fill incomplete teams with bots
+ * - Incomplete teams start solo (no bot fill)
  * 
  * Modes:
- * - team-endless: Instant start, fill with bots
+ * - team-endless: Instant start, solo vs monsters
  * - team-sitngo: Wait for min teams, then launch
  */
 
@@ -104,8 +104,7 @@ class TeamBRQueue {
         conn.mode = 'team_endless_br';
         dungeon.addPlayer(player);
         
-        // Fill slot 1 with bot teammate
-        this.gameServer.spawnBot(dungeon.id, 1);
+        // v2: solo team, no bot fill.
         
         // Start game
         dungeon.startGame();
@@ -115,7 +114,7 @@ class TeamBRQueue {
         // Send init
         this.gameServer._sendInit(conn, dungeon);
         
-        console.log(`[TeamBRQueue] Team created: player ${playerId} + bot in dungeon ${dungeon.id}`);
+        console.log(`[TeamBRQueue] Team created: player ${playerId} solo in dungeon ${dungeon.id}`);
 
         if (queued?.joinedAt) {
             this.metrics.total_wait_ms += Math.max(0, Date.now() - queued.joinedAt);
@@ -129,8 +128,8 @@ class TeamBRQueue {
     
     /**
      * Handle sit-n-go team queue
-     * Hardening: Bot-Fill nach Wartezeit — sonst hängt die Queue mit 1–3
-     * Spielern ewig (Countdown erst ab 4). Analog zu Solo-SitNGo.
+     * Solo-Launch nach Wartezeit — sonst hängt die Queue mit 1–3
+     * Spielern ewig (Countdown erst ab 4). Wartende starten solo.
      */
     _handleSitNGoQueue() {
         const waiting = this.waitingPlayers.size;
@@ -146,15 +145,15 @@ class TeamBRQueue {
             this._cancelCountdown();
         }
 
-        // Bot-Fill: 1–3 wartende Spieler nach 45 s mit Bots starten
-        // (ungerade Zahl → letztes Team Mensch + Bot, s. _launchTeamGame).
+        // Solo-Launch: 1–3 wartende Spieler nach 45 s ohne Bots starten
+        // (ungerade Zahl → letztes Team solo, s. _launchTeamGame).
         if (waiting > 0 && waiting < minPlayers && !this.countdownTimer) {
             const oldest = Math.min(...Array.from(this.waitingPlayers.values()).map(v => v.joinedAt));
-            if (Date.now() - oldest > 45000 && !this._botFillTimer) {
-                this._botFillTimer = setTimeout(() => {
-                    this._botFillTimer = null;
+            if (Date.now() - oldest > 45000 && !this._soloLaunchTimer) {
+                this._soloLaunchTimer = setTimeout(() => {
+                    this._soloLaunchTimer = null;
                     if (this.waitingPlayers.size > 0 && this.waitingPlayers.size < minPlayers) {
-                        console.log(`[TeamBRQueue] Bot-fill: launching ${this.waitingPlayers.size} waiting players`);
+                        console.log(`[TeamBRQueue] Solo-launch: launching ${this.waitingPlayers.size} waiting players`);
                         this._launchTeamGame(true);
                     }
                 }, 1000);
@@ -195,7 +194,7 @@ class TeamBRQueue {
     }
     
     /**
-     * Launch team game (botFill=true: auch unter Minimum starten, Rest mit Bots)
+     * Launch team game (botFill=true: auch unter Minimum starten, mit den wartenden Spielern)
      */
     _launchTeamGame(botFill = false) {
         const players = Array.from(this.waitingPlayers.entries());
@@ -259,16 +258,15 @@ class TeamBRQueue {
                 
                 console.log(`[TeamBRQueue] Team: ${player1Id} + ${player2Id} → dungeon ${dungeon.id}`);
             } else {
-                // Fill with bot
-                this.gameServer.spawnBot(dungeon.id, 1);
-                console.log(`[TeamBRQueue] Team: ${player1Id} + bot → dungeon ${dungeon.id}`);
+                // Solo team: single human vs monsters, no bot fill (v2).
+                console.log(`[TeamBRQueue] Team: ${player1Id} solo → dungeon ${dungeon.id}`);
             }
             
             // Start game
             dungeon.startGame();
             
-            // Send init to both players
-            this._sendMatchStarting(conn1);
+            // Send init to both players (_notifyMatchStarting already
+            // broadcast match_starting to all waiting players; no duplicate).
             if (this._isConnectionOpen(conn1)) {
                 this.gameServer._sendInit(conn1, dungeon);
             } else {
@@ -277,7 +275,6 @@ class TeamBRQueue {
             if (player2Data) {
                 const conn2 = player2Data[1].conn;
                 if (this._isConnectionOpen(conn2)) {
-                    this._sendMatchStarting(conn2);
                     if (this._isConnectionOpen(conn2)) {
                         this.gameServer._sendInit(conn2, dungeon);
                     } else {

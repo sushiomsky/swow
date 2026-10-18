@@ -6,7 +6,7 @@
  * - When MIN_PLAYERS reached, start countdown timer
  * - When timer expires OR MAX_PLAYERS reached, launch game
  * - All players start simultaneously in connected dungeons
- * - Fill remaining slots with bots
+ * - Underpopulated queues launch solo after idle timeout (no bot fill)
  * 
  * This is classic "sit and go" tournament style.
  */
@@ -19,6 +19,7 @@ const { queues } = require('./serverConstants');
 const MIN_PLAYERS = queues.sitngo.minPlayers;   // Minimum to start countdown
 const MAX_PLAYERS = queues.sitngo.maxPlayers;   // Maximum before instant start
 const COUNTDOWN_MS = queues.sitngo.countdownMs; // Delay after MIN_PLAYERS
+const SOLO_WAIT_MS = 60 * 1000; // Solo launch when MIN_PLAYERS never reached
 const MATCH_STARTING_EVENT = 'match_starting';
 
 class SitNGoQueue {
@@ -27,6 +28,7 @@ class SitNGoQueue {
         this.waitingPlayers = new Map(); // playerId → { conn, joinedAt }
         this.countdownTimer = null;
         this.countdownStartedAt = null;
+        this.soloTimer = null;
         this.metrics = {
             launches: 0,
             launch_failures: 0,
@@ -65,6 +67,8 @@ class SitNGoQueue {
             console.log('[SitNGoQueue] Max players reached, starting immediately');
             this._launchGame();
         }
+
+        this._armSoloTimer();
     }
     
     /**
@@ -82,7 +86,10 @@ class SitNGoQueue {
         if (this.waitingPlayers.size < MIN_PLAYERS && this.countdownTimer) {
             this._cancelCountdown();
         }
-        
+
+        if (this.waitingPlayers.size === 0) this._disarmSoloTimer();
+        else this._armSoloTimer();
+
         this._broadcastQueueStatus();
     }
     
@@ -91,7 +98,8 @@ class SitNGoQueue {
      */
     _startCountdown() {
         if (this.countdownTimer) return;
-        
+        this._disarmSoloTimer();
+
         console.log(`[SitNGoQueue] Starting countdown: ${COUNTDOWN_MS}ms`);
         this.countdownStartedAt = Date.now();
         
@@ -120,6 +128,7 @@ class SitNGoQueue {
      * Launch the game with all queued players
      */
     _launchGame() {
+        this._disarmSoloTimer();
         if (this.waitingPlayers.size === 0) {
             console.warn('[SitNGoQueue] Cannot launch game: no players');
             this.metrics.launch_failures += 1;
@@ -162,8 +171,7 @@ class SitNGoQueue {
             conn.mode = 'sitngo_br';
             dungeon.addPlayer(player);
             
-            // Spawn bot in slot 1
-            this.gameServer.spawnBot(dungeon.id, 1);
+            // v2: solo start, no bot fill.
             
             // Start game
             dungeon.startGame();
@@ -217,11 +225,34 @@ class SitNGoQueue {
         return !!conn && !!conn.ws && conn.ws.readyState === WebSocket.OPEN;
     }
 
+    // Compat entry (kept for match-starting-order check): historically
+    // launched with bot fill; now launches whoever is waiting.
     launchWithBots() {
         if (this.waitingPlayers.size === 0) return false;
-        console.log('[SitNGoQueue] Launching queued players with bot fill');
+        console.log('[SitNGoQueue] Launching queued players (no bot fill)');
         this._launchGame();
         return true;
+    }
+
+    // Solo idle timeout: a queue that never reaches MIN_PLAYERS still
+    // launches after SOLO_WAIT_MS with whoever is waiting (replaces the
+    // old seeder-driven timeout launch). Cancelled by countdown/launch.
+    _armSoloTimer() {
+        if (this.soloTimer || this.countdownTimer || this.waitingPlayers.size === 0) return;
+        this.soloTimer = setTimeout(() => {
+            this.soloTimer = null;
+            if (this.waitingPlayers.size > 0 && !this.countdownTimer) {
+                console.log(`[SitNGoQueue] Solo timeout: launching ${this.waitingPlayers.size} waiting players`);
+                this._launchGame();
+            }
+        }, SOLO_WAIT_MS);
+    }
+
+    _disarmSoloTimer() {
+        if (this.soloTimer) {
+            clearTimeout(this.soloTimer);
+            this.soloTimer = null;
+        }
     }
     
     /**
